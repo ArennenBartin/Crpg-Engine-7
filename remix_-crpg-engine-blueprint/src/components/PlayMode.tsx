@@ -4583,18 +4583,21 @@ export function PlayEngine() {
             }
             return (
               <div className="w-full max-w-2xl h-full flex flex-col bg-transparent relative z-20">
-                <div className="px-6 py-4 border-b border-[var(--color-sacred-gold-dark)] flex justify-between items-center relative">
-                  <h3 className="font-[family-name:var(--font-display)] font-bold text-2xl text-[var(--color-sacred-gold)] uppercase tracking-[0.2em] text-sacred-glow">
+                <div className="px-4 py-2 sm:px-6 sm:py-4 border-b border-[var(--color-sacred-gold-dark)] flex justify-between items-center relative shrink-0">
+                  <h3 className="font-[family-name:var(--font-display)] font-bold text-base sm:text-2xl text-[var(--color-sacred-gold)] uppercase tracking-[0.2em] text-sacred-glow leading-tight">
                     {document.display_name}
                   </h3>
                   <button
                     onClick={() => setActiveDocumentId(null)}
-                    className="p-1 hover:bg-black/20 rounded text-[var(--color-sacred-ink-dim)] hover:text-[var(--color-sacred-ink)] transition-colors"
+                    className="p-1 hover:bg-black/20 rounded text-[var(--color-sacred-ink-dim)] hover:text-[var(--color-sacred-ink)] transition-colors shrink-0 ml-2"
                   >
-                    <X className="w-6 h-6 drop-shadow-md" />
+                    <X className="w-5 h-5 sm:w-6 sm:h-6 drop-shadow-md" />
                   </button>
                 </div>
-                <div className="p-8 flex-1 overflow-y-auto font-serif text-xl leading-loose text-[var(--color-sacred-ink)] whitespace-pre-wrap tracking-wide drop-shadow-sm text-justify">
+                <div
+                  className="px-4 py-3 sm:p-8 flex-1 overflow-y-auto font-serif text-sm sm:text-xl leading-relaxed sm:leading-loose text-[var(--color-sacred-ink)] whitespace-pre-wrap tracking-wide drop-shadow-sm text-justify"
+                  style={{ touchAction: 'pan-y' }}
+                >
                   {document.content}
                 </div>
               </div>
