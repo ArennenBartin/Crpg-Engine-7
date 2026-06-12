@@ -151,7 +151,7 @@ export function AppShell() {
           </div>
         </header>
         
-        <div className={`flex-1 h-full w-full ${mode === 'play' ? 'overflow-hidden' : 'overflow-auto'}`}>
+        <div className={`flex-1 min-h-0 w-full ${mode === 'play' ? 'overflow-hidden' : 'overflow-auto'}`}>
           {mode === "home" && <HomePanel />}
           {mode === "play" && <PlayMode />}
           {mode === "map_editor" && <MapEditor />}

@@ -658,12 +658,13 @@ export const createEmptyGamePackage = (): GamePackage => {
     settings: {
       clock_start_hour: 21,
       minutes_per_turn: 2,
+      player_sprite_id: "spr_hero",
       music_tracks: {
-        title: "/music/Title.wav",
-        town: "/music/Town.wav",
+        title: "/music/titlescreen.ogg",
+        town: "/music/roll away.ogg",
         network: "/music/Pagan Network.wav",
         river: "/music/River.wav",
-        combat: "/music/Combat-mastered.wav",
+        combat: "/music/underworld-battle theme.ogg",
       },
       map_music: {
         map_town: "town",

@@ -773,7 +773,7 @@ const votivePattern = `
 ................
 `;
 
-export const spriteLibraryPresets = [
+const baseSpriteLibraryPresets = [
   {
     id: "spr_itm_carried_stone",
     display_name: "Carried Stone",
@@ -949,6 +949,148 @@ export const spriteLibraryPresets = [
     height: 16,
     pixels: asciiToPixels(ferrymanPattern, familiarSpritePalette),
   },
+];
+
+type IllustratedSpriteDefinition = {
+  display_name: string;
+  width: number;
+  height: number;
+  data_url: string;
+  pixels: string[];
+};
+
+const characterSpriteOverrides: Record<string, IllustratedSpriteDefinition> = {
+  spr_hero: {
+    display_name: "Player Pilgrim",
+    width: 384,
+    height: 512,
+    data_url: "/sprites/player-pilgrim.png",
+    pixels: [],
+  },
+  spr_nessa: {
+    display_name: "Acolyte Nessa",
+    width: 401,
+    height: 512,
+    data_url: "/sprites/acolyte-nessa.png",
+    pixels: [],
+  },
+  spr_aldric: {
+    display_name: "Brother Aldric",
+    width: 341,
+    height: 512,
+    data_url: "/sprites/brother-aldric.png",
+    pixels: [],
+  },
+  spr_high_clerk: {
+    display_name: "High Clerk",
+    width: 267,
+    height: 512,
+    data_url: "/sprites/npcs/high-clerk.png",
+    pixels: [],
+  },
+  spr_warden_sefa: {
+    display_name: "Warden Sefa",
+    width: 226,
+    height: 512,
+    data_url: "/sprites/npcs/warden-sefa.png",
+    pixels: [],
+  },
+  spr_guard_bren: {
+    display_name: "Cordon Guard Bren",
+    width: 317,
+    height: 512,
+    data_url: "/sprites/npcs/cordon-guard-bren.png",
+    pixels: [],
+  },
+  spr_guard_holt: {
+    display_name: "Gate Guard Holt",
+    width: 253,
+    height: 512,
+    data_url: "/sprites/npcs/gate-guard-holt.png",
+    pixels: [],
+  },
+  spr_father_imre: {
+    display_name: "Father Imre",
+    width: 243,
+    height: 512,
+    data_url: "/sprites/npcs/father-imre.png",
+    pixels: [],
+  },
+  spr_maro_counted_cup: {
+    display_name: "Maro of the Counted Cup",
+    width: 260,
+    height: 512,
+    data_url: "/sprites/npcs/maro-counted-cup.png",
+    pixels: [],
+  },
+  spr_sela: {
+    display_name: "Sela, the Widow's Cousin",
+    width: 290,
+    height: 512,
+    data_url: "/sprites/npcs/sela.png",
+    pixels: [],
+  },
+  spr_petra_stonecutter: {
+    display_name: "Petra the Stonecutter",
+    width: 240,
+    height: 512,
+    data_url: "/sprites/npcs/petra-stonecutter.png",
+    pixels: [],
+  },
+  spr_liss: {
+    display_name: "Liss",
+    width: 204,
+    height: 512,
+    data_url: "/sprites/npcs/liss.png",
+    pixels: [],
+  },
+  spr_cosmas_pilgrim: {
+    display_name: "Cosmas the Pilgrim",
+    width: 239,
+    height: 512,
+    data_url: "/sprites/npcs/cosmas-pilgrim.png",
+    pixels: [],
+  },
+  spr_riverman: {
+    display_name: "The Riverman",
+    width: 247,
+    height: 512,
+    data_url: "/sprites/npcs/riverman.png",
+    pixels: [],
+  },
+  spr_provisioner_dimos: {
+    display_name: "Provisioner Dimos",
+    width: 306,
+    height: 512,
+    data_url: "/sprites/npcs/provisioner-dimos.png",
+    pixels: [],
+  },
+  spr_cyberghost: {
+    display_name: "Cyberghost",
+    width: 392,
+    height: 512,
+    data_url: "/sprites/npcs/cyberghost.png",
+    pixels: [],
+  },
+  spr_wayside_candle: {
+    display_name: "Wayside Candle",
+    width: 379,
+    height: 512,
+    data_url: "/sprites/npcs/wayside-candle.png",
+    pixels: [],
+  },
+};
+
+const baseSpritePresetIds = new Set(baseSpriteLibraryPresets.map((sprite) => sprite.id));
+
+export const spriteLibraryPresets = [
+  ...baseSpriteLibraryPresets.map((sprite) => {
+    const override = characterSpriteOverrides[sprite.id];
+    return override ? { ...sprite, ...override } : sprite;
+  }),
+  ...Object.entries(characterSpriteOverrides)
+    .filter(([id]) => !baseSpritePresetIds.has(id))
+    .map(([id, sprite]) => ({ id, ...sprite })),
 ];
 
 const legacyObjectLibraryPresets = [

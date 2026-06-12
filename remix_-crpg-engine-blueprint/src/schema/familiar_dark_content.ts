@@ -171,7 +171,7 @@ export const FD_ENTITIES: EntityData[] = [
   {
     id: "ent_cyberghost",
     display_name: "Cyberghost",
-    sprite_id: "spr_ghost",
+    sprite_id: "spr_cyberghost",
     dialogue_id: "dia_cyberghost_network",
     is_npc: true,
     max_hp: 99, max_mp: 0, attack: 0, defense: 0, speed: 0,
@@ -179,7 +179,7 @@ export const FD_ENTITIES: EntityData[] = [
   {
     id: "ent_merchant",
     display_name: "Provisioner Dimos",
-    sprite_id: "spr_merchant",
+    sprite_id: "spr_provisioner_dimos",
     dialogue_id: "dia_merchant",
     is_npc: true,
     max_hp: 10, max_mp: 0, attack: 0, defense: 0, speed: 10,
@@ -187,7 +187,7 @@ export const FD_ENTITIES: EntityData[] = [
   {
     id: "ent_save",
     display_name: "Wayside Candle",
-    sprite_id: "spr_candle",
+    sprite_id: "spr_wayside_candle",
     dialogue_id: "dia_save",
     is_npc: true,
     max_hp: 99, max_mp: 0, attack: 0, defense: 0, speed: 0,
@@ -195,7 +195,7 @@ export const FD_ENTITIES: EntityData[] = [
   {
     id: "ent_gaoler",
     display_name: "Warden Sefa",
-    sprite_id: "spr_gaoler",
+    sprite_id: "spr_warden_sefa",
     dialogue_id: "dia_gaoler",
     is_npc: true,
     max_hp: 14, max_mp: 0, attack: 0, defense: 0, speed: 9,
@@ -203,7 +203,7 @@ export const FD_ENTITIES: EntityData[] = [
   {
     id: "ent_guard_cordon",
     display_name: "Cordon Guard Bren",
-    sprite_id: "spr_guard",
+    sprite_id: "spr_guard_bren",
     dialogue_id: "dia_guard_cordon",
     is_npc: true,
     max_hp: 14, max_mp: 0, attack: 0, defense: 0, speed: 9,
@@ -211,7 +211,7 @@ export const FD_ENTITIES: EntityData[] = [
   {
     id: "ent_guard_gate",
     display_name: "Gate Guard Holt",
-    sprite_id: "spr_guard",
+    sprite_id: "spr_guard_holt",
     dialogue_id: "dia_guard_gate",
     is_npc: true,
     max_hp: 14, max_mp: 0, attack: 0, defense: 0, speed: 9,
@@ -219,7 +219,7 @@ export const FD_ENTITIES: EntityData[] = [
   {
     id: "ent_priest",
     display_name: "Father Imre",
-    sprite_id: "spr_priest",
+    sprite_id: "spr_father_imre",
     dialogue_id: "dia_priest",
     is_npc: true,
     max_hp: 12, max_mp: 6, attack: 0, defense: 0, speed: 8,
@@ -227,7 +227,7 @@ export const FD_ENTITIES: EntityData[] = [
   {
     id: "ent_innkeep",
     display_name: "Maro of the Counted Cup",
-    sprite_id: "spr_innkeep",
+    sprite_id: "spr_maro_counted_cup",
     dialogue_id: "dia_innkeep",
     is_npc: true,
     max_hp: 12, max_mp: 0, attack: 0, defense: 0, speed: 9,
@@ -235,7 +235,7 @@ export const FD_ENTITIES: EntityData[] = [
   {
     id: "ent_elder",
     display_name: "Sela, the Widow's Cousin",
-    sprite_id: "spr_elder",
+    sprite_id: "spr_sela",
     dialogue_id: "dia_elder",
     is_npc: true,
     max_hp: 10, max_mp: 0, attack: 0, defense: 0, speed: 7,
@@ -243,7 +243,7 @@ export const FD_ENTITIES: EntityData[] = [
   {
     id: "ent_mason",
     display_name: "Petra the Stonecutter",
-    sprite_id: "spr_mason",
+    sprite_id: "spr_petra_stonecutter",
     dialogue_id: "dia_mason",
     is_npc: true,
     max_hp: 14, max_mp: 0, attack: 0, defense: 0, speed: 9,
@@ -251,7 +251,7 @@ export const FD_ENTITIES: EntityData[] = [
   {
     id: "ent_mother",
     display_name: "Liss",
-    sprite_id: "spr_mother",
+    sprite_id: "spr_liss",
     dialogue_id: "dia_mother",
     is_npc: true,
     max_hp: 10, max_mp: 0, attack: 0, defense: 0, speed: 9,
@@ -259,7 +259,7 @@ export const FD_ENTITIES: EntityData[] = [
   {
     id: "ent_pilgrim",
     display_name: "Cosmas the Pilgrim",
-    sprite_id: "spr_pilgrim",
+    sprite_id: "spr_cosmas_pilgrim",
     dialogue_id: "dia_pilgrim",
     is_npc: true,
     max_hp: 11, max_mp: 0, attack: 0, defense: 0, speed: 9,
@@ -267,7 +267,7 @@ export const FD_ENTITIES: EntityData[] = [
   {
     id: "ent_ferryman",
     display_name: "The Riverman",
-    sprite_id: "spr_ferryman",
+    sprite_id: "spr_riverman",
     dialogue_id: "dia_ferryman",
     is_npc: true,
     max_hp: 13, max_mp: 0, attack: 0, defense: 0, speed: 11,
@@ -1374,7 +1374,7 @@ export const FD_CUTSCENES: CutsceneData[] = [
     display_name: "Arrival at the Gate",
     is_blocking: true,
     actions: [
-      { type: "play_music", music_url: "/music/Town.wav" },
+      { type: "play_music", music_url: "/music/roll away.ogg" },
       { type: "screen_fade", fade: "out", duration: 0 },
       { type: "move_entity", entity_id: "ent_aldric", cell: [0, -29], facing: [0, -1] },
       { type: "screen_fade", fade: "in", duration: 1500 },
@@ -1571,7 +1571,7 @@ export const FD_CUTSCENES: CutsceneData[] = [
     display_name: "Town Theme",
     is_blocking: false,
     actions: [
-      { type: "play_music", music_url: "/music/Town.wav" },
+      { type: "play_music", music_url: "/music/roll away.ogg" },
     ],
   },
   // ── Scene 4: the trapdoor ──────────────────────────────────────────────────

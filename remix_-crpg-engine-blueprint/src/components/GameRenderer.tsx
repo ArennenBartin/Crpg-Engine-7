@@ -41,6 +41,30 @@ const spriteTextureCache = new Map<
   { texture: THREE.Texture | null; spriteDef: any }
 >();
 
+const ILLUSTRATED_CHARACTER_HEIGHT = 1.55;
+const DEFAULT_CHARACTER_HEIGHT = 1;
+
+const isIllustrationSpriteDef = (sprite: any) =>
+  !!sprite?.data_url &&
+  (!sprite.data_url.startsWith("data:") ||
+    Math.max(sprite.width || 0, sprite.height || 0) > 128);
+
+const getCharacterSpriteRenderSize = (sprite: any) => {
+  if (!sprite?.width || !sprite?.height) {
+    return { renderWidth: 1, renderHeight: DEFAULT_CHARACTER_HEIGHT };
+  }
+
+  const maxDim = Math.max(sprite.width, sprite.height);
+  const worldHeight = isIllustrationSpriteDef(sprite)
+    ? ILLUSTRATED_CHARACTER_HEIGHT
+    : DEFAULT_CHARACTER_HEIGHT;
+
+  return {
+    renderWidth: (sprite.width / maxDim) * worldHeight,
+    renderHeight: (sprite.height / maxDim) * worldHeight,
+  };
+};
+
 const getSpriteTextureEntry = (
   spriteId: string | undefined,
   gamePackage: any,
@@ -64,8 +88,14 @@ const getSpriteTextureEntry = (
 
   if (sprite.data_url) {
     const texture = new THREE.TextureLoader().load(sprite.data_url);
-    texture.magFilter = THREE.NearestFilter;
-    texture.minFilter = THREE.NearestFilter;
+    const isIllustrationSprite = isIllustrationSpriteDef(sprite);
+    texture.magFilter = isIllustrationSprite
+      ? THREE.LinearFilter
+      : THREE.NearestFilter;
+    texture.minFilter = isIllustrationSprite
+      ? THREE.LinearMipmapLinearFilter
+      : THREE.NearestFilter;
+    texture.generateMipmaps = isIllustrationSprite;
     texture.colorSpace = THREE.SRGBColorSpace;
     const entry = { texture, spriteDef: sprite };
     spriteTextureCache.set(cacheKey, entry);
@@ -332,13 +362,8 @@ const EntityNode = memo(function EntityNode({
     (showHpWhenFull || (!entityDef.is_npc && (hp < maxHp || engaged)));
   const hpPercent = showHp ? Math.max(0, hp! / maxHp!) : 1;
 
-  let renderWidth = 1;
-  let renderHeight = 1;
-  if (spriteDef?.width && spriteDef?.height) {
-    const maxDim = Math.max(spriteDef.width, spriteDef.height);
-    renderWidth = spriteDef.width / maxDim;
-    renderHeight = spriteDef.height / maxDim;
-  }
+  const { renderWidth, renderHeight } =
+    getCharacterSpriteRenderSize(spriteDef);
 
   return (
     <SmoothPositionGroup
@@ -1255,6 +1280,57 @@ function OccludingCellRenderer({
   );
 }
 
+type RuntimeObjectInstance = {
+  key: string;
+  position: [number, number, number];
+  rotationY: number;
+};
+
+type RuntimeInstanceGroup = {
+  object: ObjectData;
+  instances: RuntimeObjectInstance[];
+};
+
+const groupRuntimeInstances = <
+  T extends {
+    cell: CellData;
+    object: ObjectData;
+    rotationY: number;
+  },
+>(
+  items: T[],
+  getPosition: (item: T) => [number, number, number],
+) => {
+  const singles: T[] = [];
+  const grouped = new Map<string, RuntimeInstanceGroup>();
+
+  items.forEach((item, index) => {
+    if (!item.object.mesh) {
+      singles.push(item);
+      return;
+    }
+
+    const existing =
+      grouped.get(item.object.id) ||
+      (() => {
+        const next = { object: item.object, instances: [] };
+        grouped.set(item.object.id, next);
+        return next;
+      })();
+
+    existing.instances.push({
+      key: `cell_${item.object.id}_${item.cell.x}_${item.cell.y || 0}_${item.cell.z}_${index}`,
+      position: getPosition(item),
+      rotationY: item.rotationY,
+    });
+  });
+
+  return {
+    singles,
+    groups: Array.from(grouped.values()),
+  };
+};
+
 function CellVisualLayers({
   cells,
   objectById,
@@ -1390,6 +1466,38 @@ function CellVisualLayers({
     };
   }, [enableOcclusion, cells, objectById, wallRotationByCell]);
 
+  const staticModelInstances = useMemo(
+    () =>
+      groupRuntimeInstances(modelCells, ({ cell }) => [
+        cell.x,
+        cell.y || 0,
+        cell.z,
+      ]),
+    [modelCells],
+  );
+
+  const occludableModelInstances = useMemo(() => {
+    const visible: typeof occludableModelCells = [];
+    const faded: typeof occludableModelCells = [];
+
+    occludableModelCells.forEach((item) => {
+      if (occludedCellKeys.has(getCellCoordKey(item.cell.x, item.cell.z))) {
+        faded.push(item);
+      } else {
+        visible.push(item);
+      }
+    });
+
+    return {
+      visible: groupRuntimeInstances(visible, ({ cell }) => [
+        cell.x,
+        cell.y || 0,
+        cell.z,
+      ]),
+      faded,
+    };
+  }, [occludableModelCells, occludedCellKeys]);
+
   return (
     <>
       {groups.map((group) => (
@@ -1402,7 +1510,14 @@ function CellVisualLayers({
           hiddenCellKeys={occludedCellKeys}
         />
       ))}
-      {modelCells.map(({ cell, object, rotationY }, index) => (
+      {staticModelInstances.groups.map((group) => (
+        <RuntimeObjectInstances
+          key={`cell_instances_${group.object.id}`}
+          object={group.object}
+          instances={group.instances}
+        />
+      ))}
+      {staticModelInstances.singles.map(({ cell, object, rotationY }, index) => (
         <group
           key={`model_cell_${cell.x}_${cell.y || 0}_${cell.z}_${index}`}
           position={[cell.x, cell.y || 0, cell.z]}
@@ -1411,20 +1526,33 @@ function CellVisualLayers({
           <ObjectRuntimeModelRenderer object={object} />
         </group>
       ))}
-      {occludableModelCells.map(({ cell, object, rotationY }, index) => {
-        const cellKey = getCellCoordKey(cell.x, cell.z);
-        return (
+      {occludableModelInstances.visible.groups.map((group) => (
+        <RuntimeObjectInstances
+          key={`occ_cell_instances_${group.object.id}`}
+          object={group.object}
+          instances={group.instances}
+        />
+      ))}
+      {occludableModelInstances.visible.singles.map(
+        ({ cell, object, rotationY }, index) => (
           <OccludingCellRenderer
-            key={`occ_model_cell_${cell.x}_${cell.y || 0}_${cell.z}_${index}`}
+            key={`occ_model_visible_cell_${cell.x}_${cell.y || 0}_${cell.z}_${index}`}
             cell={cell}
             object={object}
             rotationY={rotationY}
-            opacity={
-              occludedCellKeys.has(cellKey) ? OCCLUSION_FADE_OPACITY : 1
-            }
+            opacity={1}
           />
-        );
-      })}
+        ),
+      )}
+      {occludableModelInstances.faded.map(({ cell, object, rotationY }, index) => (
+        <OccludingCellRenderer
+          key={`occ_model_faded_cell_${cell.x}_${cell.y || 0}_${cell.z}_${index}`}
+          cell={cell}
+          object={object}
+          rotationY={rotationY}
+          opacity={OCCLUSION_FADE_OPACITY}
+        />
+      ))}
       {occludableFastCells.map(({ cell, object, rotationY }, index) =>
         occludedCellKeys.has(getCellCoordKey(cell.x, cell.z)) ? (
         <OccludingCellRenderer
@@ -1584,12 +1712,6 @@ function CellHighlights({
     </>
   );
 }
-
-type RuntimeObjectInstance = {
-  key: string;
-  position: [number, number, number];
-  rotationY: number;
-};
 
 function InstancedRuntimeGeometryGroup({
   object,
@@ -2286,13 +2408,8 @@ export const GameRenderer = memo(function GameRenderer({
 
           const pY = baseHeight + surfaceOffset;
 
-          let renderWidth = 1;
-          let renderHeight = 1;
-          if (playerSpriteDef?.width && playerSpriteDef?.height) {
-            const maxDim = Math.max(playerSpriteDef.width, playerSpriteDef.height);
-            renderWidth = playerSpriteDef.width / maxDim;
-            renderHeight = playerSpriteDef.height / maxDim;
-          }
+          const { renderWidth, renderHeight } =
+            getCharacterSpriteRenderSize(playerSpriteDef);
 
           return (
             <SmoothPositionGroup

@@ -72,9 +72,155 @@ const PLAYER_STEP_READY_DISTANCE = 0.18;
 const MOVEMENT_REPEAT_START_MS = 105;
 const MOVEMENT_REPEAT_INTERVAL_MS = 105;
 const PLAY_RENDER_RADIUS = 20;
+const PLAY_DPR_MIN = 0.75;
+const PLAY_DPR_MAX = 1.0;
+const PLAY_DPR_DROP = 0.08;
+const PLAY_DPR_RAISE = 0.04;
 const NPC_SIMULATION_RADIUS = 16;
 const NPC_SCHEDULE_PATH_LIMIT = 96;
 const TWO_PI = Math.PI * 2;
+
+type DialoguePortraitConfig = {
+  id: string;
+  src: string;
+  alt: string;
+  side: "left" | "right";
+  active: boolean;
+  flipX?: boolean;
+};
+
+const PLAYER_PORTRAIT = {
+  id: "player",
+  src: "/portraits/player-pilgrim.png",
+  alt: "Player Pilgrim",
+  flipX: true,
+};
+
+const SPEAKER_PORTRAITS: Record<string, Omit<DialoguePortraitConfig, "side" | "active">> = {
+  "high clerk": {
+    id: "high-clerk",
+    src: "/portraits/npcs/high-clerk.png",
+    alt: "High Clerk",
+  },
+  "brother aldric": {
+    id: "aldric",
+    src: "/portraits/brother-aldric.png",
+    alt: "Brother Aldric",
+  },
+  aldric: {
+    id: "aldric",
+    src: "/portraits/brother-aldric.png",
+    alt: "Brother Aldric",
+  },
+  "acolyte nessa": {
+    id: "nessa",
+    src: "/portraits/acolyte-nessa.png",
+    alt: "Acolyte Nessa",
+  },
+  nessa: {
+    id: "nessa",
+    src: "/portraits/acolyte-nessa.png",
+    alt: "Acolyte Nessa",
+  },
+  "warden sefa": {
+    id: "warden-sefa",
+    src: "/portraits/npcs/warden-sefa.png",
+    alt: "Warden Sefa",
+  },
+  "cordon guard bren": {
+    id: "cordon-guard-bren",
+    src: "/portraits/npcs/cordon-guard-bren.png",
+    alt: "Cordon Guard Bren",
+  },
+  "gate guard holt": {
+    id: "gate-guard-holt",
+    src: "/portraits/npcs/gate-guard-holt.png",
+    alt: "Gate Guard Holt",
+  },
+  "father imre": {
+    id: "father-imre",
+    src: "/portraits/npcs/father-imre.png",
+    alt: "Father Imre",
+  },
+  maro: {
+    id: "maro-counted-cup",
+    src: "/portraits/npcs/maro-counted-cup.png",
+    alt: "Maro of the Counted Cup",
+  },
+  "maro of the counted cup": {
+    id: "maro-counted-cup",
+    src: "/portraits/npcs/maro-counted-cup.png",
+    alt: "Maro of the Counted Cup",
+  },
+  sela: {
+    id: "sela",
+    src: "/portraits/npcs/sela.png",
+    alt: "Sela, the Widow's Cousin",
+  },
+  "sela, the widow's cousin": {
+    id: "sela",
+    src: "/portraits/npcs/sela.png",
+    alt: "Sela, the Widow's Cousin",
+  },
+  petra: {
+    id: "petra-stonecutter",
+    src: "/portraits/npcs/petra-stonecutter.png",
+    alt: "Petra the Stonecutter",
+  },
+  "petra the stonecutter": {
+    id: "petra-stonecutter",
+    src: "/portraits/npcs/petra-stonecutter.png",
+    alt: "Petra the Stonecutter",
+  },
+  liss: {
+    id: "liss",
+    src: "/portraits/npcs/liss.png",
+    alt: "Liss",
+  },
+  cosmas: {
+    id: "cosmas-pilgrim",
+    src: "/portraits/npcs/cosmas-pilgrim.png",
+    alt: "Cosmas the Pilgrim",
+  },
+  "cosmas the pilgrim": {
+    id: "cosmas-pilgrim",
+    src: "/portraits/npcs/cosmas-pilgrim.png",
+    alt: "Cosmas the Pilgrim",
+  },
+  riverman: {
+    id: "riverman",
+    src: "/portraits/npcs/riverman.png",
+    alt: "The Riverman",
+  },
+  "the riverman": {
+    id: "riverman",
+    src: "/portraits/npcs/riverman.png",
+    alt: "The Riverman",
+  },
+  "provisioner dimos": {
+    id: "provisioner-dimos",
+    src: "/portraits/npcs/provisioner-dimos.png",
+    alt: "Provisioner Dimos",
+  },
+  cyberghost: {
+    id: "cyberghost",
+    src: "/portraits/npcs/cyberghost.png",
+    alt: "Cyberghost",
+  },
+  "wayside candle": {
+    id: "wayside-candle",
+    src: "/portraits/npcs/wayside-candle.png",
+    alt: "Wayside Candle",
+  },
+};
+
+const NON_PERSON_DIALOGUE_SPEAKERS = new Set([
+  "scene",
+  "system",
+  "notice",
+  "stele",
+  "wayside candle",
+]);
 
 const playCellKey = (x: number, z: number) => `${x}:${z}`;
 const pathCellKey = (x: number, z: number) => `${x},${z}`;
@@ -514,7 +660,70 @@ function BlackStarLightRig({ playerPos }: { playerPos: [number, number] }) {
   );
 }
 
-function FramePerfProbe({ enabled }: { enabled: boolean }) {
+function AdaptiveQualityProbe({
+  dpr,
+  setDpr,
+}: {
+  dpr: number;
+  setDpr: React.Dispatch<React.SetStateAction<number>>;
+}) {
+  const samplesRef = useRef<number[]>([]);
+  const lastFrameMsRef = useRef<number | null>(null);
+  const lastCheckMsRef = useRef(0);
+  const stableChecksRef = useRef(0);
+
+  useFrame((state) => {
+    const now = state.clock.elapsedTime * 1000;
+    const lastFrameMs = lastFrameMsRef.current;
+    if (lastFrameMs !== null) {
+      const frameMs = now - lastFrameMs;
+      if (frameMs > 0 && frameMs < 1000) samplesRef.current.push(frameMs);
+    }
+    lastFrameMsRef.current = now;
+
+    if (now - lastCheckMsRef.current < 1500 || samplesRef.current.length < 12) {
+      return;
+    }
+
+    const samples = samplesRef.current;
+    const avg = samples.reduce((sum, frameMs) => sum + frameMs, 0) / samples.length;
+    const sorted = [...samples].sort((a, b) => a - b);
+    const p95 = sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * 0.95))];
+    const max = sorted[sorted.length - 1];
+    const tooSlow = avg > 20.5 || p95 > 24 || max > 95;
+    const comfortablyStable = avg < 18.7 && p95 < 20 && max < 48;
+
+    if (tooSlow && dpr > PLAY_DPR_MIN) {
+      stableChecksRef.current = 0;
+      setDpr((current) =>
+        Math.max(PLAY_DPR_MIN, Number((current - PLAY_DPR_DROP).toFixed(2))),
+      );
+    } else if (comfortablyStable && dpr < PLAY_DPR_MAX) {
+      stableChecksRef.current += 1;
+      if (stableChecksRef.current >= 4) {
+        stableChecksRef.current = 0;
+        setDpr((current) =>
+          Math.min(PLAY_DPR_MAX, Number((current + PLAY_DPR_RAISE).toFixed(2))),
+        );
+      }
+    } else {
+      stableChecksRef.current = 0;
+    }
+
+    samplesRef.current = [];
+    lastCheckMsRef.current = now;
+  });
+
+  return null;
+}
+
+function FramePerfProbe({
+  enabled,
+  dpr,
+}: {
+  enabled: boolean;
+  dpr: number;
+}) {
   const samplesRef = useRef<number[]>([]);
   const lastFrameMsRef = useRef<number | null>(null);
   const lastEmitMsRef = useRef(0);
@@ -540,9 +749,10 @@ function FramePerfProbe({ enabled }: { enabled: boolean }) {
     const p95 = sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * 0.95))];
     const max = sorted[sorted.length - 1];
     const fps = avg > 0 ? 1000 / avg : 0;
+    const displayDpr = Number.isFinite(dpr) ? dpr : PLAY_DPR_MAX;
     const hud = document.getElementById("play-perf-hud");
     if (hud) {
-      hud.textContent = `FPS ${fps.toFixed(0)} | avg ${avg.toFixed(1)}ms | p95 ${p95.toFixed(1)}ms | max ${max.toFixed(1)}ms`;
+      hud.textContent = `FPS ${fps.toFixed(0)} | avg ${avg.toFixed(1)}ms | p95 ${p95.toFixed(1)}ms | max ${max.toFixed(1)}ms | DPR ${displayDpr.toFixed(2)}`;
     }
 
     samplesRef.current = [];
@@ -550,6 +760,80 @@ function FramePerfProbe({ enabled }: { enabled: boolean }) {
   });
 
   return null;
+}
+
+const normalizeDialogueSpeaker = (speaker: string) =>
+  speaker.trim().toLowerCase();
+
+const getDialoguePortraits = (speaker: string): DialoguePortraitConfig[] => {
+  const normalized = normalizeDialogueSpeaker(speaker);
+  const speakerPortrait = SPEAKER_PORTRAITS[normalized];
+
+  if (speakerPortrait) {
+    return [
+      { ...speakerPortrait, side: "left", active: true },
+      { ...PLAYER_PORTRAIT, side: "right", active: false },
+    ];
+  }
+
+  if (
+    !normalized ||
+    NON_PERSON_DIALOGUE_SPEAKERS.has(normalized)
+  ) {
+    return [];
+  }
+
+  if (
+    normalized === "player" ||
+    normalized === "you" ||
+    normalized === "intercessor" ||
+    normalized === "player pilgrim"
+  ) {
+    return [{ ...PLAYER_PORTRAIT, side: "right", active: true }];
+  }
+
+  return [{ ...PLAYER_PORTRAIT, side: "left", active: false, flipX: false }];
+};
+
+function DialoguePortraitStage({ speaker }: { speaker: string }) {
+  const portraits = getDialoguePortraits(speaker);
+  if (portraits.length === 0) return null;
+
+  return (
+    <div className="pointer-events-none absolute inset-x-0 -top-[18rem] sm:-top-[24rem] md:-top-[28rem] bottom-0 z-10 overflow-hidden">
+      {portraits.map((portrait) => {
+        const leftSide = portrait.side === "left";
+        return (
+          <div
+            key={`${portrait.id}_${portrait.side}`}
+            className={`absolute bottom-[-2.5rem] ${
+              leftSide
+                ? "left-[-0.5rem] sm:left-4"
+                : "right-[-0.5rem] sm:right-4"
+            }`}
+            style={{
+              transform: leftSide ? "translateX(-9%)" : "translateX(9%)",
+            }}
+          >
+            <img
+              src={portrait.src}
+              alt=""
+              aria-hidden="true"
+              className={`h-[24rem] sm:h-[32rem] md:h-[36rem] max-w-[56vw] sm:max-w-[42vw] object-contain object-bottom select-none drop-shadow-[0_0_26px_rgba(0,0,0,0.9)] ${
+                portrait.active ? "opacity-90" : "opacity-[0.58]"
+              }`}
+              style={{
+                transform: portrait.flipX ? "scaleX(-1)" : undefined,
+                transformOrigin: "bottom center",
+              }}
+              draggable={false}
+            />
+          </div>
+        );
+      })}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/18 to-transparent" />
+    </div>
+  );
 }
 
 const _cameraTargetVec = new THREE.Vector3();
@@ -639,6 +923,7 @@ export function PlayEngine() {
     opacity: 0,
     duration: 600,
   });
+  const [playDpr, setPlayDpr] = useState(PLAY_DPR_MAX);
   const cutsceneJumpsRef = useRef(0);
   const cameraAzimuth =
     ISO_CAMERA_BASE_AZIMUTH + cameraQuarterTurns * (Math.PI / 2);
@@ -1290,7 +1575,7 @@ export function PlayEngine() {
   // before (map music set by on_load cutscenes survives the fight).
   const ambientMusicRef = useRef<string | null>(null);
   useEffect(() => {
-    const COMBAT_TRACK = "/music/Combat-mastered.wav";
+    const COMBAT_TRACK = "/music/underworld-battle theme.ogg";
     const interval = setInterval(() => {
       if (activeCutscene) return;
 
@@ -1307,9 +1592,9 @@ export function PlayEngine() {
           playMusic(COMBAT_TRACK, { loop: true });
         }
       } else if (current === COMBAT_TRACK) {
-        playMusic(ambientMusicRef.current || "/music/Town.wav", { loop: true });
+        playMusic(ambientMusicRef.current || "/music/roll away.ogg", { loop: true });
       } else if (!current) {
-        playMusic("/music/Town.wav", { loop: true });
+        playMusic("/music/roll away.ogg", { loop: true });
       }
     }, 500);
 
@@ -1561,6 +1846,11 @@ export function PlayEngine() {
       if (action.type === "wait") {
         setTimeout(finishAction, action.duration || 1000);
       } else if (action.type === "show_dialogue") {
+        setScreenFade((current) => ({
+          ...current,
+          opacity: 0,
+          duration: Math.min(current.duration, 250),
+        }));
         const dialogue = useEngineStore
           .getState()
           .gamePackage.dialogue.find((d) => d.id === action.dialogue_id);
@@ -3300,7 +3590,7 @@ export function PlayEngine() {
             position: cameraPosition,
             fov: ISO_CAMERA_FOV,
           }}
-          dpr={[0.45, 0.65]}
+          dpr={playDpr}
           gl={{
             antialias: false,
             alpha: false,
@@ -3321,7 +3611,8 @@ export function PlayEngine() {
           <color attach="background" args={["#080A16"]} />
           <fog attach="fog" args={["#0C1020", 72, 180]} />
           <BlackStarLightRig playerPos={playerPos} />
-          <FramePerfProbe enabled={showPerfHud} />
+          <AdaptiveQualityProbe dpr={playDpr} setDpr={setPlayDpr} />
+          <FramePerfProbe enabled={showPerfHud} dpr={playDpr} />
           <GameRenderer
             map={activeMap}
             playerPos={playerPos}
@@ -4653,7 +4944,9 @@ export function PlayEngine() {
               return true;
             });
             return (
-              <div className="w-full max-w-2xl h-full flex flex-col bg-transparent relative z-20">
+              <>
+              <DialoguePortraitStage speaker={node.speaker} />
+              <div className="w-full max-w-2xl h-full flex flex-col bg-black/45 backdrop-blur-[1px] border-x border-[var(--color-sacred-gold-dark)]/40 shadow-[0_0_28px_rgba(0,0,0,0.55)] relative z-20">
                 <div className="px-4 py-2 sm:px-6 sm:py-4 flex flex-col items-center justify-center border-b border-[var(--color-sacred-gold-dark)] relative">
                   <h3 className="font-[family-name:var(--font-display)] text-base sm:text-xl font-bold text-[var(--color-sacred-gold)] uppercase tracking-[0.2em] text-sacred-glow">
                     {node.speaker}
@@ -4716,6 +5009,7 @@ export function PlayEngine() {
                   )}
                 </div>
               </div>
+              </>
             );
           })()
         ) : (
@@ -4733,23 +5027,37 @@ export function PlayMode() {
 
   useEffect(() => {
     if (state === "title") {
-      playMusic("/music/Title.wav");
+      playMusic("/music/titlescreen.ogg");
     }
   }, [state]);
 
   if (state === "title") {
     return (
-      <div className="flex flex-col items-center justify-center h-full bg-neutral-950 text-white p-8 relative overflow-hidden">
-        <div className="absolute inset-0 opacity-20 pointer-events-none bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-indigo-900 via-neutral-950 to-neutral-950 animate-pulse" />
-        
-        <h1 className="text-6xl font-black mb-4 tracking-tighter text-transparent bg-clip-text bg-gradient-to-br from-indigo-400 to-purple-600 drop-shadow-sm z-10">
-          {gamePackage.metadata.title || "CRPG Engine"}
-        </h1>
-        <p className="text-neutral-500 mb-16 font-medium tracking-widest uppercase text-sm z-10">Version {gamePackage.metadata.version}</p>
-        
-        <div className="flex flex-col gap-4 w-72 z-10">
+      <div className="h-full bg-neutral-950 text-white relative overflow-hidden">
+        <img
+          src="/title/familiar-dark-title.webp"
+          alt=""
+          aria-hidden="true"
+          className="absolute inset-0 h-full w-full object-cover object-center"
+          draggable={false}
+        />
+        <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(5,5,7,0.92)_0%,rgba(7,8,12,0.66)_34%,rgba(7,8,12,0.18)_68%,rgba(5,5,7,0.44)_100%)]" />
+        <div className="absolute inset-0 bg-[linear-gradient(0deg,rgba(0,0,0,0.82)_0%,rgba(0,0,0,0.18)_34%,rgba(0,0,0,0.3)_100%)]" />
+
+        <div className="relative z-10 flex h-full w-full flex-col justify-end px-6 pb-8 pt-8 sm:px-12 sm:pb-12 lg:px-16">
+          <div className="max-w-[46rem]">
+            <h1 className="font-[family-name:var(--font-display)] text-5xl font-black uppercase tracking-[0.18em] text-[var(--color-sacred-ink)] drop-shadow-[0_5px_20px_rgba(0,0,0,0.95)] sm:text-7xl lg:text-8xl">
+              {gamePackage.metadata.title || "CRPG Engine"}
+            </h1>
+            <div className="mt-4 h-px w-44 bg-gradient-to-r from-[var(--color-sacred-gold)] via-[var(--color-sacred-gold-dark)] to-transparent" />
+            <p className="mt-4 font-[family-name:var(--font-display)] text-xs font-bold uppercase tracking-[0.34em] text-[var(--color-sacred-gold)] drop-shadow-[0_2px_10px_rgba(0,0,0,0.9)]">
+              Version {gamePackage.metadata.version}
+            </p>
+          </div>
+
+          <div className="mt-8 flex w-full max-w-sm flex-col gap-3 sm:max-w-none sm:flex-row">
           <button
-            className="px-8 py-5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 rounded-xl font-bold text-lg shadow-lg shadow-indigo-900/20 transition-all active:scale-95 text-white"
+            className="border border-[var(--color-sacred-gold-dark)] bg-black/68 px-7 py-4 text-left font-[family-name:var(--font-display)] text-base font-bold uppercase tracking-[0.22em] text-[var(--color-sacred-ink)] shadow-[0_0_18px_rgba(0,0,0,0.75)] transition-all hover:border-[var(--color-sacred-gold)] hover:bg-black/82 hover:text-[var(--color-sacred-gold)] active:scale-[0.98] sm:min-w-52 sm:text-center"
             onClick={() => {
               usePlayStore.getState().resetRun();
               usePlayStore.setState({ saveData: null });
@@ -4759,10 +5067,10 @@ export function PlayMode() {
             New Game
           </button>
           <button
-            className={`px-8 py-5 rounded-xl font-bold text-lg transition-all ${
+            className={`border px-7 py-4 text-left font-[family-name:var(--font-display)] text-base font-bold uppercase tracking-[0.22em] shadow-[0_0_18px_rgba(0,0,0,0.65)] transition-all sm:min-w-52 sm:text-center ${
               hasSave
-                ? "bg-neutral-800 hover:bg-neutral-700 active:scale-95 text-neutral-200 border border-neutral-700 shadow-xl"
-                : "bg-neutral-900/50 text-neutral-700 cursor-not-allowed border border-neutral-800/50"
+                ? "border-[var(--color-sacred-gold-dark)] bg-black/54 text-[var(--color-sacred-ink-dim)] hover:border-[var(--color-sacred-gold)] hover:bg-black/78 hover:text-[var(--color-sacred-gold)] active:scale-[0.98]"
+                : "cursor-not-allowed border-neutral-800/70 bg-black/34 text-neutral-600"
             }`}
             onClick={() => {
               if (hasSave) setState("playing");
@@ -4771,6 +5079,7 @@ export function PlayMode() {
           >
             Continue Game
           </button>
+          </div>
         </div>
       </div>
     );
