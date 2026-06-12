@@ -103,6 +103,7 @@ export function MapEditor() {
   const [showAIModal, setShowAIModal] = useState(false);
   const [editLayerY, setEditLayerY] = useState(0);
   const [selection, setSelection] = useState<InspectorSelection>(null);
+  const [inspectorOpen, setInspectorOpen] = useState(false);
 
   useEffect(() => {
     if (
@@ -600,6 +601,15 @@ export function MapEditor() {
           >
             <Plus className="w-4 h-4" />
           </button>
+          {/* Inspector toggle — mobile only */}
+          <button
+            onClick={() => setInspectorOpen((v) => !v)}
+            className={`sm:hidden p-2 rounded-md transition-colors flex items-center gap-1.5 px-3 text-sm font-medium ${inspectorOpen ? "bg-neutral-700 text-white" : "text-neutral-400 hover:bg-neutral-800 hover:text-white"}`}
+            title="Toggle Inspector"
+          >
+            <GripHorizontal className="w-4 h-4" />
+            <span>Inspector</span>
+          </button>
           <button
             onClick={handleTestPlay}
             className="flex items-center gap-2 bg-green-600/20 text-green-400 hover:bg-green-600/30 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
@@ -646,6 +656,8 @@ export function MapEditor() {
           selection={selection}
           setSelection={setSelection}
           updateMap={(updates) => updateMap(activeMap.id, updates)}
+          isOpen={inspectorOpen}
+          onClose={() => setInspectorOpen(false)}
         />
       </div>
 
@@ -987,12 +999,16 @@ function MapPlacementInspector({
   selection,
   setSelection,
   updateMap,
+  isOpen,
+  onClose,
 }: {
   map: MapData;
   gamePackage: any;
   selection: InspectorSelection;
   setSelection: (selection: InspectorSelection) => void;
   updateMap: (updates: Partial<MapData>) => void;
+  isOpen?: boolean;
+  onClose?: () => void;
 }) {
   const defaultCell = (map.spawns[0]?.cell || [0, 0]) as [number, number];
   const targetMap = gamePackage.maps.find((candidate: MapData) => candidate.id !== map.id) || gamePackage.maps[0] || map;
@@ -1098,13 +1114,36 @@ function MapPlacementInspector({
           : "container_placements"] || [])[selection.index] : null;
 
   return (
-    <aside className="absolute right-0 top-0 bottom-0 w-80 max-w-[88vw] border-l border-neutral-800 bg-neutral-950/95 backdrop-blur overflow-y-auto shadow-2xl">
+    <>
+      {/* Mobile backdrop */}
+      {isOpen && (
+        <div
+          className="sm:hidden absolute inset-0 bg-black/50 z-20"
+          onClick={onClose}
+        />
+      )}
+      <aside className={`
+        sm:absolute sm:right-0 sm:top-0 sm:bottom-0 sm:w-80 sm:border-l sm:border-neutral-800 sm:bg-neutral-950/95 sm:backdrop-blur sm:overflow-y-auto sm:shadow-2xl sm:translate-y-0
+        fixed bottom-0 left-0 right-0 max-h-[65vh] border-t border-neutral-800 bg-neutral-950 overflow-y-auto shadow-2xl z-30 transition-transform duration-300
+        ${isOpen ? 'translate-y-0' : 'translate-y-full sm:translate-y-0'}
+      `}>
       <div className="sticky top-0 z-10 border-b border-neutral-800 bg-neutral-950 p-3">
+        {/* Mobile drag handle */}
+        <div className="sm:hidden flex justify-center mb-2">
+          <div className="w-10 h-1 rounded-full bg-neutral-600" />
+        </div>
         <div className="flex items-center justify-between gap-2">
           <div>
             <h3 className="text-sm font-semibold text-neutral-100">Map Inspector</h3>
             <p className="text-[11px] text-neutral-500">{map.display_name || map.id}</p>
           </div>
+          {/* Close button — mobile only */}
+          <button
+            className="sm:hidden p-1.5 text-neutral-400 hover:text-white hover:bg-neutral-800 rounded-md transition-colors"
+            onClick={onClose}
+          >
+            ✕
+          </button>
         </div>
         <div className="mt-3 grid grid-cols-2 gap-2">
           <MiniButton onClick={addEntity} disabled={gamePackage.entities.length === 0}>Entity</MiniButton>
@@ -1217,7 +1256,8 @@ function MapPlacementInspector({
           )}
         </div>
       </div>
-    </aside>
+      </aside>
+    </>
   );
 }
 
