@@ -1,0 +1,45 @@
+@import "tailwindcss";
+
+/* Player-hurt feedback: a red vignette that flashes in and fades out.
+   Re-triggered by keying the overlay div on the hit timestamp. */
+@keyframes hurt-vignette {
+  0% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@theme {
+  --font-serif: "EB Garamond", serif;
+  --font-display: "Cinzel", serif;
+  --color-sacred-gold: #c7a951;
+  --color-sacred-gold-dark: #8c7128;
+  --color-sacred-stone: #1a1c23;
+  --color-sacred-stone-light: #2d303a;
+  --color-sacred-ink: #f2e3c6;
+  --color-sacred-ink-dim: #c5b69c;
+  --color-sacred-blood: #8b1c1c;
+}
+
+@layer utilities {
+  .bg-sacred-parchment {
+    background-image: radial-gradient(circle at center, #1b1613 0%, #0d0a08 100%);
+    box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.8);
+  }
+  .bg-sacred-stone {
+    background-image: radial-gradient(circle at top left, var(--color-sacred-stone-light) 0%, var(--color-sacred-stone) 100%);
+    box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.9);
+  }
+  .border-sacred-gold {
+    border-color: var(--color-sacred-gold-dark);
+    box-shadow: 0 0 0 1px #000, inset 0 0 0 1px var(--color-sacred-gold), inset 0 0 15px rgba(0, 0, 0, 0.8);
+  }
+  .text-sacred-glow {
+    text-shadow: 0 0 8px rgba(199, 169, 81, 0.4);
+  }
+  .text-blood-glow {
+    text-shadow: 0 0 10px rgba(139, 28, 28, 0.6);
+  }
+}

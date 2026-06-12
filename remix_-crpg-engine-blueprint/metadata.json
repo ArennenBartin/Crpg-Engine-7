@@ -1,0 +1,8 @@
+{
+  "name": "Remix: CRPG Engine Blueprint",
+  "description": "A browser-first CRPG engine/dev kit for authoring maps, dialogues, and playing exportable prototypes.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

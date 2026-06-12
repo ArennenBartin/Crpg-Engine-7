@@ -1,0 +1,2359 @@
+import React, {
+  useMemo,
+  useEffect,
+  useState,
+  useRef,
+  memo,
+  useLayoutEffect,
+  startTransition,
+} from "react";
+import {
+  CellData,
+  MapData,
+  ObjectData,
+  ObjectPlacementData,
+} from "../schema/game";
+import { Billboard } from "@react-three/drei";
+import * as THREE from "three";
+import { useEngineStore } from "../store/engineStore";
+import { useFrame, useThree } from "@react-three/fiber";
+import {
+  createRuntimeMeshGeometryGroups,
+  ObjectModelRenderer,
+  ObjectRuntimeModelRenderer,
+} from "./ObjectRenderers";
+import { getObjectVerticalExtents } from "../utils/meshModel";
+import { entityStateKey } from "../utils/entityState";
+import {
+  useFxStore,
+  DamagePopup,
+  POPUP_LIFETIME_MS,
+  HIT_FLASH_MS,
+} from "../store/fxStore";
+import { THREAT_RADIUS } from "../utils/combat";
+import {
+  getObjectMaterialTexture,
+  resolveObjectMaterial,
+} from "../utils/objectMaterials";
+
+const spriteTextureCache = new Map<
+  string,
+  { texture: THREE.Texture | null; spriteDef: any }
+>();
+
+const getSpriteTextureEntry = (
+  spriteId: string | undefined,
+  gamePackage: any,
+) => {
+  if (!spriteId) return { texture: null, spriteDef: null };
+
+  const sprite = gamePackage.sprite_library.find(
+    (s: any) => s.id === spriteId,
+  );
+  if (!sprite) return { texture: null, spriteDef: null };
+
+  const cacheKey = [
+    sprite.id,
+    sprite.data_url ? `url:${sprite.data_url.length}` : "pixels",
+    sprite.width || 0,
+    sprite.height || 0,
+    sprite.pixels?.length || 0,
+  ].join("|");
+  const cached = spriteTextureCache.get(cacheKey);
+  if (cached) return cached;
+
+  if (sprite.data_url) {
+    const texture = new THREE.TextureLoader().load(sprite.data_url);
+    texture.magFilter = THREE.NearestFilter;
+    texture.minFilter = THREE.NearestFilter;
+    texture.colorSpace = THREE.SRGBColorSpace;
+    const entry = { texture, spriteDef: sprite };
+    spriteTextureCache.set(cacheKey, entry);
+    return entry;
+  }
+
+  if (!sprite.pixels || sprite.pixels.length === 0) {
+    const entry = { texture: null, spriteDef: sprite };
+    spriteTextureCache.set(cacheKey, entry);
+    return entry;
+  }
+
+  const canvas = document.createElement("canvas");
+  canvas.width = sprite.width || 128;
+  canvas.height = sprite.height || 128;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) {
+    const entry = { texture: null, spriteDef: sprite };
+    spriteTextureCache.set(cacheKey, entry);
+    return entry;
+  }
+
+  ctx.imageSmoothingEnabled = false;
+  const pixels = sprite.pixels || [];
+  for (let y = 0; y < canvas.height; y++) {
+    for (let x = 0; x < canvas.width; x++) {
+      const color = pixels[y * canvas.width + x];
+      if (color && color !== "transparent") {
+        ctx.fillStyle = color;
+        ctx.fillRect(x, y, 1, 1);
+      }
+    }
+  }
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.magFilter = THREE.NearestFilter;
+  texture.minFilter = THREE.NearestFilter;
+  texture.colorSpace = THREE.SRGBColorSpace;
+  const entry = { texture, spriteDef: sprite };
+  spriteTextureCache.set(cacheKey, entry);
+  return entry;
+};
+
+function useSpriteTexture(spriteId: string | undefined, gamePackage: any) {
+  return useMemo(
+    () => getSpriteTextureEntry(spriteId, gamePackage),
+    [spriteId, gamePackage.sprite_library],
+  );
+}
+
+interface GameRendererProps {
+  glide?: boolean;
+  focusOverride?: [number, number] | null;
+  map: MapData;
+  playerPos?: [number, number];
+  playerFacing?: [number, number];
+  playerSpriteId?: string;
+  // Ground items currently visible (authored minus taken, plus dropped).
+  worldItems?: { id: string; cell: [number, number]; icon: string }[];
+  // Extra object placements rendered with the map's own (e.g. containers).
+  extraPlacements?: ObjectPlacementData[];
+  onCellClick?: (x: number, z: number) => void;
+  onCellHover?: (x: number, z: number) => void;
+  onPointerOut?: () => void;
+  targetPattern?: { x: number; z: number }[];
+  // Cells inside the aimed skill's range — drawn as a faint field beneath
+  // the brighter targetPattern highlight.
+  rangeCells?: { x: number; z: number }[];
+  hoveredCell?: [number, number] | null;
+  editLayerY?: number;
+  entityStates?: Record<string, any>;
+  partyFollowers?: { entity_id: string; cell: [number, number] }[];
+  partyMemberIds?: string[];
+  // Turn-queue combat: true while the queue runs; activeTurnKey is the actor
+  // whose turn it is ("player", a party entity id, or an enemy state key).
+  inCombat?: boolean;
+  activeTurnKey?: string | null;
+  showGrid?: boolean;
+  enableOcclusion?: boolean;
+  occlusionAzimuth?: number;
+  renderCenter?: [number, number];
+  renderRadius?: number;
+}
+
+const TILE_SLIDE_SPEED = 8.5;
+const TILE_SLIDE_SNAP_DISTANCE = 10;
+const TILE_SLIDE_EPSILON = 0.000001;
+const RENDER_CHUNK_SIZE = 12;
+const RENDER_WINDOW_SHIFT_DISTANCE = 8;
+const OCCLUSION_SAMPLE_STEP = 3;
+const DEFAULT_RENDER_RADIUS = 28;
+
+function SmoothPositionGroup({
+  position,
+  snapDistance = TILE_SLIDE_SNAP_DISTANCE,
+  onPositionUpdate,
+  children,
+}: {
+  position: [number, number, number];
+  snapDistance?: number;
+  onPositionUpdate?: (position: THREE.Vector3) => void;
+  children: React.ReactNode;
+}) {
+  const groupRef = useRef<THREE.Group>(null);
+  const currentRef = useRef(new THREE.Vector3(...position));
+  const targetRef = useRef(new THREE.Vector3(...position));
+  const nextTargetRef = useRef(new THREE.Vector3(...position));
+  const stepRef = useRef(new THREE.Vector3());
+  const hasPositionRef = useRef(false);
+  const onPositionUpdateRef = useRef(onPositionUpdate);
+
+  useEffect(() => {
+    onPositionUpdateRef.current = onPositionUpdate;
+  }, [onPositionUpdate]);
+
+  useLayoutEffect(() => {
+    const nextTarget = nextTargetRef.current.set(
+      position[0],
+      position[1],
+      position[2],
+    );
+    if (!groupRef.current) return;
+
+    if (
+      hasPositionRef.current &&
+      targetRef.current.distanceToSquared(nextTarget) < TILE_SLIDE_EPSILON
+    ) {
+      return;
+    }
+
+    if (
+      !hasPositionRef.current ||
+      currentRef.current.distanceTo(nextTarget) > snapDistance
+    ) {
+      currentRef.current.copy(nextTarget);
+      targetRef.current.copy(nextTarget);
+      groupRef.current.position.copy(nextTarget);
+      hasPositionRef.current = true;
+      onPositionUpdateRef.current?.(currentRef.current);
+      return;
+    }
+
+    targetRef.current.copy(nextTarget);
+  }, [
+    position[0],
+    position[1],
+    position[2],
+    snapDistance,
+  ]);
+
+  useFrame((_, frameDelta) => {
+    if (!groupRef.current) return;
+
+    const current = currentRef.current;
+    const target = targetRef.current;
+    const distance = current.distanceTo(target);
+
+    if (distance > snapDistance) {
+      current.copy(target);
+    } else if (distance * distance >= TILE_SLIDE_EPSILON) {
+      const maxStep = TILE_SLIDE_SPEED * Math.min(frameDelta, 0.05);
+
+      if (distance <= maxStep) {
+        current.copy(target);
+      } else {
+        current.add(
+          stepRef.current
+            .subVectors(target, current)
+            .multiplyScalar(maxStep / distance),
+        );
+      }
+    } else {
+      return;
+    }
+
+    groupRef.current.position.copy(current);
+    onPositionUpdateRef.current?.(current);
+  });
+
+  return <group ref={groupRef}>{children}</group>;
+}
+
+function HitFlashOverlay({
+  born,
+  width,
+  height,
+}: {
+  born: number;
+  width: number;
+  height: number;
+}) {
+  const matRef = useRef<THREE.MeshBasicMaterial>(null);
+
+  useFrame(() => {
+    const mat = matRef.current;
+    if (!mat) return;
+    const age = performance.now() - born;
+    mat.opacity = age < HIT_FLASH_MS ? 0.65 * (1 - age / HIT_FLASH_MS) : 0;
+  });
+
+  return (
+    <Billboard position={[0, height * 0.5, 0]}>
+      <mesh raycast={() => null}>
+        <planeGeometry args={[width, height]} />
+        <meshBasicMaterial
+          ref={matRef}
+          color="#ff4040"
+          transparent
+          opacity={0.65}
+          depthWrite={false}
+          blending={THREE.AdditiveBlending}
+        />
+      </mesh>
+    </Billboard>
+  );
+}
+
+const EntityNode = memo(function EntityNode({
+  placement,
+  entityDef,
+  yOffset,
+  gamePackage,
+  hp,
+  maxHp,
+  fxKey,
+  engaged,
+  isActive,
+  showHpWhenFull,
+}: {
+  placement: any;
+  entityDef: any;
+  yOffset: number;
+  gamePackage: any;
+  hp?: number;
+  maxHp?: number;
+  // Key into the fx store's hit flashes (entity state key).
+  fxKey?: string;
+  // Hostile within threat range of the player — keeps its HP bar visible
+  // even at full health so a fight reads at a glance.
+  engaged?: boolean;
+  // This entity owns the current combat turn (bright cyan ring).
+  isActive?: boolean;
+  // Force the HP bar even at full health (party members during combat).
+  showHpWhenFull?: boolean;
+}) {
+  const { texture, spriteDef } = useSpriteTexture(entityDef.sprite_id, gamePackage);
+  const hitFlashAt = useFxStore((state) =>
+    fxKey ? state.hitFlashes[fxKey] : undefined,
+  );
+  const [visibleFlashAt, setVisibleFlashAt] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!hitFlashAt) return;
+    setVisibleFlashAt(hitFlashAt);
+    const timeout = window.setTimeout(() => {
+      setVisibleFlashAt(null);
+    }, HIT_FLASH_MS + 40);
+    return () => window.clearTimeout(timeout);
+  }, [hitFlashAt]);
+
+  const showHp =
+    hp !== undefined &&
+    maxHp !== undefined &&
+    (showHpWhenFull || (!entityDef.is_npc && (hp < maxHp || engaged)));
+  const hpPercent = showHp ? Math.max(0, hp! / maxHp!) : 1;
+
+  let renderWidth = 1;
+  let renderHeight = 1;
+  if (spriteDef?.width && spriteDef?.height) {
+    const maxDim = Math.max(spriteDef.width, spriteDef.height);
+    renderWidth = spriteDef.width / maxDim;
+    renderHeight = spriteDef.height / maxDim;
+  }
+
+  return (
+    <SmoothPositionGroup
+      position={[placement.cell[0], yOffset, placement.cell[1]]}
+    >
+      {engaged && !isActive && (
+        <mesh position={[0, 0.015, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <ringGeometry args={[0.34, 0.44, 20]} />
+          <meshBasicMaterial color="#BF616A" transparent opacity={0.55} />
+        </mesh>
+      )}
+      {/* Active-turn ring: whoever is acting right now wears the bright ring */}
+      {isActive && (
+        <mesh position={[0, 0.02, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <ringGeometry args={[0.38, 0.52, 24]} />
+          <meshBasicMaterial color="#7DF9FF" transparent opacity={0.9} />
+        </mesh>
+      )}
+
+      {texture ? (
+        <Billboard position={[0, renderHeight * 0.5, 0]}>
+          <mesh>
+            <planeGeometry args={[renderWidth, renderHeight]} />
+            <meshBasicMaterial
+              map={texture}
+              transparent
+              alphaTest={0.5}
+              depthWrite={false}
+              fog={false}
+            />
+          </mesh>
+        </Billboard>
+      ) : (
+        <>
+          <mesh position={[0, 0.4, 0]}>
+            <boxGeometry args={[0.6, 0.8, 0.6]} />
+            <meshStandardMaterial
+              color={entityDef.is_npc ? "#A3BE8C" : "#BF616A"}
+            />
+          </mesh>
+          <mesh position={[0, 1.2, 0]}>
+            <sphereGeometry args={[0.15, 8, 8]} />
+            <meshBasicMaterial
+              color={entityDef.is_npc ? "#A3BE8C" : "#BF616A"}
+            />
+          </mesh>
+        </>
+      )}
+
+      {/* Hit flash — brief red wash over the sprite when this entity takes
+          damage. Opacity is animated per-frame from the fx store timestamp. */}
+      {fxKey && visibleFlashAt && (
+        <HitFlashOverlay
+          born={visibleFlashAt}
+          width={renderWidth * 1.05}
+          height={renderHeight * 1.05}
+        />
+      )}
+
+      {/* Health Bar */}
+      {showHp && (
+        <Billboard position={[0, renderHeight + 0.18, 0]}>
+          <mesh position={[0, 0, -0.01]}>
+            <planeGeometry args={[0.66, 0.1]} />
+            <meshBasicMaterial color="#10101a" transparent opacity={0.85} />
+          </mesh>
+          <mesh position={[-0.3 * (1 - hpPercent), 0, 0]}>
+            <planeGeometry args={[Math.max(0.001, 0.6 * hpPercent), 0.07]} />
+            <meshBasicMaterial
+              color={
+                hpPercent > 0.5
+                  ? "#4ade80"
+                  : hpPercent > 0.25
+                    ? "#facc15"
+                    : "#ef4444"
+              }
+            />
+          </mesh>
+        </Billboard>
+      )}
+    </SmoothPositionGroup>
+  );
+});
+
+// ── Floating combat text ────────────────────────────────────────────────────
+// Damage/heal numbers rendered as canvas-texture billboards that drift up and
+// fade out. Textures are cached per text+color pair (combat reuses a handful
+// of values constantly).
+
+const popupTextureCache = new Map<
+  string,
+  { texture: THREE.CanvasTexture; aspect: number }
+>();
+const getPopupTexture = (text: string, color: string) => {
+  const cacheKey = `${color}|${text}`;
+  const cached = popupTextureCache.get(cacheKey);
+  if (cached) return cached;
+
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d")!;
+  ctx.font = "bold 56px 'Arial Black', sans-serif";
+  const width = Math.ceil(ctx.measureText(text).width) + 24;
+  canvas.width = Math.max(48, width);
+  canvas.height = 80;
+  ctx.font = "bold 56px 'Arial Black', sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.lineWidth = 8;
+  ctx.strokeStyle = "rgba(0,0,0,0.9)";
+  ctx.strokeText(text, canvas.width / 2, canvas.height / 2);
+  ctx.fillStyle = color;
+  ctx.fillText(text, canvas.width / 2, canvas.height / 2);
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  const entry = { texture, aspect: canvas.width / canvas.height };
+  popupTextureCache.set(cacheKey, entry);
+  return entry;
+};
+
+function DamagePopupNode({
+  popup,
+  baseY,
+}: {
+  popup: DamagePopup;
+  baseY: number;
+}) {
+  const groupRef = useRef<THREE.Group>(null);
+  const matRef = useRef<THREE.MeshBasicMaterial>(null);
+  const { texture, aspect } = getPopupTexture(popup.text, popup.color);
+  const startY = baseY + popup.y;
+
+  useFrame(() => {
+    const t = Math.min(1, (performance.now() - popup.born) / POPUP_LIFETIME_MS);
+    if (groupRef.current) {
+      // Ease-out rise: fast pop, slow drift.
+      groupRef.current.position.y = startY + (1 - (1 - t) * (1 - t)) * 0.85;
+    }
+    if (matRef.current) {
+      matRef.current.opacity = t < 0.65 ? 1 : 1 - (t - 0.65) / 0.35;
+    }
+  });
+
+  const height = 0.46;
+  return (
+    <group ref={groupRef} position={[popup.cell[0], startY, popup.cell[1]]}>
+      <Billboard>
+        <mesh raycast={() => null} renderOrder={999}>
+          <planeGeometry args={[height * aspect, height]} />
+          <meshBasicMaterial
+            ref={matRef}
+            map={texture}
+            transparent
+            depthTest={false}
+            depthWrite={false}
+          />
+        </mesh>
+      </Billboard>
+    </group>
+  );
+}
+
+function DamagePopupLayer({
+  highestCellByCoord,
+  objectById,
+}: {
+  highestCellByCoord: Map<string, CellData>;
+  objectById: Map<string, ObjectData>;
+}) {
+  const popups = useFxStore((state) => state.popups);
+  const prunePopups = useFxStore((state) => state.prunePopups);
+  const lastPruneRef = useRef(0);
+
+  useFrame(() => {
+    if (popups.length === 0) return;
+    const now = performance.now();
+    if (now - lastPruneRef.current > 250) {
+      lastPruneRef.current = now;
+      prunePopups();
+    }
+  });
+
+  return (
+    <>
+      {popups.map((popup) => {
+        const cell =
+          highestCellByCoord.get(
+            getCellCoordKey(popup.cell[0], popup.cell[1]),
+          ) || null;
+        return (
+          <DamagePopupNode
+            key={`popup_${popup.id}`}
+            popup={popup}
+            baseY={getStandingSurfaceY(cell, objectById)}
+          />
+        );
+      })}
+    </>
+  );
+}
+
+const _playerVec = new THREE.Vector3();
+const _vec3 = new THREE.Vector3();
+
+export const playerStateRef = { px: 0, py: 0, pz: 0, ready: false };
+
+// World items render as floating icon billboards. Textures are cached per
+// icon string since most maps reuse a handful of item icons.
+const emojiTextureCache = new Map<string, THREE.CanvasTexture>();
+const getEmojiTexture = (icon: string) => {
+  const cached = emojiTextureCache.get(icon);
+  if (cached) return cached;
+
+  const canvas = document.createElement("canvas");
+  canvas.width = 64;
+  canvas.height = 64;
+  const ctx = canvas.getContext("2d");
+  if (ctx) {
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.font = "44px serif";
+    ctx.fillText(icon, 32, 36);
+  }
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  emojiTextureCache.set(icon, texture);
+  return texture;
+};
+
+function WorldItemNode({
+  cell,
+  icon,
+  sprite_id,
+  gamePackage,
+  yBase,
+}: {
+  cell: [number, number];
+  icon: string;
+  sprite_id?: string;
+  gamePackage: any;
+  yBase: number;
+}) {
+  const emojiTexture = useMemo(() => sprite_id ? null : getEmojiTexture(icon || "📦"), [icon, sprite_id]);
+  const { texture: spriteTexture, spriteDef } = useSpriteTexture(sprite_id, gamePackage);
+  const texture = sprite_id ? spriteTexture : emojiTexture;
+
+  const renderWidth = spriteDef ? (spriteDef.width / Math.max(spriteDef.width, spriteDef.height)) * 0.8 : 0.55;
+  const renderHeight = spriteDef ? (spriteDef.height / Math.max(spriteDef.width, spriteDef.height)) * 0.8 : 0.55;
+
+  const groupRef = useRef<THREE.Group>(null);
+  const phase = useMemo(
+    () => Math.abs(cell[0] * 13.37 + cell[1] * 7.77) % Math.PI,
+    [cell],
+  );
+
+  useFrame(({ clock }) => {
+    if (!groupRef.current) return;
+    groupRef.current.position.y =
+      yBase + 0.34 + Math.sin(clock.elapsedTime * 2 + phase) * 0.05;
+  });
+
+  return (
+    <group ref={groupRef} position={[cell[0], yBase + 0.34, cell[1]]}>
+      <Billboard>
+        <mesh raycast={() => null}>
+          <planeGeometry args={[renderWidth, renderHeight]} />
+          <meshBasicMaterial
+            map={texture}
+            transparent
+            alphaTest={0.05}
+            depthWrite={false}
+          />
+        </mesh>
+      </Billboard>
+    </group>
+  );
+}
+
+function useWebGLContextRecovery() {
+  const gl = useThree((state) => state.gl);
+
+  useEffect(() => {
+    const canvas = gl.domElement;
+    const handleContextLost = (event: Event) => {
+      event.preventDefault();
+      console.warn("WebGL context lost; attempting browser restore.");
+    };
+    const handleContextRestored = () => {
+      gl.resetState();
+      console.info("WebGL context restored.");
+    };
+
+    canvas.addEventListener("webglcontextlost", handleContextLost);
+    canvas.addEventListener("webglcontextrestored", handleContextRestored);
+    return () => {
+      canvas.removeEventListener("webglcontextlost", handleContextLost);
+      canvas.removeEventListener("webglcontextrestored", handleContextRestored);
+    };
+  }, [gl]);
+}
+
+const SmartCellRenderer = memo(function SmartCellRenderer({
+  cell,
+  materials,
+  tileObjDef,
+  isTargeted,
+  isHovered,
+  onCellClick,
+  onCellHover,
+}: any) {
+  const isWalkable = cell.walkable;
+  const h = cell.visual_height * 0.5;
+  const cy = cell.y || 0;
+  const topY = cy + (h > 0 ? h : 0.5);
+  const canObscure = topY > 0.6; // Will it ever be above player + 0.5?
+
+  const groupRef = useRef<THREE.Group>(null);
+
+  const walkMat = useMemo(
+    () => (canObscure ? materials.walkable.clone() : materials.walkable),
+    [materials.walkable, canObscure],
+  );
+  const blockMat = useMemo(
+    () => (canObscure ? materials.blocked.clone() : materials.blocked),
+    [materials.blocked, canObscure],
+  );
+
+  useFrame(({ camera }) => {
+    if (!groupRef.current || !canObscure) return;
+
+    _playerVec.set(playerStateRef.px, playerStateRef.py, playerStateRef.pz);
+
+    let targetOpacity = 1.0;
+
+    // Check if cell is above player and might block view
+    if (topY > playerStateRef.py + 0.5) {
+      const px = _playerVec.x;
+      const pz = _playerVec.z;
+      const cx = camera.position.x;
+      const cz = camera.position.z;
+
+      const pcX = cx - px;
+      const pcZ = cz - pz;
+      const pcLenSq = pcX * pcX + pcZ * pcZ;
+
+      let distSq = 0;
+
+      if (pcLenSq < 0.001) {
+        // Camera is right above player
+        const dx = cell.x - px;
+        const dz = cell.z - pz;
+        distSq = dx * dx + dz * dz;
+      } else {
+        // Line segment distance
+        const vX = cell.x - px;
+        const vZ = cell.z - pz;
+        let t = (vX * pcX + vZ * pcZ) / pcLenSq;
+        t = Math.max(0, Math.min(1, t)); // Clamp to segment
+
+        const closestX = px + t * pcX;
+        const closestZ = pz + t * pcZ;
+        const dx = cell.x - closestX;
+        const dz = cell.z - closestZ;
+        distSq = dx * dx + dz * dz;
+      }
+
+      // Also add a small bubble around player to clear roof properly
+      const pDx = cell.x - px;
+      const pDz = cell.z - pz;
+      const playerDistSq = pDx * pDx + pDz * pDz;
+
+      // If cell is close to the View Ray OR close to the player
+      if (distSq < 20 || playerDistSq < 20) {
+        targetOpacity = 0.1;
+      }
+    }
+
+    const newTransparent = targetOpacity < 1.0;
+    if (walkMat.transparent !== newTransparent) {
+      walkMat.transparent = newTransparent;
+      walkMat.needsUpdate = true;
+    }
+    if (blockMat.transparent !== newTransparent) {
+      blockMat.transparent = newTransparent;
+      blockMat.needsUpdate = true;
+    }
+
+    const lerpFactor = 0.1;
+    walkMat.opacity += (targetOpacity - walkMat.opacity) * lerpFactor;
+    blockMat.opacity += (targetOpacity - blockMat.opacity) * lerpFactor;
+
+    // Quick traverse to set opacity for custom shapes
+    if (groupRef.current) {
+      groupRef.current.traverse((child: any) => {
+        if (
+          child.isMesh &&
+          child.material !== materials.targetHighlight &&
+          child.material !== materials.gridLine &&
+          child.material !== walkMat &&
+          child.material !== blockMat
+        ) {
+          if (child.material.transparent !== newTransparent) {
+            child.material.transparent = newTransparent;
+            child.material.needsUpdate = true;
+          }
+          child.material.opacity = walkMat.opacity;
+        }
+      });
+    }
+  });
+
+  return (
+    <group
+      ref={groupRef}
+      position={[cell.x, cell.y || 0, cell.z]}
+      onClick={(e) => {
+        if (onCellClick) {
+          e.stopPropagation();
+          onCellClick(cell.x, cell.z);
+        }
+      }}
+      onPointerOver={(e) => {
+        if (onCellHover) {
+          e.stopPropagation();
+          onCellHover(cell.x, cell.z);
+        }
+      }}
+    >
+      {tileObjDef ? (
+        <group position={[0, 0, 0]}>
+          <ObjectModelRenderer object={tileObjDef} />
+        </group>
+      ) : h > 0 ? (
+        <mesh
+          material={isWalkable ? walkMat : blockMat}
+          position={[0, h / 2, 0]}
+        >
+          <boxGeometry args={[1, h, 1]} />
+        </mesh>
+      ) : (
+        <mesh
+          material={isWalkable ? walkMat : blockMat}
+          rotation={[-Math.PI / 2, 0, 0]}
+        >
+          <planeGeometry args={[1, 1]} />
+        </mesh>
+      )}
+
+      {(isTargeted || isHovered) && (
+        <mesh position={[0, h + 0.01, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <planeGeometry args={[1, 1]} />
+          <primitive object={materials.targetHighlight} attach="material" />
+        </mesh>
+      )}
+
+      {/* Outline/grid style stroke */}
+      <lineSegments position={[0, 0.001, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <edgesGeometry args={[new THREE.PlaneGeometry(1, 1)]} />
+        <primitive object={materials.gridLine} attach="material" />
+      </lineSegments>
+    </group>
+  );
+});
+
+const getHighestCell = (map: MapData, x: number, z: number) => {
+  const matches = map.cells.filter((c) => c.x === x && c.z === z && c.walkable);
+  if (matches.length === 0) return null;
+  return matches.reduce((prev, curr) =>
+    (curr.y || 0) + curr.visual_height * 0.5 >
+    (prev.y || 0) + prev.visual_height * 0.5
+      ? curr
+      : prev,
+  );
+};
+
+const getCellCoordKey = (x: number, z: number) => `${x}:${z}`;
+
+const getCellTopY = (cell: CellData) =>
+  (cell.y || 0) + (cell.visual_height || 0) * 0.5;
+
+// Y of the standing surface at a cell. Raised cells (visual_height > 0)
+// render as boxes, so their top is the surface even when a flat floor object
+// is also present; flat cells take the floor object's mesh height instead.
+const getStandingSurfaceY = (
+  cell: CellData | null,
+  objectById: Map<string, ObjectData>,
+  minOffset = 0.05,
+) => {
+  let baseHeight = cell ? cell.y || 0 : 0;
+  let surfaceOffset = minOffset;
+  if (cell && (cell.visual_height || 0) > 0) {
+    baseHeight += (cell.visual_height || 0) * 0.5;
+  } else if (cell?.object_id) {
+    const tileDef = objectById.get(cell.object_id);
+    if (tileDef) {
+      surfaceOffset = Math.max(
+        minOffset,
+        getObjectVerticalExtents(tileDef).maxY,
+      );
+    }
+  }
+  return baseHeight + surfaceOffset;
+};
+
+const getOcclusionTopY = (cell: CellData) => {
+  const height = (cell.visual_height || 0) * 0.5;
+  return (cell.y || 0) + (height > 0 ? height : 0.5);
+};
+
+const OCCLUSION_MIN_TOP_Y = 0.6;
+const OCCLUSION_PLAYER_RADIUS_SQ = 6;
+const OCCLUSION_RAY_LENGTH = 7;
+const OCCLUSION_RAY_HALF_WIDTH = 1.45;
+const OCCLUSION_FADE_OPACITY = 0.18;
+// Cells whose base elevation is at least this are overhead geometry (roofs,
+// high bridges). They occlude regardless of visual_height or object tags —
+// roof cells are flat "floor" tiles raised to y=2, which the height/object
+// tests alone would never catch.
+const OCCLUSION_OVERHEAD_MIN_Y = 1.5;
+// Roofs hide in a wider bubble than walls so a building's interior reads as
+// a room, not a small fading patch around the player.
+const OCCLUSION_OVERHEAD_PLAYER_RADIUS_SQ = 42;
+
+const isOccludingCellObject = (object: ObjectData | null | undefined) =>
+  Boolean(
+    object &&
+      !object.tags?.includes("floor") &&
+      !object.tags?.includes("water") &&
+      object.collision.profile !== "none",
+  );
+
+const isOverheadCell = (cell: CellData) =>
+  (cell.y || 0) >= OCCLUSION_OVERHEAD_MIN_Y;
+
+const shouldRenderCellWithOcclusion = (
+  cell: CellData,
+  object: ObjectData | null | undefined,
+) =>
+  cell.active !== false &&
+  ((cell.visual_height || 0) * 0.5 > OCCLUSION_MIN_TOP_Y ||
+    isOverheadCell(cell) ||
+    isOccludingCellObject(object));
+
+const isWallObject = (object: ObjectData | null | undefined) =>
+  Boolean(object?.tags?.includes("wall"));
+
+const isFastTileObject = (object: ObjectData | null | undefined) =>
+  !object ||
+  object.tags?.includes("floor") ||
+  object.tags?.includes("water") ||
+  object.collision.profile === "none";
+
+const vectorToRotationY = (x: number, z: number) => Math.atan2(x, z);
+
+const buildWallRotationByCell = (
+  map: MapData,
+  objectById: Map<string, ObjectData>,
+) => {
+  const wallCells = new Map<string, CellData>();
+  const rotations = new Map<string, number>();
+  const visited = new Set<string>();
+
+  map.cells.forEach((cell) => {
+    const object = cell.object_id ? objectById.get(cell.object_id) : null;
+    if (isWallObject(object)) {
+      wallCells.set(getCellCoordKey(cell.x, cell.z), cell);
+    }
+  });
+
+  wallCells.forEach((startCell, startKey) => {
+    if (visited.has(startKey)) return;
+
+    const component: CellData[] = [];
+    const queue = [startCell];
+    visited.add(startKey);
+
+    for (let index = 0; index < queue.length; index++) {
+      const cell = queue[index];
+      component.push(cell);
+
+      [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1],
+      ].forEach(([dx, dz]) => {
+        const key = getCellCoordKey(cell.x + dx, cell.z + dz);
+        const neighbor = wallCells.get(key);
+        if (!neighbor || visited.has(key)) return;
+        visited.add(key);
+        queue.push(neighbor);
+      });
+    }
+
+    const centerX =
+      component.reduce((total, cell) => total + cell.x, 0) / component.length;
+    const centerZ =
+      component.reduce((total, cell) => total + cell.z, 0) / component.length;
+
+    component.forEach((cell) => {
+      const dx = cell.x - centerX;
+      const dz = cell.z - centerZ;
+      let outX = 0;
+      let outZ = 1;
+
+      if (Math.abs(dx) >= Math.abs(dz) && Math.abs(dx) > 0.01) {
+        outX = Math.sign(dx);
+        outZ = 0;
+      } else if (Math.abs(dz) > 0.01) {
+        outX = 0;
+        outZ = Math.sign(dz);
+      }
+
+      rotations.set(getCellCoordKey(cell.x, cell.z), vectorToRotationY(outX, outZ));
+    });
+  });
+
+  return rotations;
+};
+
+type RuntimeMaterialProps = {
+  id: string;
+  name: string;
+  color: string;
+  roughness: number;
+  metalness: number;
+  emissive: string;
+  emissiveIntensity: number;
+  opacity: number;
+  transparent: boolean;
+  textureKind: ReturnType<typeof resolveObjectMaterial>["textureKind"];
+  textureScale: number;
+  textureStrength: number;
+};
+
+const getCellMaterialProps = (
+  object: ObjectData | null | undefined,
+  walkable: boolean,
+): RuntimeMaterialProps => {
+  if (object) {
+    const material = resolveObjectMaterial(object);
+    return {
+      id: material.id,
+      name: material.name,
+      color: material.color,
+      roughness: material.roughness,
+      metalness: material.metalness,
+      emissive: material.emissive,
+      emissiveIntensity: material.emissiveIntensity,
+      opacity: material.opacity,
+      transparent: material.transparent,
+      textureKind: material.textureKind,
+      textureScale: material.textureScale,
+      textureStrength: material.textureStrength,
+    };
+  }
+
+  return {
+    id: walkable ? "default_walkable" : "default_blocked",
+    name: walkable ? "Walkable Floor" : "Blocked Tile",
+    color: walkable ? "#2E3440" : "#3B4252",
+    roughness: walkable ? 0.8 : 0.9,
+    metalness: 0.02,
+    emissive: "#000000",
+    emissiveIntensity: 0,
+    opacity: 1,
+    transparent: false,
+    textureKind: "none",
+    textureScale: 1,
+    textureStrength: 0,
+  };
+};
+
+type CellVisualGroup = {
+  key: string;
+  cells: CellData[];
+  kind: "plane" | "box";
+  height: number;
+  material: RuntimeMaterialProps;
+};
+
+function InstancedCellGroup({
+  group,
+  hiddenCellKeys,
+}: {
+  group: CellVisualGroup;
+  hiddenCellKeys?: Set<string>;
+}) {
+  const meshRef = useRef<THREE.InstancedMesh>(null);
+  const texture = getObjectMaterialTexture(group.material);
+
+  useLayoutEffect(() => {
+    if (!meshRef.current) return;
+
+    const dummy = new THREE.Object3D();
+    group.cells.forEach((cell, index) => {
+      const y = cell.y || 0;
+      const hidden = hiddenCellKeys?.has(getCellCoordKey(cell.x, cell.z));
+      if (group.kind === "plane") {
+        dummy.position.set(cell.x, y + 0.001, cell.z);
+        dummy.rotation.set(-Math.PI / 2, 0, 0);
+        dummy.scale.set(hidden ? 0.0001 : 1, hidden ? 0.0001 : 1, hidden ? 0.0001 : 1);
+      } else {
+        dummy.position.set(cell.x, y + group.height / 2, cell.z);
+        dummy.rotation.set(0, 0, 0);
+        dummy.scale.set(hidden ? 0.0001 : 1, hidden ? 0.0001 : 1, hidden ? 0.0001 : 1);
+      }
+      dummy.updateMatrix();
+      meshRef.current!.setMatrixAt(index, dummy.matrix);
+    });
+
+    meshRef.current.count = group.cells.length;
+    meshRef.current.instanceMatrix.needsUpdate = true;
+    meshRef.current.computeBoundingSphere();
+  }, [group, hiddenCellKeys]);
+
+  return (
+    <instancedMesh
+      ref={meshRef}
+      args={[undefined as any, undefined as any, group.cells.length]}
+      frustumCulled={false}
+      raycast={() => null}
+    >
+      {group.kind === "plane" ? (
+        <planeGeometry args={[1, 1]} />
+      ) : (
+        <boxGeometry args={[1, group.height, 1]} />
+      )}
+      <meshLambertMaterial
+        map={texture || undefined}
+        color={group.material.color}
+        emissive={group.material.emissive}
+        emissiveIntensity={group.material.emissiveIntensity}
+        opacity={group.material.opacity}
+        transparent={group.material.transparent}
+        side={THREE.DoubleSide}
+      />
+    </instancedMesh>
+  );
+}
+
+function getOccludedCellKeys(
+  cells: CellData[],
+  objectById: Map<string, ObjectData>,
+  playerPos: [number, number] | undefined,
+  cameraAzimuth: number,
+) {
+  const occludedKeys = new Set<string>();
+  if (!playerPos) return occludedKeys;
+
+  const cameraDirX = Math.cos(cameraAzimuth);
+  const cameraDirZ = Math.sin(cameraAzimuth);
+  const [px, pz] = playerPos;
+
+  const playerY = playerStateRef.ready ? playerStateRef.py : 0;
+  // The wide roof-reveal bubble only applies while the player is actually
+  // beneath overhead geometry (indoors). Outside, roofs fade via the camera
+  // ray like walls do, so buildings don't peel open as the player walks past.
+  const playerUnderOverhead = cells.some(
+    (cell) =>
+      isOverheadCell(cell) &&
+      cell.x === px &&
+      cell.z === pz &&
+      (cell.y || 0) > playerY + 1.0,
+  );
+
+  cells.forEach((cell) => {
+    const object = cell.object_id ? objectById.get(cell.object_id) : null;
+    if (!shouldRenderCellWithOcclusion(cell, object)) return;
+
+    const overhead = isOverheadCell(cell);
+    // Overhead geometry only occludes while it is actually above the player;
+    // if the player ever stands at roof height it must stay solid.
+    if (overhead && (cell.y || 0) <= playerY + 1.0) return;
+
+    // Geometry whose highest point is at or below the player never blocks the camera
+    if (getOcclusionTopY(cell) <= playerY + 0.1) return;
+
+    const dx = cell.x - px;
+    const dz = cell.z - pz;
+    const playerDistSq = dx * dx + dz * dz;
+    const alongCameraRay = dx * cameraDirX + dz * cameraDirZ;
+    const perpendicularDistance = Math.abs(dx * cameraDirZ - dz * cameraDirX);
+    const heightBias = THREE.MathUtils.clamp(
+      (getOcclusionTopY(cell) - OCCLUSION_MIN_TOP_Y) * 0.08,
+      0,
+      0.65,
+    );
+
+    const playerRadiusSq =
+      overhead && playerUnderOverhead
+        ? OCCLUSION_OVERHEAD_PLAYER_RADIUS_SQ
+        : OCCLUSION_PLAYER_RADIUS_SQ;
+
+    if (
+      playerDistSq <= playerRadiusSq ||
+      (alongCameraRay > -0.25 &&
+        alongCameraRay < OCCLUSION_RAY_LENGTH &&
+        perpendicularDistance < OCCLUSION_RAY_HALF_WIDTH + heightBias)
+    ) {
+      occludedKeys.add(getCellCoordKey(cell.x, cell.z));
+    }
+  });
+
+  return occludedKeys;
+}
+
+function applyGroupOpacity(group: THREE.Group, opacity: number) {
+  group.traverse((child: any) => {
+    if (!child.isMesh || !child.material) return;
+
+    const materials = Array.isArray(child.material)
+      ? child.material
+      : [child.material];
+
+    materials.forEach((material: THREE.Material & { opacity?: number }) => {
+      const baseOpacityKey = "crpgBaseOpacity";
+      const baseTransparentKey = "crpgBaseTransparent";
+      const baseDepthWriteKey = "crpgBaseDepthWrite";
+      if (material.userData[baseOpacityKey] === undefined) {
+        material.userData[baseOpacityKey] =
+          typeof material.opacity === "number" ? material.opacity : 1;
+        material.userData[baseTransparentKey] = material.transparent;
+        material.userData[baseDepthWriteKey] = material.depthWrite;
+      }
+
+      const baseOpacity = material.userData[baseOpacityKey] as number;
+      const baseTransparent = material.userData[baseTransparentKey] as boolean;
+      const baseDepthWrite = material.userData[baseDepthWriteKey] as boolean;
+      const targetOpacity = baseOpacity * opacity;
+      const targetTransparent = baseTransparent || opacity < 0.999;
+      const targetDepthWrite = baseDepthWrite && opacity >= 0.999;
+      const updateProgram =
+        material.transparent !== targetTransparent ||
+        material.depthWrite !== targetDepthWrite;
+
+      if (Math.abs((material.opacity ?? 1) - targetOpacity) > 0.001) {
+        material.opacity = targetOpacity;
+      }
+      material.transparent = targetTransparent;
+      material.depthWrite = targetDepthWrite;
+      material.needsUpdate = updateProgram;
+    });
+  });
+}
+
+function OccludingCellRenderer({
+  cell,
+  object,
+  rotationY,
+  opacity,
+}: {
+  cell: CellData;
+  object: ObjectData | null | undefined;
+  rotationY: number;
+  opacity: number;
+}) {
+  const groupRef = useRef<THREE.Group>(null);
+  const height = Math.max(0, (cell.visual_height || 0) * 0.5);
+  const kind = height > 0 ? "box" : "plane";
+  const material = getCellMaterialProps(object, cell.walkable);
+  const texture = getObjectMaterialTexture(material);
+  const fastTile = isFastTileObject(object);
+  const materialOpacity = material.opacity * opacity;
+  const materialTransparent = material.transparent || opacity < 0.999;
+
+  useLayoutEffect(() => {
+    if (!groupRef.current || fastTile) return;
+    applyGroupOpacity(groupRef.current, opacity);
+  }, [fastTile, opacity]);
+
+  return (
+    <group
+      ref={groupRef}
+      position={[cell.x, cell.y || 0, cell.z]}
+      rotation={[0, rotationY, 0]}
+    >
+      {!fastTile && object ? (
+        <ObjectRuntimeModelRenderer object={object} />
+      ) : kind === "box" ? (
+        <mesh position={[0, Math.max(0.05, height) / 2, 0]} raycast={() => null}>
+          <boxGeometry args={[1, Math.max(0.05, height), 1]} />
+          <meshLambertMaterial
+            map={texture || undefined}
+            color={material.color}
+            emissive={material.emissive}
+            emissiveIntensity={material.emissiveIntensity}
+            opacity={materialOpacity}
+            transparent={materialTransparent}
+            depthWrite={!materialTransparent}
+            side={THREE.DoubleSide}
+          />
+        </mesh>
+      ) : (
+        <mesh
+          position={[0, 0.001, 0]}
+          rotation={[-Math.PI / 2, 0, 0]}
+          raycast={() => null}
+        >
+          <planeGeometry args={[1, 1]} />
+          <meshLambertMaterial
+            map={texture || undefined}
+            color={material.color}
+            emissive={material.emissive}
+            emissiveIntensity={material.emissiveIntensity}
+            opacity={materialOpacity}
+            transparent={materialTransparent}
+            depthWrite={!materialTransparent}
+            side={THREE.DoubleSide}
+          />
+        </mesh>
+      )}
+    </group>
+  );
+}
+
+function CellVisualLayers({
+  cells,
+  objectById,
+  wallRotationByCell,
+  playerPos,
+  enableOcclusion,
+  occlusionAzimuth,
+}: {
+  cells: CellData[];
+  objectById: Map<string, ObjectData>;
+  wallRotationByCell: Map<string, number>;
+  playerPos?: [number, number];
+  enableOcclusion: boolean;
+  occlusionAzimuth: number;
+}) {
+  const sampledPlayerPos = useMemo<[number, number] | undefined>(() => {
+    if (!playerPos) return undefined;
+    return [
+      Math.round(playerPos[0] / OCCLUSION_SAMPLE_STEP) * OCCLUSION_SAMPLE_STEP,
+      Math.round(playerPos[1] / OCCLUSION_SAMPLE_STEP) * OCCLUSION_SAMPLE_STEP,
+    ];
+  }, [playerPos?.[0], playerPos?.[1]]);
+
+  const occludedCellKeys = useMemo(
+    () =>
+      enableOcclusion
+        ? getOccludedCellKeys(
+            cells,
+            objectById,
+            sampledPlayerPos,
+            occlusionAzimuth,
+          )
+        : new Set<string>(),
+    [
+      enableOcclusion,
+      cells,
+      objectById,
+      occlusionAzimuth,
+      sampledPlayerPos?.[0],
+      sampledPlayerPos?.[1],
+    ],
+  );
+
+  const {
+    groups,
+    occludableGroups,
+    modelCells,
+    occludableModelCells,
+    occludableFastCells,
+  } = useMemo(() => {
+    const groupedCells = new Map<CellVisualGroup["key"], CellVisualGroup>();
+    const groupedOccludableCells = new Map<
+      CellVisualGroup["key"],
+      CellVisualGroup
+    >();
+    const renderedModelCells: Array<{
+      cell: CellData;
+      object: ObjectData;
+      rotationY: number;
+    }> = [];
+    const renderedOccludableModelCells: Array<{
+      cell: CellData;
+      object: ObjectData;
+      rotationY: number;
+    }> = [];
+    const renderedOccludableFastCells: Array<{
+      cell: CellData;
+      object: ObjectData | null | undefined;
+      rotationY: number;
+    }> = [];
+
+    const addGroupedCell = (
+      target: Map<CellVisualGroup["key"], CellVisualGroup>,
+      cell: CellData,
+      object: ObjectData | null | undefined,
+      prefix: string,
+    ) => {
+      const height = Math.max(0, (cell.visual_height || 0) * 0.5);
+      const kind = height > 0 ? "box" : "plane";
+      const materialKey = object?.id || (cell.walkable ? "walkable" : "blocked");
+      const key = `${prefix}_${kind}_${height.toFixed(3)}_${materialKey}`;
+      const existing = target.get(key);
+
+      if (existing) {
+        existing.cells.push(cell);
+        return;
+      }
+
+      target.set(key, {
+        key,
+        cells: [cell],
+        kind,
+        height: Math.max(0.05, height),
+        material: getCellMaterialProps(object, cell.walkable),
+      });
+    };
+
+    cells.forEach((cell) => {
+      const object = cell.object_id ? objectById.get(cell.object_id) : null;
+      const fastTile = isFastTileObject(object);
+      const rotationY =
+        isWallObject(object)
+          ? wallRotationByCell.get(getCellCoordKey(cell.x, cell.z)) || 0
+          : 0;
+      const canOcclude =
+        enableOcclusion && shouldRenderCellWithOcclusion(cell, object);
+
+      if (canOcclude && fastTile) {
+        renderedOccludableFastCells.push({ cell, object, rotationY });
+        addGroupedCell(groupedOccludableCells, cell, object, "occludable");
+        return;
+      }
+
+      if (canOcclude && !fastTile && object) {
+        renderedOccludableModelCells.push({ cell, object, rotationY });
+        return;
+      }
+
+      if (!fastTile && object) {
+        renderedModelCells.push({ cell, object, rotationY });
+        return;
+      }
+
+      addGroupedCell(groupedCells, cell, object, "static");
+    });
+
+    return {
+      groups: Array.from(groupedCells.values()),
+      occludableGroups: Array.from(groupedOccludableCells.values()),
+      modelCells: renderedModelCells,
+      occludableModelCells: renderedOccludableModelCells,
+      occludableFastCells: renderedOccludableFastCells,
+    };
+  }, [enableOcclusion, cells, objectById, wallRotationByCell]);
+
+  return (
+    <>
+      {groups.map((group) => (
+        <InstancedCellGroup key={group.key} group={group} />
+      ))}
+      {occludableGroups.map((group) => (
+        <InstancedCellGroup
+          key={group.key}
+          group={group}
+          hiddenCellKeys={occludedCellKeys}
+        />
+      ))}
+      {modelCells.map(({ cell, object, rotationY }, index) => (
+        <group
+          key={`model_cell_${cell.x}_${cell.y || 0}_${cell.z}_${index}`}
+          position={[cell.x, cell.y || 0, cell.z]}
+          rotation={[0, rotationY, 0]}
+        >
+          <ObjectRuntimeModelRenderer object={object} />
+        </group>
+      ))}
+      {occludableModelCells.map(({ cell, object, rotationY }, index) => {
+        const cellKey = getCellCoordKey(cell.x, cell.z);
+        return (
+          <OccludingCellRenderer
+            key={`occ_model_cell_${cell.x}_${cell.y || 0}_${cell.z}_${index}`}
+            cell={cell}
+            object={object}
+            rotationY={rotationY}
+            opacity={
+              occludedCellKeys.has(cellKey) ? OCCLUSION_FADE_OPACITY : 1
+            }
+          />
+        );
+      })}
+      {occludableFastCells.map(({ cell, object, rotationY }, index) =>
+        occludedCellKeys.has(getCellCoordKey(cell.x, cell.z)) ? (
+        <OccludingCellRenderer
+          key={`occ_fast_cell_${cell.x}_${cell.y || 0}_${cell.z}_${index}`}
+          cell={cell}
+          object={object}
+          rotationY={rotationY}
+          opacity={OCCLUSION_FADE_OPACITY}
+        />
+        ) : null,
+      )}
+    </>
+  );
+}
+
+function CellGridLines({
+  cells,
+  material,
+}: {
+  cells: CellData[];
+  material: THREE.LineBasicMaterial;
+}) {
+  const geometry = useMemo(() => {
+    const positions: number[] = [];
+
+    cells.forEach((cell) => {
+      const y = (cell.y || 0) + 0.004;
+      const x0 = cell.x - 0.5;
+      const x1 = cell.x + 0.5;
+      const z0 = cell.z - 0.5;
+      const z1 = cell.z + 0.5;
+
+      positions.push(
+        x0,
+        y,
+        z0,
+        x1,
+        y,
+        z0,
+        x1,
+        y,
+        z0,
+        x1,
+        y,
+        z1,
+        x1,
+        y,
+        z1,
+        x0,
+        y,
+        z1,
+        x0,
+        y,
+        z1,
+        x0,
+        y,
+        z0,
+      );
+    });
+
+    const nextGeometry = new THREE.BufferGeometry();
+    nextGeometry.setAttribute(
+      "position",
+      new THREE.Float32BufferAttribute(positions, 3),
+    );
+    return nextGeometry;
+  }, [cells]);
+
+  useEffect(
+    () => () => {
+      geometry.dispose();
+    },
+    [geometry],
+  );
+
+  return (
+    <lineSegments geometry={geometry} raycast={() => null}>
+      <primitive object={material} attach="material" />
+    </lineSegments>
+  );
+}
+
+function CellHighlights({
+  targetPattern,
+  rangeCells,
+  hoveredCell,
+  highestCellByCoord,
+  material,
+  rangeMaterial,
+}: {
+  targetPattern?: { x: number; z: number }[];
+  rangeCells?: { x: number; z: number }[];
+  hoveredCell?: [number, number] | null;
+  highestCellByCoord: Map<string, CellData>;
+  material: THREE.MeshBasicMaterial;
+  rangeMaterial?: THREE.MeshBasicMaterial;
+}) {
+  const highlightedCells = useMemo(() => {
+    const byCoord = new Map<string, CellData>();
+
+    (targetPattern || []).forEach((cell) => {
+      const match = highestCellByCoord.get(getCellCoordKey(cell.x, cell.z));
+      if (match) byCoord.set(getCellCoordKey(cell.x, cell.z), match);
+    });
+
+    if (hoveredCell) {
+      const match = highestCellByCoord.get(
+        getCellCoordKey(hoveredCell[0], hoveredCell[1]),
+      );
+      if (match) byCoord.set(getCellCoordKey(hoveredCell[0], hoveredCell[1]), match);
+    }
+
+    return Array.from(byCoord.values());
+  }, [targetPattern, hoveredCell, highestCellByCoord]);
+
+  // Faint range field, excluding cells already in the bright pattern.
+  const rangeFieldCells = useMemo(() => {
+    if (!rangeCells?.length) return [] as CellData[];
+    const patternKeys = new Set(
+      highlightedCells.map((cell) => getCellCoordKey(cell.x, cell.z)),
+    );
+    const byCoord = new Map<string, CellData>();
+    rangeCells.forEach((cell) => {
+      const key = getCellCoordKey(cell.x, cell.z);
+      if (patternKeys.has(key)) return;
+      const match = highestCellByCoord.get(key);
+      if (match) byCoord.set(key, match);
+    });
+    return Array.from(byCoord.values());
+  }, [rangeCells, highlightedCells, highestCellByCoord]);
+
+  return (
+    <>
+      {rangeMaterial &&
+        rangeFieldCells.map((cell) => (
+          <mesh
+            key={`range_${cell.x}_${cell.y || 0}_${cell.z}`}
+            position={[cell.x, getCellTopY(cell) + 0.012, cell.z]}
+            rotation={[-Math.PI / 2, 0, 0]}
+            raycast={() => null}
+          >
+            <planeGeometry args={[0.92, 0.92]} />
+            <primitive object={rangeMaterial} attach="material" />
+          </mesh>
+        ))}
+      {highlightedCells.map((cell) => (
+        <mesh
+          key={`highlight_${cell.x}_${cell.y || 0}_${cell.z}`}
+          position={[cell.x, getCellTopY(cell) + 0.015, cell.z]}
+          rotation={[-Math.PI / 2, 0, 0]}
+          raycast={() => null}
+        >
+          <planeGeometry args={[1, 1]} />
+          <primitive object={material} attach="material" />
+        </mesh>
+      ))}
+    </>
+  );
+}
+
+type RuntimeObjectInstance = {
+  key: string;
+  position: [number, number, number];
+  rotationY: number;
+};
+
+function InstancedRuntimeGeometryGroup({
+  object,
+  geometryGroup,
+  instances,
+}: {
+  object: ObjectData;
+  geometryGroup: ReturnType<typeof createRuntimeMeshGeometryGroups>[number];
+  instances: RuntimeObjectInstance[];
+}) {
+  const meshRef = useRef<THREE.InstancedMesh>(null);
+  const material = resolveObjectMaterial(object, geometryGroup.materialRef);
+  const texture = getObjectMaterialTexture(material);
+
+  useLayoutEffect(() => {
+    if (!meshRef.current) return;
+
+    const dummy = new THREE.Object3D();
+    instances.forEach((instance, index) => {
+      dummy.position.set(
+        instance.position[0],
+        instance.position[1],
+        instance.position[2],
+      );
+      dummy.rotation.set(0, instance.rotationY, 0);
+      dummy.scale.set(1, 1, 1);
+      dummy.updateMatrix();
+      meshRef.current!.setMatrixAt(index, dummy.matrix);
+    });
+
+    meshRef.current.count = instances.length;
+    meshRef.current.instanceMatrix.needsUpdate = true;
+    meshRef.current.computeBoundingSphere();
+  }, [instances]);
+
+  return (
+    <instancedMesh
+      ref={meshRef}
+      args={[undefined as any, undefined as any, instances.length]}
+      frustumCulled={false}
+      raycast={() => null}
+    >
+      <primitive object={geometryGroup.geometry} attach="geometry" />
+      <meshLambertMaterial
+        map={texture || undefined}
+        color={material.color}
+        emissive={material.emissive}
+        emissiveIntensity={material.emissiveIntensity}
+        opacity={material.opacity}
+        transparent={material.transparent}
+        side={THREE.DoubleSide}
+      />
+    </instancedMesh>
+  );
+}
+
+function RuntimeObjectInstances({
+  object,
+  instances,
+}: {
+  object: ObjectData;
+  instances: RuntimeObjectInstance[];
+}) {
+  const geometryGroups = useMemo(
+    () =>
+      object.mesh ? createRuntimeMeshGeometryGroups(object.mesh) : [],
+    [object],
+  );
+
+  useEffect(
+    () => () => {
+      geometryGroups.forEach((group) => group.geometry.dispose());
+    },
+    [geometryGroups],
+  );
+
+  if (!object.mesh || instances.length === 0) return null;
+
+  return (
+    <>
+      {geometryGroups.map((geometryGroup) => (
+        <InstancedRuntimeGeometryGroup
+          key={geometryGroup.key}
+          object={object}
+          geometryGroup={geometryGroup}
+          instances={instances}
+        />
+      ))}
+    </>
+  );
+}
+
+function getPlacementRenderInfo(
+  placement: ObjectPlacementData,
+  index: number,
+  objectById: Map<string, ObjectData>,
+  highestCellByCoord: Map<string, CellData>,
+  extentsByObjectId: Map<
+    string,
+    ReturnType<typeof getObjectVerticalExtents>
+  >,
+) {
+  const object = objectById.get(placement.object_id);
+  if (!object) return null;
+
+  const cell =
+    highestCellByCoord.get(getCellCoordKey(placement.cell[0], placement.cell[1])) ||
+    null;
+  let baseHeight = cell ? cell.y || 0 : 0;
+  let surfaceOffset = 0;
+
+  if (cell && (cell.visual_height || 0) > 0) {
+    baseHeight += (cell.visual_height || 0) * 0.5;
+  } else if (cell?.object_id) {
+    const tileDef = objectById.get(cell.object_id);
+    if (tileDef) {
+      const tileExtents =
+        extentsByObjectId.get(tileDef.id) || getObjectVerticalExtents(tileDef);
+      extentsByObjectId.set(tileDef.id, tileExtents);
+      surfaceOffset = tileExtents.maxY;
+    }
+  }
+
+  const objectExtents =
+    extentsByObjectId.get(object.id) || getObjectVerticalExtents(object);
+  extentsByObjectId.set(object.id, objectExtents);
+
+  const facing = placement.facing || [0, 1];
+  const rotY = Math.atan2(facing[0], facing[1]);
+  const minY = objectExtents.minY;
+  const yOffset = baseHeight + surfaceOffset - minY + 0.01;
+
+  return {
+    key: `cobj_${placement.object_id}_${index}`,
+    object,
+    placement,
+    position: [placement.cell[0], yOffset, placement.cell[1]] as [
+      number,
+      number,
+      number,
+    ],
+    rotationY: rotY,
+    maxY: objectExtents.maxY,
+  };
+}
+
+function CustomObjectPlacementLayer({
+  placements,
+  objectById,
+  highestCellByCoord,
+}: {
+  placements: ObjectPlacementData[];
+  objectById: Map<string, ObjectData>;
+  highestCellByCoord: Map<string, CellData>;
+}) {
+  const { singles, instanceGroups } = useMemo(() => {
+    const objectCounts = placements.reduce((counts, placement) => {
+      counts.set(placement.object_id, (counts.get(placement.object_id) || 0) + 1);
+      return counts;
+    }, new Map<string, number>());
+    const extentsByObjectId = new Map<
+      string,
+      ReturnType<typeof getObjectVerticalExtents>
+    >();
+    const nextSingles: ReturnType<typeof getPlacementRenderInfo>[] = [];
+    const groupedInstances = new Map<
+      string,
+      { object: ObjectData; instances: RuntimeObjectInstance[] }
+    >();
+
+    placements.forEach((placement, index) => {
+      const info = getPlacementRenderInfo(
+        placement,
+        index,
+        objectById,
+        highestCellByCoord,
+        extentsByObjectId,
+      );
+      if (!info) return;
+
+      const repeated = (objectCounts.get(placement.object_id) || 0) > 2;
+      const canInstance =
+        repeated &&
+        Boolean(info.object.mesh) &&
+        !placement.dialogue_id &&
+        !info.object.tags?.includes("interactable");
+
+      if (!canInstance) {
+        nextSingles.push(info);
+        return;
+      }
+
+      const existing =
+        groupedInstances.get(info.object.id) ||
+        (() => {
+          const next = { object: info.object, instances: [] };
+          groupedInstances.set(info.object.id, next);
+          return next;
+        })();
+      existing.instances.push({
+        key: info.key,
+        position: info.position,
+        rotationY: info.rotationY,
+      });
+    });
+
+    return {
+      singles: nextSingles.filter(Boolean) as NonNullable<
+        ReturnType<typeof getPlacementRenderInfo>
+      >[],
+      instanceGroups: Array.from(groupedInstances.values()),
+    };
+  }, [placements, objectById, highestCellByCoord]);
+
+  return (
+    <>
+      {instanceGroups.map((group) => (
+        <RuntimeObjectInstances
+          key={`instances_${group.object.id}`}
+          object={group.object}
+          instances={group.instances}
+        />
+      ))}
+      {singles.map((info) => (
+        <group
+          key={info.key}
+          position={info.position}
+          rotation={[0, info.rotationY, 0]}
+        >
+          <ObjectRuntimeModelRenderer
+            object={info.object}
+            includeDecals={Boolean(info.placement.dialogue_id)}
+          />
+
+          {info.placement.dialogue_id && (
+            <mesh position={[0, info.maxY + 0.3, 0]}>
+              <sphereGeometry args={[0.15, 8, 8]} />
+              <meshBasicMaterial color="#EBCB8B" />
+            </mesh>
+          )}
+        </group>
+      ))}
+    </>
+  );
+}
+
+export const GameRenderer = memo(function GameRenderer({
+  map,
+  playerPos,
+  playerFacing = [0, -1],
+  playerSpriteId,
+  worldItems,
+  extraPlacements,
+  onCellClick,
+  onCellHover,
+  onPointerOut,
+  targetPattern,
+  rangeCells,
+  hoveredCell,
+  editLayerY,
+  entityStates,
+  partyFollowers = [],
+  partyMemberIds = [],
+  inCombat = false,
+  activeTurnKey = null,
+  showGrid,
+  enableOcclusion = false,
+  occlusionAzimuth = Math.PI / 4,
+  renderCenter,
+  renderRadius = DEFAULT_RENDER_RADIUS,
+}: GameRendererProps) {
+  const { gamePackage } = useEngineStore();
+  useWebGLContextRecovery();
+
+  const snappedRenderCenter = useMemo<[number, number] | null>(() => {
+    if (!renderCenter) return null;
+    return [
+      Math.round(renderCenter[0] / RENDER_CHUNK_SIZE) * RENDER_CHUNK_SIZE,
+      Math.round(renderCenter[1] / RENDER_CHUNK_SIZE) * RENDER_CHUNK_SIZE,
+    ];
+  }, [renderCenter?.[0], renderCenter?.[1]]);
+  const [chunkedRenderCenter, setChunkedRenderCenter] =
+    useState<[number, number] | null>(snappedRenderCenter);
+
+  useEffect(() => {
+    if (!renderCenter || !snappedRenderCenter) {
+      setChunkedRenderCenter(null);
+      return;
+    }
+
+    setChunkedRenderCenter((previous) => {
+      if (!previous) return snappedRenderCenter;
+
+      const dx = renderCenter[0] - previous[0];
+      const dz = renderCenter[1] - previous[1];
+      const shouldShift =
+        dx * dx + dz * dz >=
+        RENDER_WINDOW_SHIFT_DISTANCE * RENDER_WINDOW_SHIFT_DISTANCE;
+
+      if (!shouldShift) return previous;
+      if (
+        previous[0] === snappedRenderCenter[0] &&
+        previous[1] === snappedRenderCenter[1]
+      ) {
+        return previous;
+      }
+      return snappedRenderCenter;
+    });
+  }, [
+    renderCenter?.[0],
+    renderCenter?.[1],
+    snappedRenderCenter?.[0],
+    snappedRenderCenter?.[1],
+  ]);
+
+  const isInRenderWindow = (
+    x: number,
+    z: number,
+    padding = 0,
+  ) => {
+    if (!chunkedRenderCenter) return true;
+    const radius = renderRadius + padding;
+    const dx = x - chunkedRenderCenter[0];
+    const dz = z - chunkedRenderCenter[1];
+    return dx * dx + dz * dz <= radius * radius;
+  };
+
+  const renderCells = useMemo(
+    () =>
+      chunkedRenderCenter
+        ? map.cells.filter((cell) => isInRenderWindow(cell.x, cell.z, 2))
+        : map.cells,
+    [
+      map.cells,
+      chunkedRenderCenter?.[0],
+      chunkedRenderCenter?.[1],
+      renderRadius,
+    ],
+  );
+
+  const objectById = useMemo(
+    () =>
+      new Map(
+        gamePackage.object_library.map((object) => [
+          object.id,
+          object as ObjectData,
+        ]),
+      ),
+    [gamePackage.object_library],
+  );
+
+  const wallRotationByCell = useMemo(
+    () => buildWallRotationByCell(map, objectById),
+    [map, objectById],
+  );
+
+  const highestCellByCoord = useMemo(() => {
+    const lookup = new Map<string, CellData>();
+
+    map.cells.forEach((cell) => {
+      if (!cell.walkable) return;
+
+      const key = getCellCoordKey(cell.x, cell.z);
+      const previous = lookup.get(key);
+      if (!previous || getCellTopY(cell) > getCellTopY(previous)) {
+        lookup.set(key, cell);
+      }
+    });
+
+    return lookup;
+  }, [map.cells]);
+
+  // Ground surface for object placements: unlike entities, placed objects
+  // often sit on cells their own collision marked unwalkable (columns on a
+  // temple platform), so this lookup keeps blocked cells and only excludes
+  // overhead geometry (roofs) and wall cells.
+  const placementSurfaceByCoord = useMemo(() => {
+    const lookup = new Map<string, CellData>();
+
+    map.cells.forEach((cell) => {
+      if ((cell.y || 0) >= 1.5) return; // overhead (roofs)
+      if ((cell.visual_height || 0) * 0.5 > 1.01) return; // walls
+      const key = getCellCoordKey(cell.x, cell.z);
+      const previous = lookup.get(key);
+      if (!previous || getCellTopY(cell) > getCellTopY(previous)) {
+        lookup.set(key, cell);
+      }
+    });
+
+    return lookup;
+  }, [map.cells]);
+
+  const allRenderPlacements = useMemo(
+    () =>
+      extraPlacements?.length
+        ? [...(map.custom_object_placements || []), ...extraPlacements]
+        : map.custom_object_placements || [],
+    [map.custom_object_placements, extraPlacements],
+  );
+  const renderPlacements = useMemo(
+    () =>
+      chunkedRenderCenter
+        ? allRenderPlacements.filter((placement) =>
+            isInRenderWindow(placement.cell[0], placement.cell[1], 4),
+          )
+        : allRenderPlacements,
+    [
+      allRenderPlacements,
+      chunkedRenderCenter?.[0],
+      chunkedRenderCenter?.[1],
+      renderRadius,
+    ],
+  );
+  const renderWorldItems = useMemo(
+    () =>
+      chunkedRenderCenter
+        ? (worldItems || []).filter((item) =>
+            isInRenderWindow(item.cell[0], item.cell[1], 4),
+          )
+        : worldItems || [],
+    [
+      worldItems,
+      chunkedRenderCenter?.[0],
+      chunkedRenderCenter?.[1],
+      renderRadius,
+    ],
+  );
+
+  const staticElements = useMemo(() => {
+    return (
+      <group>
+        <CustomObjectPlacementLayer
+          placements={renderPlacements}
+          objectById={objectById}
+          highestCellByCoord={placementSurfaceByCoord}
+        />
+
+        {editLayerY !== undefined && map.triggers?.map((trigger, i) => {
+          if (!trigger.cell) return null;
+          const cell =
+            highestCellByCoord.get(
+              getCellCoordKey(trigger.cell[0], trigger.cell[1]),
+            ) || null;
+          const yOffset = getStandingSurfaceY(cell, objectById);
+
+          return (
+            <mesh
+              key={`trigger_${i}`}
+              position={[trigger.cell[0], yOffset, trigger.cell[1]]}
+              rotation={[-Math.PI / 2, 0, 0]}
+            >
+              <planeGeometry args={[0.6, 0.6]} />
+              <meshStandardMaterial
+                color={trigger.type === "step" ? "#EBCB8B" : "#B48EAD"}
+                opacity={0.5}
+                transparent
+              />
+            </mesh>
+          );
+        })}
+      </group>
+    );
+  }, [editLayerY, renderPlacements, map.triggers, objectById, highestCellByCoord, placementSurfaceByCoord]);
+
+  const { texture: playerSpriteTex, spriteDef: playerSpriteDef } = useSpriteTexture(
+    playerSpriteId || gamePackage.settings?.player_sprite_id,
+    gamePackage,
+  );
+
+  // Memoize materials so we don't recreate them every frame
+  const materials = useMemo(
+    () => ({
+      walkable: new THREE.MeshStandardMaterial({
+        color: "#1a1830",
+        emissive: "#080315",
+        emissiveIntensity: 0.18,
+        roughness: 0.8,
+      }),
+      blocked: new THREE.MeshStandardMaterial({
+        color: "#241832",
+        emissive: "#0b0317",
+        emissiveIntensity: 0.16,
+        roughness: 0.9,
+      }),
+      player: new THREE.MeshStandardMaterial({
+        color: "#88C0D0",
+        emissive: "#88C0D0",
+        emissiveIntensity: 0.2,
+      }),
+      gridLine: new THREE.LineBasicMaterial({
+        color: "#24243a",
+        opacity: 0.25,
+        transparent: true,
+      }),
+      targetHighlight: new THREE.MeshBasicMaterial({
+        color: "#D08770",
+        opacity: 0.6,
+        transparent: true,
+      }),
+      rangeHighlight: new THREE.MeshBasicMaterial({
+        color: "#88C0D0",
+        opacity: 0.16,
+        transparent: true,
+        depthWrite: false,
+      }),
+    }),
+    [],
+  );
+
+  useEffect(
+    () => () => {
+      Object.values(materials).forEach((material) => material.dispose());
+    },
+    [materials],
+  );
+
+  return (
+    <group onPointerOut={onPointerOut}>
+      {/* Invisible interaction plane for editor and targeting */}
+      {(editLayerY !== undefined || onCellClick || onCellHover) && (
+        <mesh
+          position={[0, editLayerY ?? 0.02, 0]}
+          rotation={[-Math.PI / 2, 0, 0]}
+          onClick={(e) => {
+            if (onCellClick) {
+              e.stopPropagation();
+              const x = Math.round(e.point.x);
+              const z = Math.round(e.point.z);
+              onCellClick(x, z);
+            }
+          }}
+          onPointerMove={(e) => {
+            if (onCellHover) {
+              e.stopPropagation();
+              const x = Math.round(e.point.x);
+              const z = Math.round(e.point.z);
+              onCellHover(x, z);
+            }
+          }}
+        >
+          <planeGeometry args={[map.width, map.height]} />
+          <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+        </mesh>
+      )}
+
+      {/* Render Cells */}
+      <CellVisualLayers
+        cells={renderCells}
+        objectById={objectById}
+        wallRotationByCell={wallRotationByCell}
+        playerPos={playerPos}
+        enableOcclusion={enableOcclusion}
+        occlusionAzimuth={occlusionAzimuth}
+      />
+      {(showGrid ?? editLayerY !== undefined) && (
+        <CellGridLines cells={renderCells} material={materials.gridLine} />
+      )}
+      <CellHighlights
+        targetPattern={targetPattern}
+        rangeCells={rangeCells}
+        hoveredCell={hoveredCell}
+        highestCellByCoord={highestCellByCoord}
+        material={materials.targetHighlight}
+        rangeMaterial={materials.rangeHighlight}
+      />
+
+      {staticElements}
+
+      {/* Floating combat text (damage numbers, heals, deaths) */}
+      <DamagePopupLayer
+        highestCellByCoord={highestCellByCoord}
+        objectById={objectById}
+      />
+
+      {/* Render World Items */}
+      {renderWorldItems.map((item) => {
+        const cell =
+          highestCellByCoord.get(
+            getCellCoordKey(item.cell[0], item.cell[1]),
+          ) || null;
+        const yBase = getStandingSurfaceY(cell, objectById, 0);
+        return (
+          <WorldItemNode
+            key={`world_item_${item.id}`}
+            cell={item.cell}
+            icon={item.icon || "📦"}
+            sprite_id={gamePackage.items.find((i) => i.id === (item as any).item_id)?.sprite_id}
+            gamePackage={gamePackage}
+            yBase={yBase}
+          />
+        );
+      })}
+
+      {/* Render Entities */}
+      {map.entity_placements?.map((placement, i) => {
+        if (partyMemberIds.includes(placement.entity_id)) return null;
+
+        // Skip dead enemies in play mode and get their current cell
+        const key = entityStateKey(map.id, placement.entity_id, i);
+        const entityState = entityStates?.[key];
+
+        if (entityState?.dead || entityState?.hidden) return null;
+
+        const currentCellCoord = entityState?.cell || placement.cell;
+        if (
+          chunkedRenderCenter &&
+          !isInRenderWindow(currentCellCoord[0], currentCellCoord[1], 6)
+        ) {
+          return null;
+        }
+
+        const entityDef = gamePackage.entities.find(
+          (e) => e.id === placement.entity_id,
+        );
+        if (!entityDef) return null;
+
+        const cell =
+          highestCellByCoord.get(
+            getCellCoordKey(currentCellCoord[0], currentCellCoord[1]),
+          ) || null;
+        const yOffset = getStandingSurfaceY(cell, objectById);
+
+        const engaged =
+          !entityDef.is_npc &&
+          !!playerPos &&
+          Math.abs(currentCellCoord[0] - playerPos[0]) +
+            Math.abs(currentCellCoord[1] - playerPos[1]) <=
+            THREAT_RADIUS;
+
+        return (
+          <EntityNode
+            key={`entity_${placement.entity_id}_${i}`}
+            placement={{ ...placement, cell: currentCellCoord }}
+            entityDef={entityDef}
+            yOffset={yOffset}
+            gamePackage={gamePackage}
+            hp={entityState?.hp ?? entityDef.max_hp}
+            maxHp={entityDef.max_hp}
+            fxKey={key}
+            engaged={engaged}
+            isActive={activeTurnKey === key}
+          />
+        );
+      })}
+
+      {/* Render Party Followers */}
+      {partyFollowers.map((follower, i) => {
+        const entityDef = gamePackage.entities.find(
+          (e) => e.id === follower.entity_id,
+        );
+        if (!entityDef) return null;
+
+        // Downed party members lie out of sight until the fight ends.
+        const followerState = entityStates?.[follower.entity_id];
+        if (followerState?.dead) return null;
+
+        const cell =
+          highestCellByCoord.get(
+            getCellCoordKey(follower.cell[0], follower.cell[1]),
+          ) || null;
+        return (
+          <EntityNode
+            key={`party_${follower.entity_id}_${i}`}
+            placement={{ entity_id: follower.entity_id, cell: follower.cell }}
+            entityDef={entityDef}
+            yOffset={getStandingSurfaceY(cell, objectById)}
+            gamePackage={gamePackage}
+            hp={followerState?.hp ?? entityDef.max_hp}
+            maxHp={entityDef.max_hp}
+            fxKey={follower.entity_id}
+            isActive={activeTurnKey === follower.entity_id}
+            showHpWhenFull={inCombat}
+          />
+        );
+      })}
+
+      {/* Render Player Marker */}
+      {playerPos &&
+        (() => {
+          const playerCell =
+            highestCellByCoord.get(getCellCoordKey(playerPos[0], playerPos[1])) ||
+            null;
+          let baseHeight = playerCell
+            ? (playerCell.visual_height || 0) * 0.5 + (playerCell.y || 0)
+            : 0;
+          let surfaceOffset = 0.05; // default surface height
+
+          if (playerCell?.object_id) {
+            const tileDef = objectById.get(playerCell.object_id);
+            if (tileDef) {
+              surfaceOffset = getObjectVerticalExtents(tileDef).maxY;
+            }
+          }
+
+          const pY = baseHeight + surfaceOffset;
+
+          let renderWidth = 1;
+          let renderHeight = 1;
+          if (playerSpriteDef?.width && playerSpriteDef?.height) {
+            const maxDim = Math.max(playerSpriteDef.width, playerSpriteDef.height);
+            renderWidth = playerSpriteDef.width / maxDim;
+            renderHeight = playerSpriteDef.height / maxDim;
+          }
+
+          return (
+            <SmoothPositionGroup
+              position={[playerPos[0], pY, playerPos[1]]}
+              onPositionUpdate={(position) => {
+                playerStateRef.px = position.x;
+                playerStateRef.py = position.y;
+                playerStateRef.pz = position.z;
+                playerStateRef.ready = true;
+              }}
+            >
+              {playerSpriteTex ? (
+                <Billboard
+                  follow={true}
+                  lockX={false}
+                  lockY={false}
+                  lockZ={false}
+                >
+                  <mesh position={[0, renderHeight * 0.5, 0]}>
+                    <planeGeometry args={[renderWidth, renderHeight]} />
+                  <meshBasicMaterial
+                      map={playerSpriteTex}
+                      transparent={true}
+                      alphaTest={0.1}
+                      depthWrite={false}
+                      fog={false}
+                      side={THREE.DoubleSide}
+                    />
+                  </mesh>
+                </Billboard>
+              ) : (
+                <mesh
+                  position={[0, 0.4, 0]}
+                  material={materials.player}
+                  rotation={[
+                    0,
+                    Math.atan2(playerFacing[0], playerFacing[1]),
+                    0,
+                  ]}
+                >
+                  <cylinderGeometry args={[0, 0.3, 0.8, 4]} />
+                </mesh>
+              )}
+              {activeTurnKey === "player" ? (
+                <mesh position={[0, 0.02, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+                  <ringGeometry args={[0.38, 0.52, 24]} />
+                  <meshBasicMaterial color="#7DF9FF" transparent opacity={0.9} />
+                </mesh>
+              ) : (
+                <mesh position={[0, 0.01, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+                  <ringGeometry args={[0.3, 0.4, 16]} />
+                  <meshBasicMaterial
+                    color="#88C0D0"
+                    transparent
+                    opacity={inCombat ? 0.25 : 0.5}
+                  />
+                </mesh>
+              )}
+            </SmoothPositionGroup>
+          );
+        })()}
+    </group>
+  );
+});

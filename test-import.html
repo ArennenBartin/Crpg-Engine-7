@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sprite Import Test</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            padding: 20px; 
+            background: #1a1a1a; 
+            color: white; 
+        }
+        .test-section { 
+            margin: 20px 0; 
+            padding: 15px; 
+            background: #2a2a2a; 
+            border-radius: 8px; 
+        }
+        .feature-list li { 
+            margin: 5px 0; 
+            color: #4ade80; 
+        }
+        .feature-list li::before { 
+            content: "✓ "; 
+            color: #22c55e; 
+            font-weight: bold; 
+        }
+    </style>
+</head>
+<body>
+    <h1>Sprite Import Feature Implementation</h1>
+    
+    <div class="test-section">
+        <h2>✅ Completed Features</h2>
+        <ul class="feature-list">
+            <li>Import button added to SpriteCreator UI header</li>
+            <li>File input handling for PNG/WEBP images</li>
+            <li>Image quantization to 48x48 grid with palette extraction</li>
+            <li>Preview modal showing imported image before conversion</li>
+            <li>Error handling for unsupported formats and oversized images</li>
+            <li>Color quantization using game's palette (11 colors + transparency)</li>
+            <li>Automatic sprite creation with proper naming</li>
+        </ul>
+    </div>
+    
+    <div class="test-section">
+        <h2>🎨 Game Palette Used</h2>
+        <ul>
+            <li>#1A1410 - warm near-black outline</li>
+            <li>#D9A47E/#B5805C - skin colors</li>
+            <li>#EDE4CE/#C7B999 - linen colors</li>
+            <li>#8A6B3C - bronze</li>
+            <li>#D9A648 - votive gold</li>
+            <li>#74815B - olive</li>
+            <li>#3D4666 - indigo</li>
+            <li>#B26A4B - terracotta</li>
+            <li>#A7D9DC - star-glass cyan</li>
+            <li>#7A1B26 - crimson</li>
+        </ul>
+    </div>
+    
+    <div class="test-section">
+        <h2>📋 Implementation Details</h2>
+        <p>The sprite import feature:</p>
+        <ul>
+            <li>Accepts PNG and WEBP image files up to 5MB</li>
+            <li>Scales all images to 48x48 pixels</li>
+            <li>Quantizes colors to match the game's aesthetic palette</li>
+            <li>Preserves transparency (alpha < 128 becomes transparent)</li>
+            <li>Shows a preview before finalizing the import</li>
+            <li>Creates a new sprite with automatic naming</li>
+            <li>Integrates seamlessly with existing sprite editor</li>
+        </ul>
+    </div>
+    
+    <div class="test-section">
+        <h2>🚀 Ready to Use</h2>
+        <p>The import feature is now available in the SpriteCreator component. Users can click the "Import" button in the header, select an image file, preview the conversion, and add it to their sprite library.</p>
+    </div>
+</body>
+</html>
