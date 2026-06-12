@@ -3293,7 +3293,7 @@ export function PlayEngine() {
     : [];
 
   return (
-    <div className="flex flex-col h-full bg-neutral-950 relative overflow-hidden" style={{ touchAction: 'none' }}>
+    <div className="flex flex-col h-full bg-neutral-950 relative overflow-hidden pb-16 sm:pb-0" style={{ touchAction: 'none' }}>
       <div className="flex-1 relative min-h-0">
         <Canvas
           camera={{
@@ -4642,22 +4642,23 @@ export function PlayEngine() {
             });
             return (
               <div className="w-full max-w-2xl h-full flex flex-col bg-transparent relative z-20">
-                <div className="px-6 py-4 flex flex-col items-center justify-center border-b border-[var(--color-sacred-gold-dark)] relative">
-                  <h3 className="font-[family-name:var(--font-display)] text-xl font-bold text-[var(--color-sacred-gold)] uppercase tracking-[0.2em] text-sacred-glow">
+                <div className="px-4 py-2 sm:px-6 sm:py-4 flex flex-col items-center justify-center border-b border-[var(--color-sacred-gold-dark)] relative">
+                  <h3 className="font-[family-name:var(--font-display)] text-base sm:text-xl font-bold text-[var(--color-sacred-gold)] uppercase tracking-[0.2em] text-sacred-glow">
                     {node.speaker}
                   </h3>
                   {/* Ornate decorative accent below speaker */}
-                  <div className="w-24 h-0.5 bg-gradient-to-r from-transparent via-[var(--color-sacred-gold-dark)] to-transparent mt-2"></div>
+                  <div className="w-24 h-0.5 bg-gradient-to-r from-transparent via-[var(--color-sacred-gold-dark)] to-transparent mt-1 sm:mt-2"></div>
                 </div>
-                <div className="p-6 flex-1 overflow-y-auto">
-                  <p className="text-[var(--color-sacred-ink)] font-serif text-lg leading-relaxed drop-shadow-sm text-center">
+                <div className="px-4 py-2 sm:p-6 flex-1 overflow-y-auto">
+                  <p className="text-[var(--color-sacred-ink)] font-serif text-sm sm:text-lg leading-relaxed drop-shadow-sm text-center">
                     {node.text}
                   </p>
                 </div>
-                <div className="p-4 flex flex-col gap-2 shrink-0 max-h-[40%] overflow-y-auto overflow-x-hidden border-t border-[var(--color-sacred-gold-dark)]">
+                <div className="px-3 py-2 sm:p-4 flex flex-col gap-1.5 sm:gap-2 shrink-0 max-h-[45%] overflow-y-auto overflow-x-hidden border-t border-[var(--color-sacred-gold-dark)]">
                   {visibleOptions.map((opt, i) => (
                       <button
                         key={i}
+                        className="w-full text-left px-3 py-1.5 sm:py-2 bg-neutral-800/50 hover:bg-neutral-700 rounded text-xs sm:text-sm text-neutral-300 transition-colors"
                         onClick={() => {
                           if (opt.set_switch) {
                             usePlayStore
@@ -4689,7 +4690,6 @@ export function PlayEngine() {
                             if (cutscene) setActiveCutscene(cutscene);
                           }
                         }}
-                        className="w-full text-left px-3 py-2 bg-neutral-800/50 hover:bg-neutral-700 rounded text-sm text-neutral-300 transition-colors"
                       >
                         {opt.text}
                       </button>
