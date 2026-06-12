@@ -3475,9 +3475,9 @@ export function PlayEngine() {
 
         {/* Turn banner + initiative strip (combat only) */}
         {inCombat && (
-          <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center gap-1.5 pointer-events-none">
+          <div className="absolute top-2 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center gap-1 pointer-events-none" style={{ maxWidth: 'calc(100vw - 9rem)' }}>
             <div
-              className={`px-6 py-2 border text-sm font-[family-name:var(--font-display)] font-bold tracking-widest uppercase shadow-[0_0_20px_rgba(0,0,0,0.9)] bg-sacred-stone border-sacred-gold text-sacred-glow ${
+              className={`px-3 py-1 sm:px-6 sm:py-2 border text-[10px] sm:text-sm font-[family-name:var(--font-display)] font-bold tracking-widest uppercase shadow-[0_0_20px_rgba(0,0,0,0.9)] bg-sacred-stone border-sacred-gold text-sacred-glow whitespace-nowrap ${
                 controlledActor
                   ? controlledActor.isPlayer
                     ? "text-[var(--color-sacred-gold)]"
@@ -3489,12 +3489,13 @@ export function PlayEngine() {
               {controlledActor
                 ? controlledActor.isPlayer
                   ? "⚔ Your Turn ⚔"
-                  : `⚔ Command ${controlledActor.name} ⚔`
-                : "The Enemy Moves..."}
+                  : `⚔ ${controlledActor.name.split(" ")[0]}`
+                : "Enemy..."}
             </div>
-            <div className="flex gap-1.5 flex-wrap justify-center max-w-[90vw]">
+            <div className="flex gap-1 flex-nowrap justify-center overflow-hidden max-w-full">
               {combatQueueInfo
                 .filter((c) => !c.dead)
+                .slice(0, 6)
                 .map((c) => {
                   const active = c.id === saveData.active_turn_id;
                   const accent =
@@ -3504,15 +3505,15 @@ export function PlayEngine() {
                   return (
                     <div
                       key={c.id}
-                      className={`px-3 py-1 bg-sacred-stone border ${accent} ${
+                      className={`px-1.5 sm:px-3 py-0.5 sm:py-1 bg-sacred-stone border ${accent} ${
                         active ? "scale-110 shadow-[0_0_15px_var(--color-sacred-gold)] brightness-125 z-10" : "opacity-60 grayscale"
-                      } transition-all flex flex-col items-center`}
+                      } transition-all flex flex-col items-center shrink-0`}
                       style={{ borderStyle: "solid", borderWidth: "1px" }}
                     >
-                      <span className="text-[10px] font-serif font-bold truncate max-w-20 leading-tight">
-                        {c.name}
+                      <span className="text-[8px] sm:text-[10px] font-serif font-bold truncate max-w-[2.5rem] sm:max-w-20 leading-tight">
+                        {c.name.split(" ")[0]}
                       </span>
-                      <div className="w-14 h-1 bg-black border border-[#111] mt-0.5 overflow-hidden">
+                      <div className="w-8 sm:w-14 h-0.5 sm:h-1 bg-black border border-[#111] mt-0.5 overflow-hidden">
                         <div
                           className={`h-full ${c.kind === "enemy" ? "bg-[#8b1c1c]" : "bg-[var(--color-sacred-gold-dark)]"}`}
                           style={{
@@ -3769,13 +3770,21 @@ export function PlayEngine() {
           )}
         </div>
 
-        <div className="absolute left-2 pointer-events-none flex flex-col items-start justify-end gap-1 max-h-[30%] overflow-hidden z-10" style={{ bottom: 'calc(0.5rem + env(safe-area-inset-bottom))' }}>
+        <div
+          className="absolute left-2 pointer-events-none flex flex-col items-start justify-end gap-1 max-h-[30%] overflow-hidden z-10"
+          style={{
+            bottom: hotbarSkills.length > 0 && !overlayOpen
+              ? 'calc(4rem + env(safe-area-inset-bottom))'
+              : 'calc(0.5rem + env(safe-area-inset-bottom))',
+            maxWidth: 'min(55%, 16rem)',
+          }}
+        >
           {logMessages.slice(-3).map((msg, i, arr) => {
             const age = arr.length - 1 - i;
             return (
               <div
                 key={i}
-                className="bg-neutral-900/85 border border-neutral-800/50 text-neutral-200 text-[11px] py-1 px-2.5 rounded-md shadow-lg pointer-events-auto transition-all animate-in fade-in slide-in-from-left-4"
+                className="bg-neutral-900/85 border border-neutral-800/50 text-neutral-200 text-[10px] sm:text-[11px] py-1 px-2 sm:px-2.5 rounded-md shadow-lg pointer-events-auto transition-all animate-in fade-in slide-in-from-left-4 break-words"
                 style={{ opacity: Math.max(0.15, 1 - age * 0.35) }}
               >
                 {msg}
