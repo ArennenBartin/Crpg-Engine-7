@@ -2116,18 +2116,18 @@ export function PlayEngine() {
               hp: saved.hp ?? def?.max_hp ?? 10,
               energy: saved.energy ?? 0,
               isDead: !!saved.dead || !!saved.hidden,
-	            };
-	          })
-	          .filter((n) => {
-	            if (!n.def || n.isDead) return false;
-	            const dist =
-	              Math.abs(playerCell[0] - n.cell[0]) +
-	              Math.abs(playerCell[1] - n.cell[1]);
-	            const hasSchedule = (n.placement.schedule?.length || 0) > 0;
-	            return n.def.is_npc
-	              ? hasSchedule || dist <= NPC_SIMULATION_RADIUS
-	              : dist <= CHASE_RADIUS + 4;
-	          }) || [];
+                    };
+                  })
+                  .filter((n) => {
+                    if (!n.def || n.isDead) return false;
+                    const dist =
+                      Math.abs(playerCell[0] - n.cell[0]) +
+                      Math.abs(playerCell[1] - n.cell[1]);
+                    const hasSchedule = (n.placement.schedule?.length || 0) > 0;
+                    return n.def.is_npc
+                      ? hasSchedule || dist <= NPC_SIMULATION_RADIUS
+                      : dist <= CHASE_RADIUS + 4;
+                  }) || [];
 
       let walkableMapCache: Set<string> | null = null;
       const getTurnWalkableMap = () => {
@@ -2237,9 +2237,9 @@ export function PlayEngine() {
               const walkableMap = getTurnWalkableMap();
               const occupiedMap = new Set(
                 mapEntities
-	                  .filter((n) => !n.isDead)
-	                  .map((n) => pathCellKey(n.cell[0], n.cell[1])),
-	              );
+                          .filter((n) => !n.isDead)
+                          .map((n) => pathCellKey(n.cell[0], n.cell[1])),
+                      );
 
               const nextStep = findNextStep(
                 readyNpc.cell[0],
@@ -2278,10 +2278,10 @@ export function PlayEngine() {
                 }
 
                 if (
-	                  walkableMap.has(pathCellKey(nx, nz)) &&
-	                  !occupiedMap.has(pathCellKey(nx, nz)) &&
-	                  !(playerCell[0] === nx && playerCell[1] === nz)
-	                ) {
+                          walkableMap.has(pathCellKey(nx, nz)) &&
+                          !occupiedMap.has(pathCellKey(nx, nz)) &&
+                          !(playerCell[0] === nx && playerCell[1] === nz)
+                        ) {
                   readyNpc.cell = [nx, nz];
                 }
               }
@@ -2301,10 +2301,10 @@ export function PlayEngine() {
               const walkableMap = getTurnWalkableMap();
               const occupiedMap = new Set(
                 mapEntities
-	                  .filter((n) => !n.isDead && n !== readyNpc)
-	                  .map((n) => pathCellKey(n.cell[0], n.cell[1])),
-	              );
-	              occupiedMap.add(pathCellKey(playerCell[0], playerCell[1]));
+                          .filter((n) => !n.isDead && n !== readyNpc)
+                          .map((n) => pathCellKey(n.cell[0], n.cell[1])),
+                      );
+                      occupiedMap.add(pathCellKey(playerCell[0], playerCell[1]));
 
               const nextStep = findNextStep(
                 readyNpc.cell[0],
@@ -2312,8 +2312,8 @@ export function PlayEngine() {
                 (x, z) => x === target.cell[0] && z === target.cell[1],
                 walkableMap,
                 occupiedMap,
-		                NPC_SCHEDULE_PATH_LIMIT,
-	              );
+                                NPC_SCHEDULE_PATH_LIMIT,
+                      );
               if (nextStep) {
                 readyNpc.cell = [nextStep[0], nextStep[1]];
               }
@@ -2325,26 +2325,26 @@ export function PlayEngine() {
             hp: readyNpc.hp,
             dead: readyNpc.isDead,
           };
-	        } else {
-	          const waits = [Math.ceil((1000 - playerEnergy) / playerSpeed)];
-	          mapEntities.forEach((n) => {
-	            if (n.isDead || n.energy >= 1000) return;
-	            waits.push(Math.ceil((1000 - n.energy) / Math.max(1, n.def!.speed || 10)));
-	          });
-	          const ticks = Math.max(1, Math.min(...waits.filter((wait) => wait > 0)));
+                } else {
+                  const waits = [Math.ceil((1000 - playerEnergy) / playerSpeed)];
+                  mapEntities.forEach((n) => {
+                    if (n.isDead || n.energy >= 1000) return;
+                    waits.push(Math.ceil((1000 - n.energy) / Math.max(1, n.def!.speed || 10)));
+                  });
+                  const ticks = Math.max(1, Math.min(...waits.filter((wait) => wait > 0)));
 
-	          elapsedTicks += ticks;
-	          playerEnergy += playerSpeed * ticks;
-	          mapEntities.forEach((n) => {
-	            n.energy += Math.max(1, n.def!.speed || 10) * ticks;
-	            nextEntities[n.key] = {
-	              cell: n.cell,
-	              hp: n.hp,
-	              energy: n.energy,
-	              dead: n.isDead,
-	            };
-	          });
-	        }
+                  elapsedTicks += ticks;
+                  playerEnergy += playerSpeed * ticks;
+                  mapEntities.forEach((n) => {
+                    n.energy += Math.max(1, n.def!.speed || 10) * ticks;
+                    nextEntities[n.key] = {
+                      cell: n.cell,
+                      hp: n.hp,
+                      energy: n.energy,
+                      dead: n.isDead,
+                    };
+                  });
+                }
       }
 
       return {
@@ -3406,19 +3406,19 @@ export function PlayEngine() {
 
         {/* Floating Act + Wait buttons — always reachable, bottom-right of canvas */}
         {!targetingSkillId && !activeShopId && !activeDialogueId && !activeDocumentId && !activeContainerId && (
-          <div className="absolute right-4 z-20 flex flex-col gap-3 pointer-events-auto" style={{ bottom: 'calc(1rem + env(safe-area-inset-bottom))' }}>
+          <div className="absolute right-3 z-20 flex flex-col gap-2 pointer-events-auto" style={{ bottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}>
             <button
-              className="w-16 h-16 bg-sacred-stone active:brightness-150 rounded-full flex flex-col items-center justify-center active:scale-90 transition-all select-none shadow-[0_0_15px_rgba(0,0,0,0.8)] border-sacred-gold text-[var(--color-sacred-gold)] touch-manipulation gap-0.5"
+              className="w-12 h-12 sm:w-16 sm:h-16 bg-sacred-stone active:brightness-150 rounded-full flex flex-col items-center justify-center active:scale-90 transition-all select-none shadow-[0_0_15px_rgba(0,0,0,0.8)] border-sacred-gold text-[var(--color-sacred-gold)] touch-manipulation gap-0.5"
               style={{ borderStyle: "solid", borderWidth: "2px" }}
               onClick={handleAct}
               title="Interact / Act"
             >
-              <Hand className="w-7 h-7 drop-shadow-md" />
-              <span className="text-[9px] font-[family-name:var(--font-display)] font-bold tracking-widest uppercase opacity-90 text-sacred-glow">Act</span>
+              <Hand className="w-5 h-5 sm:w-7 sm:h-7 drop-shadow-md" />
+              <span className="text-[8px] font-[family-name:var(--font-display)] font-bold tracking-widest uppercase opacity-90 text-sacred-glow">Act</span>
             </button>
 
             <button
-              className="w-16 h-16 bg-sacred-stone active:brightness-150 rounded-full flex flex-col items-center justify-center active:scale-90 transition-all select-none shadow-[0_0_15px_rgba(0,0,0,0.8)] border-sacred-gold text-[var(--color-sacred-ink-dim)] touch-manipulation gap-0.5"
+              className="w-12 h-12 sm:w-16 sm:h-16 bg-sacred-stone active:brightness-150 rounded-full flex flex-col items-center justify-center active:scale-90 transition-all select-none shadow-[0_0_15px_rgba(0,0,0,0.8)] border-sacred-gold text-[var(--color-sacred-ink-dim)] touch-manipulation gap-0.5"
               style={{ borderStyle: "solid", borderWidth: "2px" }}
               onPointerDown={(e) => { e.stopPropagation(); simulateKey("z", true); }}
               onPointerUp={(e) => { e.stopPropagation(); simulateKey("z", false); }}
@@ -3426,8 +3426,8 @@ export function PlayEngine() {
               onContextMenu={(e) => e.preventDefault()}
               title="Wait (Pass Turn)"
             >
-              <Clock className="w-7 h-7 drop-shadow-md" />
-              <span className="text-[9px] font-[family-name:var(--font-display)] font-bold tracking-widest uppercase opacity-90">Wait</span>
+              <Clock className="w-5 h-5 sm:w-7 sm:h-7 drop-shadow-md" />
+              <span className="text-[8px] font-[family-name:var(--font-display)] font-bold tracking-widest uppercase opacity-90">Wait</span>
             </button>
           </div>
         )}
@@ -3449,22 +3449,22 @@ export function PlayEngine() {
                   key={skill.id}
                   onClick={() => beginTargeting(skill.id)}
                   disabled={!affordable}
-                  className={`relative w-[60px] h-16 rounded-sm bg-sacred-stone flex flex-col items-center justify-center gap-0.5 shadow-[0_0_15px_rgba(0,0,0,0.8)] border-sacred-gold transition-all select-none touch-manipulation ${
+                  className={`relative w-[46px] h-12 sm:w-[60px] sm:h-16 rounded-sm bg-sacred-stone flex flex-col items-center justify-center gap-0.5 shadow-[0_0_15px_rgba(0,0,0,0.8)] border-sacred-gold transition-all select-none touch-manipulation ${
                     affordable ? "active:scale-90 brightness-100" : "opacity-40 grayscale"
                   }`}
                   style={{ borderStyle: "solid", borderWidth: "1px" }}
                   title={`${skill.display_name}${skill.description ? ` — ${skill.description}` : ""}`}
                 >
-                  <span className="absolute top-1 left-1.5 text-[10px] font-serif font-bold text-[var(--color-sacred-gold)] drop-shadow-md">
+                  <span className="absolute top-0.5 left-1 text-[9px] font-serif font-bold text-[var(--color-sacred-gold)] drop-shadow-md">
                     {i + 1}
                   </span>
-                  <Sparkles className="w-4 h-4 text-[var(--color-sacred-ink)]" />
-                  <span className="text-[8px] font-[family-name:var(--font-display)] font-bold uppercase tracking-wider leading-tight text-center px-0.5 text-[var(--color-sacred-ink)]">
+                  <Sparkles className="w-3 h-3 sm:w-4 sm:h-4 text-[var(--color-sacred-ink)]" />
+                  <span className="text-[7px] sm:text-[8px] font-[family-name:var(--font-display)] font-bold uppercase tracking-wider leading-tight text-center px-0.5 text-[var(--color-sacred-ink)]">
                     {skill.display_name}
                   </span>
                   {skill.mp_cost > 0 && (
-                    <span className="text-[9px] font-serif font-bold text-[#457b9d] drop-shadow-md">
-                      {skill.mp_cost} Aether
+                    <span className="text-[7px] sm:text-[9px] font-serif font-bold text-[#457b9d] drop-shadow-md">
+                      {skill.mp_cost}MP
                     </span>
                   )}
                 </button>
@@ -3550,20 +3550,20 @@ export function PlayEngine() {
           })()}
 
         {/* HUD / Controls Overlay */}
-        <div className="absolute top-3 left-3 z-20 flex flex-col gap-1.5 pointer-events-auto">
+        <div className="absolute top-2 left-2 z-20 flex flex-col gap-1 pointer-events-auto">
           {/* Player Vitals - compact */}
           <div
-            className="px-4 py-3 bg-sacred-stone border-sacred-gold rounded-sm shadow-[0_0_20px_rgba(0,0,0,0.8)] flex flex-col gap-2.5 w-48"
+            className="px-2.5 py-2 sm:px-4 sm:py-3 bg-sacred-stone border-sacred-gold rounded-sm shadow-[0_0_20px_rgba(0,0,0,0.8)] flex flex-col gap-1.5 sm:gap-2.5 w-36 sm:w-48"
             style={{ borderStyle: "solid", borderWidth: "2px" }}
           >
             <div>
-              <div className="flex justify-between items-end mb-1 px-1">
-                <span className="text-[#e63946] text-[11px] font-[family-name:var(--font-display)] font-bold tracking-widest uppercase">Vitality</span>
-                <span className="font-serif font-bold text-[11px] text-[var(--color-sacred-ink)] drop-shadow-sm">
+              <div className="flex justify-between items-end mb-0.5 px-0.5">
+                <span className="text-[#e63946] text-[9px] sm:text-[11px] font-[family-name:var(--font-display)] font-bold tracking-widest uppercase">Vitality</span>
+                <span className="font-serif font-bold text-[9px] sm:text-[11px] text-[var(--color-sacred-ink)] drop-shadow-sm">
                   {saveData.playerStats.hp} / {saveData.playerStats.max_hp}
                 </span>
               </div>
-              <div className="w-full bg-black/80 h-2.5 border border-[#4a1010] shadow-[inset_0_0_5px_rgba(0,0,0,1)] relative">
+              <div className="w-full bg-black/80 h-2 border border-[#4a1010] shadow-[inset_0_0_5px_rgba(0,0,0,1)] relative">
                 <div
                   className="h-full bg-gradient-to-r from-[#8b1c1c] to-[#e63946] transition-all duration-300 shadow-[0_0_8px_rgba(230,57,70,0.5)]"
                   style={{
@@ -3573,13 +3573,13 @@ export function PlayEngine() {
               </div>
             </div>
             <div>
-              <div className="flex justify-between items-end mb-1 px-1">
-                <span className="text-[#457b9d] text-[11px] font-[family-name:var(--font-display)] font-bold tracking-widest uppercase">Aether</span>
-                <span className="font-serif font-bold text-[11px] text-[var(--color-sacred-ink)] drop-shadow-sm">
+              <div className="flex justify-between items-end mb-0.5 px-0.5">
+                <span className="text-[#457b9d] text-[9px] sm:text-[11px] font-[family-name:var(--font-display)] font-bold tracking-widest uppercase">Aether</span>
+                <span className="font-serif font-bold text-[9px] sm:text-[11px] text-[var(--color-sacred-ink)] drop-shadow-sm">
                   {saveData.playerStats.mp ?? 10} / {saveData.playerStats.max_mp ?? 10}
                 </span>
               </div>
-              <div className="w-full bg-black/80 h-2.5 border border-[#0f1f38] shadow-[inset_0_0_5px_rgba(0,0,0,1)] relative">
+              <div className="w-full bg-black/80 h-2 border border-[#0f1f38] shadow-[inset_0_0_5px_rgba(0,0,0,1)] relative">
                 <div
                   className="h-full bg-gradient-to-r from-[#1d3557] to-[#457b9d] transition-all duration-300 shadow-[0_0_8px_rgba(69,123,157,0.5)]"
                   style={{
@@ -3588,16 +3588,16 @@ export function PlayEngine() {
                 />
               </div>
             </div>
-            <div className="flex justify-between font-serif text-[10px] text-[var(--color-sacred-ink)] pt-1 px-1 font-bold">
-              <span title="Attack" className="flex items-center gap-1"><span className="text-[var(--color-sacred-gold)]">⚔</span> {saveData.playerStats.attack}</span>
-              <span title="Defense" className="flex items-center gap-1"><span className="text-[var(--color-sacred-gold)]">🛡</span> {saveData.playerStats.defense}</span>
-              <span title="Speed" className="flex items-center gap-1"><span className="text-[var(--color-sacred-gold)]">⚡</span> {saveData.playerStats.speed}</span>
+            <div className="flex justify-between font-serif text-[9px] text-[var(--color-sacred-ink)] px-0.5 font-bold">
+              <span title="Attack" className="flex items-center gap-0.5"><span className="text-[var(--color-sacred-gold)]">⚔</span> {saveData.playerStats.attack}</span>
+              <span title="Defense" className="flex items-center gap-0.5"><span className="text-[var(--color-sacred-gold)]">🛡</span> {saveData.playerStats.defense}</span>
+              <span title="Speed" className="flex items-center gap-0.5"><span className="text-[var(--color-sacred-gold)]">⚡</span> {saveData.playerStats.speed}</span>
             </div>
-            <div className="pt-1.5 border-t border-[var(--color-sacred-gold-dark)]/50 flex justify-between items-center px-1">
-              <span className="text-[var(--color-sacred-gold)] text-[11px] font-[family-name:var(--font-display)] font-bold tracking-widest uppercase">
+            <div className="pt-1 border-t border-[var(--color-sacred-gold-dark)]/50 flex justify-between items-center px-0.5">
+              <span className="text-[var(--color-sacred-gold)] text-[9px] sm:text-[11px] font-[family-name:var(--font-display)] font-bold tracking-widest uppercase">
                 {clockPhase}
               </span>
-              <span className="font-serif font-bold text-[10px] text-[var(--color-sacred-ink)] drop-shadow-sm">
+              <span className="font-serif font-bold text-[9px] sm:text-[10px] text-[var(--color-sacred-ink)] drop-shadow-sm">
                 Day {clockDay} · {String(clockHour).padStart(2, "0")}:
                 {String(clockMinute).padStart(2, "0")}
               </span>
@@ -3607,7 +3607,7 @@ export function PlayEngine() {
           {/* Party panel — the people beside you, with their real stats */}
           {partyMemberIds.length > 0 && (
             <div
-              className="px-4 py-3 bg-sacred-stone border-[var(--color-sacred-gold-dark)] rounded-sm shadow-[0_0_20px_rgba(0,0,0,0.8)] flex flex-col gap-2.5 w-48 mt-1"
+              className="px-2.5 py-2 sm:px-4 sm:py-3 bg-sacred-stone border-[var(--color-sacred-gold-dark)] rounded-sm shadow-[0_0_20px_rgba(0,0,0,0.8)] flex flex-col gap-1.5 sm:gap-2.5 w-36 sm:w-48 mt-0.5"
               style={{ borderStyle: "solid", borderWidth: "1px" }}
             >
               {partyMemberIds.map((pid) => {
@@ -3699,49 +3699,49 @@ export function PlayEngine() {
         </div>
 
         {/* Top-right icon buttons */}
-        <div className="absolute top-3 right-3 z-20 flex flex-col items-end gap-2 pointer-events-auto">
-          <div className="flex gap-2">
+        <div className="absolute top-2 right-2 z-20 flex flex-col items-end gap-1.5 pointer-events-auto">
+          <div className="flex gap-1.5">
             <button
               onClick={() => setShowInventory(true)}
-              className="w-10 h-10 bg-neutral-900/90 border border-neutral-700 hover:bg-neutral-700 text-neutral-300 rounded-full shadow-lg transition-all flex items-center justify-center"
+              className="w-8 h-8 sm:w-10 sm:h-10 bg-neutral-900/90 border border-neutral-700 hover:bg-neutral-700 text-neutral-300 rounded-full shadow-lg transition-all flex items-center justify-center"
               title="Inventory"
             >
-              <Briefcase className="w-5 h-5" />
+              <Briefcase className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
             <button
               onClick={() => setShowSkills(true)}
-              className="w-10 h-10 bg-indigo-900/90 border border-indigo-700 hover:bg-indigo-700 text-indigo-200 rounded-full shadow-lg transition-all flex items-center justify-center"
+              className="w-8 h-8 sm:w-10 sm:h-10 bg-indigo-900/90 border border-indigo-700 hover:bg-indigo-700 text-indigo-200 rounded-full shadow-lg transition-all flex items-center justify-center"
               title="Spells & Skills"
             >
-              <Sparkles className="w-5 h-5" />
+              <Sparkles className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
             <button
               onClick={() => {
                 clearInputState();
                 setShowCaseFile(true);
               }}
-              className="w-10 h-10 bg-sky-950/90 border border-sky-800 hover:bg-sky-800 text-sky-200 rounded-full shadow-lg transition-all flex items-center justify-center"
+              className="w-8 h-8 sm:w-10 sm:h-10 bg-sky-950/90 border border-sky-800 hover:bg-sky-800 text-sky-200 rounded-full shadow-lg transition-all flex items-center justify-center"
               title="Case File"
             >
-              <BookOpen className="w-5 h-5" />
+              <BookOpen className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
             <button
               onClick={() => {
                 clearInputState();
                 setShowSaveMenu(true);
               }}
-              className="w-10 h-10 bg-amber-950/90 border border-amber-800 hover:bg-amber-800 text-amber-200 rounded-full shadow-lg transition-all flex items-center justify-center"
+              className="w-8 h-8 sm:w-10 sm:h-10 bg-amber-950/90 border border-amber-800 hover:bg-amber-800 text-amber-200 rounded-full shadow-lg transition-all flex items-center justify-center"
               title="Save / Load"
             >
-              <Save className="w-5 h-5" />
+              <Save className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
             {(saveData.party_members || []).length > 0 && (
               <button
                 onClick={handlePartyTalk}
-                className="w-10 h-10 bg-emerald-900/90 border border-emerald-700 hover:bg-emerald-700 text-emerald-100 rounded-full shadow-lg transition-all flex items-center justify-center"
+                className="w-8 h-8 sm:w-10 sm:h-10 bg-emerald-900/90 border border-emerald-700 hover:bg-emerald-700 text-emerald-100 rounded-full shadow-lg transition-all flex items-center justify-center"
                 title="Talk to Party"
               >
-                <MessageCircle className="w-5 h-5" />
+                <MessageCircle className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
             )}
           </div>

@@ -73,8 +73,8 @@ export function AppShell() {
         </div>
       </nav>
 
-      {/* Mobile Header */}
-      <header className="sm:hidden h-14 shrink-0 border-b border-neutral-800 flex items-center px-4 justify-between bg-neutral-950 z-20">
+      {/* Mobile Header — hidden in play mode to maximise vertical space */}
+      <header className={`sm:hidden h-14 shrink-0 border-b border-neutral-800 flex items-center px-4 justify-between bg-neutral-950 z-20${mode === 'play' ? ' hidden' : ''}`}>
         <div className="flex items-center gap-3 z-30">
           <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="text-neutral-400 hover:text-white p-1">
             {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
@@ -151,7 +151,7 @@ export function AppShell() {
           </div>
         </header>
         
-        <div className="flex-1 overflow-auto h-full w-full">
+        <div className={`flex-1 h-full w-full ${mode === 'play' ? 'overflow-hidden' : 'overflow-auto'}`}>
           {mode === "home" && <HomePanel />}
           {mode === "play" && <PlayMode />}
           {mode === "map_editor" && <MapEditor />}
