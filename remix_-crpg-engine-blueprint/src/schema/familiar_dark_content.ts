@@ -1166,13 +1166,13 @@ export const FD_DIALOGUE: DialogueData[] = [
         id: "node_work",
         speaker: "Orin",
         text: "Cordon lamps, black-star panes, little blessed windows for houses that cannot afford marble. The Church buys the big panes and pretends the small ones are folk taste.",
-        options: [{ text: "Go back.", next_node_id: "node_1" }],
+        options: [{ text: "Go back.", set_switch: "testimony_orin", next_node_id: "node_1" }],
       },
       {
         id: "node_move",
         speaker: "Orin",
         text: "Only in reflection. You look at a dark pane and one of them is standing half a breath wrong. Never in the square, never when a guard asks. Glass knows authority.",
-        options: [{ text: "Go back.", next_node_id: "node_1" }],
+        options: [{ text: "Go back.", set_switch: "testimony_orin", next_node_id: "node_1" }],
       },
     ],
   },
@@ -1194,13 +1194,13 @@ export const FD_DIALOGUE: DialogueData[] = [
         id: "node_stones",
         speaker: "Marta",
         text: "Families too pagan to face the nave and too useful to bury outside the walls. Alderamontico has always known how to condemn a thing and inherit it.",
-        options: [{ text: "Go back.", next_node_id: "node_1" }],
+        options: [{ text: "Go back.", set_switch: "testimony_marta", next_node_id: "node_1" }],
       },
       {
         id: "node_followers",
         speaker: "Marta",
         text: "Followers? No. Habits. A habit can outlive a god, a bishop, and a law. That is why habits are dangerous.",
-        options: [{ text: "Go back.", next_node_id: "node_1" }],
+        options: [{ text: "Go back.", set_switch: "testimony_marta", next_node_id: "node_1" }],
       },
     ],
   },
@@ -1233,13 +1233,13 @@ export const FD_DIALOGUE: DialogueData[] = [
         id: "node_what",
         speaker: "Lazare",
         text: "An old parish mistake. A tolerated hunger. The Church has three categories for me and none of them are friend. I prefer tenant.",
-        options: [{ text: "Go back.", next_node_id: "node_1" }],
+        options: [{ text: "Go back.", set_switch: "lazare_talked", next_node_id: "node_1" }],
       },
       {
         id: "node_rite",
         speaker: "Lazare",
         text: "Only this: the night the Witness bled, every mirror in this room showed the old road instead of my face. I know the difference, Intercessor. One of those has never belonged to me.",
-        options: [{ text: "Go back.", next_node_id: "node_1" }],
+        options: [{ text: "Go back.", set_switch: "lazare_talked", next_node_id: "node_1" }],
       },
     ],
   },
@@ -1277,7 +1277,7 @@ export const FD_DIALOGUE: DialogueData[] = [
         id: "node_opinion",
         speaker: "Provisioner Dimos",
         text: "He leans in, glances both ways along the market row. — Free of charge, because you'll hear it anyway: half this town bought candles from me the week before the rite. Sevens. Always sevens. I sell no opinions, Intercessor, but I sell a great many candles, and I can count.",
-        options: [{ text: "Go back.", next_node_id: "node_1" }],
+        options: [{ text: "Go back.", set_switch: "testimony_dimos", next_node_id: "node_1" }],
       },
     ],
   },
@@ -1549,12 +1549,12 @@ export const FD_CUTSCENES: CutsceneData[] = [
     actions: [
       { type: "play_music", music_url: "/music/roll away.ogg" },
       { type: "screen_fade", fade: "out", duration: 0 },
-      { type: "move_entity", entity_id: "ent_aldric", cell: [1, -63], facing: [0, 1] },
+      { type: "move_entity", entity_id: "ent_aldric", cell: [1, -144], facing: [0, 1] },
       { type: "screen_fade", fade: "in", duration: 1500 },
       // The procession in one shot: Mouthstone, exile road, bleeding Witness.
-      { type: "camera_pan", cell: [0, -70], duration: 1300 },
-      { type: "camera_pan", cell: [0, -51], duration: 1300 },
-      { type: "camera_pan", cell: [0, 26], duration: 1800 },
+      { type: "camera_pan", cell: [0, -138], duration: 1300 },
+      { type: "camera_pan", cell: [0, -84], duration: 1300 },
+      { type: "camera_pan", cell: [0, -10], duration: 1800 },
       { type: "wait", duration: 700 },
       { type: "camera_pan", duration: 1800 },
       { type: "show_dialogue", dialogue_id: "dia_opening_ceremony" },
@@ -1591,7 +1591,7 @@ export const FD_CUTSCENES: CutsceneData[] = [
       { type: "set_switch", switch_id: "office_briefed", switch_value: true },
       // The writ is the key that unseals the cellar trapdoor (Scene 4).
       { type: "set_switch", switch_id: "act1_assigned", switch_value: true },
-      { type: "camera_pan", cell: [13, -24], duration: 900 },
+      { type: "camera_pan", cell: [54, -76], duration: 900 },
       { type: "read_document", document_id: "doc_writ" },
       { type: "show_dialogue", dialogue_id: "dia_office_briefing" },
       { type: "read_document", document_id: "doc_field_note" },
@@ -1604,7 +1604,7 @@ export const FD_CUTSCENES: CutsceneData[] = [
     is_blocking: true,
     actions: [
       { type: "set_switch", switch_id: "gaol_entered", switch_value: true },
-      { type: "camera_pan", cell: [-13, -29], duration: 900 },
+      { type: "camera_pan", cell: [76, -54], duration: 900 },
       { type: "show_dialogue", dialogue_id: "dia_gaol_entry_scene" },
       { type: "camera_pan", duration: 700 },
     ],
@@ -1624,7 +1624,7 @@ export const FD_CUTSCENES: CutsceneData[] = [
     is_blocking: true,
     actions: [
       { type: "set_switch", switch_id: "seen_cordon", switch_value: true },
-      { type: "camera_pan", cell: [0, 26], duration: 1600 },
+      { type: "camera_pan", cell: [0, -10], duration: 1600 },
       { type: "show_dialogue", dialogue_id: "dia_first_sight" },
       { type: "camera_pan", duration: 1400 },
     ],
@@ -1635,7 +1635,7 @@ export const FD_CUTSCENES: CutsceneData[] = [
     is_blocking: true,
     actions: [
       { type: "set_switch", switch_id: "seen_funeral", switch_value: true },
-      { type: "camera_pan", cell: [-9, 9], duration: 900 },
+      { type: "camera_pan", cell: [26, 18], duration: 900 },
       { type: "show_dialogue", dialogue_id: "dia_funeral" },
       { type: "camera_pan", duration: 700 },
     ],
@@ -1646,7 +1646,7 @@ export const FD_CUTSCENES: CutsceneData[] = [
     is_blocking: true,
     actions: [
       { type: "set_switch", switch_id: "seen_cellar", switch_value: true },
-      { type: "camera_pan", cell: [-18, -11], duration: 900 },
+      { type: "camera_pan", cell: [-62, 20], duration: 900 },
       { type: "show_dialogue", dialogue_id: "dia_cellar" },
       { type: "camera_pan", duration: 700 },
     ],
@@ -1729,7 +1729,7 @@ export const FD_CUTSCENES: CutsceneData[] = [
     is_blocking: true,
     actions: [
       { type: "set_switch", switch_id: "act1_complete", switch_value: true },
-      { type: "camera_pan", cell: [13, -24], duration: 900 },
+      { type: "camera_pan", cell: [54, -76], duration: 900 },
       { type: "show_dialogue", dialogue_id: "dia_office_after" },
       { type: "camera_pan", duration: 700 },
     ],
@@ -1764,7 +1764,7 @@ export const FD_CUTSCENES: CutsceneData[] = [
     display_name: "The Sealed Cellar",
     is_blocking: true,
     actions: [
-      { type: "camera_pan", cell: [-18, -11], duration: 800 },
+      { type: "camera_pan", cell: [-62, 20], duration: 800 },
       { type: "show_dialogue", dialogue_id: "dia_trapdoor_sealed" },
       { type: "camera_pan", duration: 600 },
     ],
@@ -1810,6 +1810,130 @@ export const FD_CUTSCENES: CutsceneData[] = [
       { type: "read_document", document_id: "doc_rite_fragment_2" },
       { type: "give_item", item_id: "itm_rite_fragment_2", amount: 1 },
       { type: "set_switch", switch_id: "found_second_leaf", switch_value: true },
+    ],
+  },
+  // ══════════════════════════════════════════════════════════════════════════
+  // ACT 1 OPEN WORLD: Gate blocks, cave transitions, boss, logs
+  // ══════════════════════════════════════════════════════════════════════════
+  {
+    id: "cut_gate_blocked_briefing",
+    display_name: "The Scriptorium First",
+    is_blocking: true,
+    actions: [
+      { type: "show_dialogue", dialogue_id: "dia_gate_blocked_briefing" },
+    ],
+  },
+  {
+    id: "cut_gate_blocked_cave",
+    display_name: "Not Yet Ready",
+    is_blocking: true,
+    actions: [
+      { type: "show_dialogue", dialogue_id: "dia_gate_blocked_cave" },
+    ],
+  },
+  {
+    id: "cut_gate_blocked_deep",
+    display_name: "The Sigil Seal",
+    is_blocking: true,
+    actions: [
+      { type: "show_dialogue", dialogue_id: "dia_gate_blocked_deep" },
+    ],
+  },
+  {
+    id: "cut_gate_blocked_prison",
+    display_name: "No Admittance",
+    is_blocking: true,
+    actions: [
+      { type: "show_dialogue", dialogue_id: "dia_gate_blocked_prison" },
+    ],
+  },
+  {
+    id: "cut_gate_blocked_mouthstone",
+    display_name: "The Road Beyond",
+    is_blocking: true,
+    actions: [
+      { type: "show_dialogue", dialogue_id: "dia_gate_blocked_mouthstone" },
+    ],
+  },
+  {
+    id: "cut_gate_blocked_shrine",
+    display_name: "Old Marks",
+    is_blocking: true,
+    actions: [
+      { type: "show_dialogue", dialogue_id: "dia_gate_blocked_shrine" },
+    ],
+  },
+  // ── Cave transitions ──
+  {
+    id: "cut_cave_descent",
+    display_name: "Into the Eastern Caves",
+    is_blocking: true,
+    actions: [
+      { type: "screen_fade", fade: "out", duration: 800 },
+      { type: "teleport_player", cell: [0, 116], facing: [0, 1] },
+      { type: "play_music", music_url: "/music/Pagan Network.wav" },
+      { type: "screen_fade", fade: "in", duration: 1100 },
+    ],
+  },
+  {
+    id: "cut_cave_return",
+    display_name: "Back to the Surface",
+    is_blocking: true,
+    actions: [
+      { type: "screen_fade", fade: "out", duration: 800 },
+      { type: "teleport_player", cell: [138, 58], facing: [0, -1] },
+      { type: "play_music", music_url: "/music/roll away.ogg" },
+      { type: "screen_fade", fade: "in", duration: 1100 },
+    ],
+  },
+  // ── Boss intro ──
+  {
+    id: "cut_boss_intro",
+    display_name: "The Grid-Sick",
+    is_blocking: true,
+    actions: [
+      { type: "screen_fade", fade: "out", duration: 600 },
+      { type: "camera_pan", cell: [0, 138], duration: 1200 },
+      { type: "screen_fade", fade: "in", duration: 800 },
+      { type: "show_dialogue", dialogue_id: "dia_boss_intro" },
+      { type: "camera_pan", duration: 800 },
+    ],
+  },
+  // ── Grid sickness log readers ──
+  {
+    id: "cut_read_log_1",
+    display_name: "Scratched Wall — First",
+    is_blocking: true,
+    actions: [
+      { type: "read_document", document_id: "doc_grid_log_1" },
+      { type: "set_switch", switch_id: "found_log_1", switch_value: true },
+    ],
+  },
+  {
+    id: "cut_read_log_2",
+    display_name: "Scratched Wall — Second",
+    is_blocking: true,
+    actions: [
+      { type: "read_document", document_id: "doc_grid_log_2" },
+      { type: "set_switch", switch_id: "found_log_2", switch_value: true },
+    ],
+  },
+  {
+    id: "cut_read_log_3",
+    display_name: "Scratched Wall — Third",
+    is_blocking: true,
+    actions: [
+      { type: "read_document", document_id: "doc_grid_log_3" },
+      { type: "set_switch", switch_id: "found_log_3", switch_value: true },
+    ],
+  },
+  {
+    id: "cut_read_log_4",
+    display_name: "Scratched Wall — Final",
+    is_blocking: true,
+    actions: [
+      { type: "read_document", document_id: "doc_grid_log_4" },
+      { type: "set_switch", switch_id: "found_log_4", switch_value: true },
     ],
   },
 ];
@@ -1924,6 +2048,20 @@ export const FD_QUESTS: QuestData[] = [
       { id: "obj_3", description: "Find where the town learned to pray", type: "explore", target_id: "cellar", count: 1 },
     ],
   },
+  {
+    id: "quest_vampire",
+    display_name: "The Lonely Vampire",
+    description:
+      "A body in the eastern caves. The town says vampire. The Church says investigate.",
+    objectives: [
+      { id: "obj_briefing", description: "Report to Aldric at the Scriptorium", type: "talk", target_id: "ent_aldric", count: 1 },
+      { id: "obj_testimony", description: "Gather testimony from townspeople (2 of 3)", type: "talk", target_id: "ent_merchant", count: 2 },
+      { id: "obj_lazare", description: "Visit Lazare Behind the Shutters", type: "talk", target_id: "ent_lazare_vampire", count: 1 },
+      { id: "obj_cave", description: "Investigate the eastern caves", type: "explore", target_id: "cave", count: 1 },
+      { id: "obj_boss", description: "Confront what remains in the deep", type: "explore", target_id: "deep_cave", count: 1 },
+      { id: "obj_verdict", description: "Present evidence to Aldric", type: "talk", target_id: "ent_aldric", count: 1 },
+    ],
+  },
 ];
 
 export const FD_DOCUMENTS: DocumentData[] = [
@@ -1978,6 +2116,31 @@ export const FD_DOCUMENTS: DocumentData[] = [
     display_name: "Rite Fragment — Second Leaf",
     content:
       "The torn page's other half, folded into an ossuary niche between two named skulls. Mara's hand, pressed so hard the paper tore:\n\n'We light them tomorrow. All of us together. My choice, written where the Church never sweeps — if anyone kind ever reads this, know that nobody dragged me to that terrace. I asked Nessa for the words. I asked.'\n\nAnd beneath, smaller:\n\n'It was never the statue that opened.'",
+  },
+  // ── Grid Sickness Logs (cave evidence chain) ──
+  {
+    id: "doc_grid_log_1",
+    display_name: "Scratched Wall — First Entry",
+    content:
+      "The fatigue won't lift. Three weeks since the last basement rite. My hands shake when I hold the candles. The Church physician says rest. Rest from what? I can feel the Grid in my teeth.",
+  },
+  {
+    id: "doc_grid_log_2",
+    display_name: "Scratched Wall — Second Entry",
+    content:
+      "I killed the goat last night. I don't remember deciding to. My hands knew what to do before I did. The blood looked like light. I wrote the old words on the barn wall. I don't know those words.",
+  },
+  {
+    id: "doc_grid_log_3",
+    display_name: "Scratched Wall — Third Entry",
+    content:
+      "The candles help. The old prayers help. Nothing from the Church helps. Mara says she found something better. Not the basement. The Witness itself. She says Nessa gave her the words. We go tonight.",
+  },
+  {
+    id: "doc_grid_log_4",
+    display_name: "Scratched Wall — Final Entry",
+    content:
+      "I can't go. My body won't move right anymore. Mara went without me. Tollen and Iria too. I heard screaming from the hill. I crawled here. The dark is the only thing that doesn't hurt.",
   },
 ];
 
@@ -2066,6 +2229,14 @@ export const FD_ITEMS: ItemData[] = [
       "The other half of the torn page, hidden with the ossuary dead. Mara's own words: nobody dragged her. She asked.",
     icon: "📜",
   },
+  {
+    id: "itm_cave_sigil",
+    display_name: "Cave Sigil",
+    category: "key",
+    description:
+      "A flat river-stone incised with old marks. The deep passage recognizes it.",
+    icon: "🪬",
+  },
 ];
 
 export const FD_SHOPS: ShopData[] = [
@@ -2090,3 +2261,118 @@ export const FD_SHOPS: ShopData[] = [
     ],
   },
 ];
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ACT 1 OPEN WORLD: Gate-block dialogues, boss intro, cave entrance
+// ══════════════════════════════════════════════════════════════════════════════
+
+FD_DIALOGUE.push(
+  {
+    id: "dia_gate_blocked_briefing",
+    display_name: "The Scriptorium First",
+    nodes: [
+      {
+        id: "node_1",
+        speaker: "Brother Aldric",
+        text: "The Scriptorium first, Intercessor. The briefing won't deliver itself.",
+        options: [{ text: "(Turn back.)" }],
+      },
+    ],
+  },
+  {
+    id: "dia_gate_blocked_cave",
+    display_name: "Not Ready",
+    nodes: [
+      {
+        id: "node_1",
+        speaker: "Brother Aldric",
+        text: "We're not walking into those caves blind. Talk to the townspeople. Talk to Lazare. Then we go.",
+        options: [{ text: "(Turn back.)" }],
+      },
+    ],
+  },
+  {
+    id: "dia_gate_blocked_deep",
+    display_name: "Sigil Seal",
+    nodes: [
+      {
+        id: "node_1",
+        speaker: "Scene",
+        text: "Old marks are cut into the stone. The passage ahead won't open without something that matches them.",
+        options: [{ text: "(Turn back.)" }],
+      },
+    ],
+  },
+  {
+    id: "dia_gate_blocked_prison",
+    display_name: "No Admittance",
+    nodes: [
+      {
+        id: "node_1",
+        speaker: "Scene",
+        text: "The warden shakes her head. You have no business in the Hall of Custody yet.",
+        options: [{ text: "(Turn back.)" }],
+      },
+    ],
+  },
+  {
+    id: "dia_gate_blocked_mouthstone",
+    display_name: "The Road Beyond",
+    nodes: [
+      {
+        id: "node_1",
+        speaker: "Scene",
+        text: "The road beyond the Mouthstone is not your assignment. Not yet.",
+        options: [{ text: "(Turn back.)" }],
+      },
+    ],
+  },
+  {
+    id: "dia_gate_blocked_shrine",
+    display_name: "Old Marks",
+    nodes: [
+      {
+        id: "node_1",
+        speaker: "Scene",
+        text: "This door bears marks older than the cave itself. It won't answer you. Not yet.",
+        options: [{ text: "(Leave it.)" }],
+      },
+    ],
+  },
+  {
+    id: "dia_boss_intro",
+    display_name: "The Grid-Sick",
+    nodes: [
+      {
+        id: "node_1",
+        speaker: "Scene",
+        text: "Something stands in the deepest chamber. It crackles with half-formed Glass, a body twisted by grid sickness into something that no longer remembers what it was. Its mouth moves. Words scrape out like stone on stone.",
+        options: [{ text: "Listen.", next_node_id: "node_2" }],
+      },
+      {
+        id: "node_2",
+        speaker: "The Grid-Sick",
+        text: "The candles... Mara said the candles would... fix... She said the Witness would see us... It saw me... it saw me...",
+        options: [{ text: "End this.", next_node_id: "node_3" }],
+      },
+      {
+        id: "node_3",
+        speaker: "Brother Aldric",
+        text: "Grid sickness this far gone — there's nothing left to save. Be merciful. Be quick.",
+        options: [{ text: "(Prepare for battle.)" }],
+      },
+    ],
+  },
+  {
+    id: "dia_cave_entrance",
+    display_name: "Cave Entrance",
+    nodes: [
+      {
+        id: "node_1",
+        speaker: "Scene",
+        text: "The eastern caves. The body was found somewhere in the deep. The air coming up smells like burnt metal and old prayers.",
+        options: [{ text: "Descend." }, { text: "(Not yet.)" }],
+      },
+    ],
+  },
+);

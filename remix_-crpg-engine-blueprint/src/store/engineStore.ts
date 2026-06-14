@@ -6,6 +6,18 @@ import {
   createEmptyGamePackage,
 } from "../schema/game";
 
+export type PackageImportResult =
+  | {
+      ok: true;
+      message: string;
+      imported: GamePackage;
+    }
+  | {
+      ok: false;
+      message: string;
+      issues: string[];
+    };
+
 export type EditorMode =
   | "home"
   | "play"
@@ -38,7 +50,7 @@ interface EditorState {
 
   // Utilities
   exportPackage: () => string;
-  importPackage: (jsonString: string) => void;
+  importPackage: (jsonString: string) => PackageImportResult;
   updateMap: (mapId: string, updates: Partial<MapData>) => void;
   addMap: (mapData: MapData) => void;
   addObject: (objData: any) => void;
@@ -85,6 +97,38 @@ interface EditorState {
   undo: () => void;
   redo: () => void;
 }
+
+const formatPackageIssue = (issue: { path: PropertyKey[]; message: string }) => {
+  const path = issue.path.length ? issue.path.map(String).join(".") : "package";
+  return `${path}: ${issue.message}`;
+};
+
+const keepExistingId = <T extends { id: string }>(items: T[], currentId: string | null) =>
+  currentId && items.some((item) => item.id === currentId) ? currentId : null;
+
+const pickSelectedMapId = (pkg: GamePackage, currentId: string | null) => {
+  if (currentId && pkg.maps.some((map) => map.id === currentId)) return currentId;
+  if (pkg.maps.some((map) => map.id === pkg.metadata.start_map_id)) return pkg.metadata.start_map_id;
+  return pkg.maps[0]?.id || null;
+};
+
+const normalizeImportedPackage = (pkg: GamePackage): GamePackage => {
+  const startMap = pkg.maps.find((map) => map.id === pkg.metadata.start_map_id) || pkg.maps[0];
+  if (!startMap) return pkg;
+
+  const startSpawn =
+    startMap.spawns.find((spawn) => spawn.id === pkg.metadata.start_spawn_id) ||
+    startMap.spawns[0];
+
+  return {
+    ...pkg,
+    metadata: {
+      ...pkg.metadata,
+      start_map_id: startMap.id,
+      start_spawn_id: startSpawn?.id || pkg.metadata.start_spawn_id,
+    },
+  };
+};
 
 export const useEngineStore = create<EditorState>((set, get) => ({
   mode: "home",
@@ -150,30 +194,70 @@ export const useEngineStore = create<EditorState>((set, get) => ({
   setSelectedSkillId: (id) => set({ selectedSkillId: id }),
 
   exportPackage: () => {
-    return JSON.stringify(get().gamePackage, null, 2);
+    const result = GamePackageSchema.safeParse(get().gamePackage);
+    if (!result.success) {
+      const issues = result.error.issues
+        .slice(0, 5)
+        .map(formatPackageIssue)
+        .join("; ");
+      throw new Error(`Current package is not exportable: ${issues}`);
+    }
+    return JSON.stringify(result.data, null, 2);
   },
   importPackage: (jsonString) => {
+    const previous = get().gamePackage;
+    const trimmed = jsonString.trim();
+    if (!trimmed) {
+      return {
+        ok: false,
+        message: "Import failed: no JSON was provided.",
+        issues: ["The import payload is empty."],
+      };
+    }
+
     try {
-      const parsed = JSON.parse(jsonString);
+      const parsed = JSON.parse(trimmed);
       const result = GamePackageSchema.safeParse(parsed);
       if (result.success) {
-        // Schema parse also fills in any missing defaulted fields.
-        set({ gamePackage: result.data });
-        return;
+        const imported = normalizeImportedPackage(result.data);
+        set((state) => ({
+          undoStack: [...state.undoStack, previous].slice(-50),
+          redoStack: [],
+          gamePackage: imported,
+          selectedMapId: pickSelectedMapId(imported, state.selectedMapId),
+          selectedObjectId: keepExistingId(imported.object_library, state.selectedObjectId),
+          selectedSpriteId: keepExistingId(imported.sprite_library, state.selectedSpriteId),
+          selectedDialogueId: keepExistingId(imported.dialogue, state.selectedDialogueId),
+          selectedQuestId: keepExistingId(imported.quests, state.selectedQuestId),
+          selectedEntityId: keepExistingId(imported.entities, state.selectedEntityId),
+          selectedItemId: keepExistingId(imported.items, state.selectedItemId),
+          selectedDocumentId: keepExistingId(imported.documents, state.selectedDocumentId),
+          selectedShopId: keepExistingId(imported.shops || [], state.selectedShopId),
+          selectedSkillId: keepExistingId(imported.abilities || [], state.selectedSkillId),
+        }));
+        return {
+          ok: true,
+          message: `Imported ${imported.metadata.title} (${imported.maps.length} maps, ${imported.object_library.length} objects).`,
+          imported,
+        };
       }
-      // Import anyway so older/hand-edited packages aren't bricked, but
-      // surface exactly what failed validation.
+
+      const issues = result.error.issues.slice(0, 25).map(formatPackageIssue);
       console.warn(
-        "Imported package has schema issues:",
+        "Rejected package import with schema issues:",
         result.error.issues.slice(0, 25),
       );
-      alert(
-        `Package imported with ${result.error.issues.length} schema issue(s) — see console for details.`,
-      );
-      set({ gamePackage: parsed });
+      return {
+        ok: false,
+        message: `Import failed: ${result.error.issues.length} schema issue(s).`,
+        issues,
+      };
     } catch (err) {
-      console.error("Failed to import package", err);
-      alert("Invalid game package JSON");
+      return {
+        ok: false,
+        message: "Import failed: invalid JSON.",
+        issues: [err instanceof Error ? err.message : "The file could not be parsed as JSON."],
+      };
     }
   },
   updateMap: (mapId, updates) => {

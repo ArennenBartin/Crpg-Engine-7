@@ -256,6 +256,7 @@ export class MapBuilder {
   private tierByCell = new Map<string, 0 | 1 | 2>();
   private anchors: Record<string, Vec2> = {};
   private zones: Record<string, Region> = {};
+  private streetCells = new Set<string>(); // cells painted by road() — keeps lots off the carriageway
   private rng: () => number;
   private rngStreams = new Map<string, () => number>();
 
@@ -315,6 +316,35 @@ export class MapBuilder {
     return s;
   }
 
+  // ── Public: placement queries (coherent-town guards) ──
+  inBounds(x: number, z: number): boolean {
+    return this.grid.has(cellKey(x, z));
+  }
+
+  isWater(x: number, z: number): boolean {
+    const c = this.get(x, z);
+    return !!c && c.surface_tag === "water";
+  }
+
+  isStreet(x: number, z: number): boolean {
+    return this.streetCells.has(cellKey(x, z));
+  }
+
+  // True only if every cell in the region is in-bounds, unreserved, dry land,
+  // and not part of a street. Use before placing a building so nothing ever
+  // overlaps a road, the river, or another structure.
+  canPlace(region: Region, opts: { allowStreet?: boolean } = {}): boolean {
+    let ok = true;
+    iterRegion(region, (x, z) => {
+      if (!ok) return;
+      const c = this.get(x, z);
+      const k = cellKey(x, z);
+      if (!c || this.reserved.has(k) || c.surface_tag === "water") ok = false;
+      else if (!opts.allowStreet && this.streetCells.has(k)) ok = false;
+    });
+    return ok;
+  }
+
   // ── Public: zones & anchors ──
   zone(name: string, region: Region): this {
     this.zones[name] = region;
@@ -358,6 +388,15 @@ export class MapBuilder {
       if (!c) return;
       c.walkable = false;
       this.reserved.add(cellKey(x, z));
+    });
+    return this;
+  }
+
+  // Force walkability for a region (e.g. a bridge deck over water).
+  setWalk(region: Region, val: boolean): this {
+    iterRegion(region, (x, z) => {
+      const c = this.get(x, z);
+      if (c) c.walkable = val;
     });
     return this;
   }
@@ -438,9 +477,12 @@ export class MapBuilder {
       const [xs, zs] = k.split("|").map(Number);
       const c = this.get(xs, zs);
       if (!c) continue;
+      // A road never paves over water (so bridges, not roads, cross rivers).
+      if (c.surface_tag === "water") continue;
       c.object_id = id;
       c.walkable = true;
       c.terrain = "stone";
+      this.streetCells.add(k);
     }
     return this;
   }

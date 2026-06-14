@@ -187,6 +187,70 @@ const RENDER_WINDOW_SHIFT_DISTANCE = 8;
 const OCCLUSION_SAMPLE_STEP = 3;
 const DEFAULT_RENDER_RADIUS = 28;
 
+// ── Rainbow-dusk sky ────────────────────────────────────────────────────────
+// A large inverted sphere with an unlit gradient shader: indigo zenith →
+// magenta → orange/pink horizon, iridescent cloud streaks, and a pale sun.
+// Follows the camera so it always wraps the scene; renders behind everything.
+const SKY_VERT = `
+  varying vec3 vDir;
+  void main() {
+    vDir = normalize(position);
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  }
+`;
+const SKY_FRAG = `
+  precision mediump float;
+  varying vec3 vDir;
+  void main() {
+    float h = clamp(vDir.y * 0.5 + 0.5, 0.0, 1.0);
+    vec3 zenith  = vec3(0.09, 0.05, 0.18);
+    vec3 high    = vec3(0.30, 0.13, 0.42);
+    vec3 mid     = vec3(0.66, 0.22, 0.46);
+    vec3 horizon = vec3(0.95, 0.58, 0.42);
+    vec3 col = mix(horizon, mid,  smoothstep(0.0, 0.34, h));
+    col = mix(col, high,   smoothstep(0.34, 0.68, h));
+    col = mix(col, zenith, smoothstep(0.68, 1.0, h));
+    // Iridescent cloud streaks banded across the mid sky.
+    float az = atan(vDir.z, vDir.x);
+    float band = sin(az * 6.0 + h * 11.0) * 0.5 + 0.5;
+    band *= smoothstep(0.02, 0.5, h) * (1.0 - smoothstep(0.62, 1.0, h));
+    vec3 irid = vec3(0.5 + 0.5 * sin(az * 3.0),
+                     0.5 + 0.5 * sin(az * 3.0 + 2.094),
+                     0.5 + 0.5 * sin(az * 3.0 + 4.188));
+    col += irid * band * 0.14;
+    // Pale sun: tight disc + soft halo.
+    vec3 sunDir = normalize(vec3(-0.55, 0.34, -0.78));
+    float s = max(dot(normalize(vDir), sunDir), 0.0);
+    col += vec3(1.0, 0.92, 0.78) * pow(s, 80.0) * 1.0;
+    col += vec3(1.0, 0.74, 0.52) * pow(s, 6.0) * 0.22;
+    gl_FragColor = vec4(col, 1.0);
+  }
+`;
+
+function SkyDome() {
+  const ref = useRef<THREE.Mesh>(null);
+  const material = useMemo(
+    () =>
+      new THREE.ShaderMaterial({
+        vertexShader: SKY_VERT,
+        fragmentShader: SKY_FRAG,
+        side: THREE.BackSide,
+        depthWrite: false,
+        fog: false,
+      }),
+    [],
+  );
+  useEffect(() => () => material.dispose(), [material]);
+  useFrame((state) => {
+    if (ref.current) ref.current.position.copy(state.camera.position);
+  });
+  return (
+    <mesh ref={ref} material={material} renderOrder={-1} frustumCulled={false} raycast={() => null}>
+      <sphereGeometry args={[500, 24, 16]} />
+    </mesh>
+  );
+}
+
 function SmoothPositionGroup({
   position,
   snapDistance = TILE_SLIDE_SNAP_DISTANCE,
@@ -2229,6 +2293,8 @@ export const GameRenderer = memo(function GameRenderer({
 
   return (
     <group onPointerOut={onPointerOut}>
+      {/* Rainbow-dusk sky backdrop, wrapping the whole scene. */}
+      <SkyDome />
       {/* Invisible interaction plane for editor and targeting */}
       {(editLayerY !== undefined || onCellClick || onCellHover) && (
         <mesh

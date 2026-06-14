@@ -1,6 +1,7 @@
 import { createWitnessTownLibrary } from "../utils/witnessKit";
 import { createPaganNetworkKit } from "../utils/networkKit";
 import { createParishKit } from "../utils/parishKit";
+import { createCityKit } from "../utils/cityKit";
 
 export const asciiToPixels = (
   ascii: string,
@@ -780,35 +781,35 @@ const baseSpriteLibraryPresets = [
     display_name: "Carried Stone",
     width: 16,
     height: 16,
-    data_url: asciiToPixelsWH(stonePattern, familiarSpritePalette, 16, 16),
+    pixels: asciiToPixelsWH(stonePattern, familiarSpritePalette, 16, 16),
   },
   {
     id: "spr_itm_health_potion",
     display_name: "Health Potion",
     width: 16,
     height: 16,
-    data_url: asciiToPixelsWH(potionPattern, familiarSpritePalette, 16, 16),
+    pixels: asciiToPixelsWH(potionPattern, familiarSpritePalette, 16, 16),
   },
   {
     id: "spr_itm_glass_shard",
     display_name: "Glass Shard",
     width: 16,
     height: 16,
-    data_url: asciiToPixelsWH(shardPattern, familiarSpritePalette, 16, 16),
+    pixels: asciiToPixelsWH(shardPattern, familiarSpritePalette, 16, 16),
   },
   {
     id: "spr_itm_archive_key",
     display_name: "Archive Key",
     width: 16,
     height: 16,
-    data_url: asciiToPixelsWH(keyPattern, familiarSpritePalette, 16, 16),
+    pixels: asciiToPixelsWH(keyPattern, familiarSpritePalette, 16, 16),
   },
   {
     id: "spr_itm_votive",
     display_name: "Votive Candle",
     width: 16,
     height: 16,
-    data_url: asciiToPixelsWH(votivePattern, familiarSpritePalette, 16, 16),
+    pixels: asciiToPixelsWH(votivePattern, familiarSpritePalette, 16, 16),
   },
   {
     id: "spr_hero",
@@ -2148,6 +2149,7 @@ const baseObjectLibraryPresets = [
   ...createWitnessTownLibrary(),
   ...createPaganNetworkKit(),
   ...createParishKit(),
+  ...createCityKit(),
 ];
 
 export const objectLibraryPresets = baseObjectLibraryPresets.map((object) =>

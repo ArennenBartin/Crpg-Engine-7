@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useEngineStore, EditorMode } from "../store/engineStore";
 import { Home, Play, Map, Box, MessageSquare, BookOpen, Swords, FileJson, Upload, Menu, X, Image as ImageIcon, Undo2, Redo2, Sparkles, Briefcase, FileText, Eye } from "lucide-react";
 import { PlayMode } from "./PlayMode";
@@ -194,10 +194,18 @@ export function AppShell() {
 
 function HomePanel() {
   const { gamePackage, exportPackage, importPackage, setGamePackage, updateSettings } = useEngineStore();
+  const importFileRef = useRef<HTMLInputElement | null>(null);
   const [musicTracksText, setMusicTracksText] = useState(
     JSON.stringify(gamePackage.settings?.music_tracks || {}, null, 2),
   );
   const [musicTracksError, setMusicTracksError] = useState<string | null>(null);
+  const [packageJsonText, setPackageJsonText] = useState("");
+  const [packageIoMessage, setPackageIoMessage] = useState<{
+    tone: "success" | "error";
+    text: string;
+    detail?: string;
+  } | null>(null);
+  const [isImportingPackage, setIsImportingPackage] = useState(false);
 
   useEffect(() => {
     setMusicTracksText(JSON.stringify(gamePackage.settings?.music_tracks || {}, null, 2));
@@ -229,22 +237,71 @@ function HomePanel() {
     }
   };
 
-  const handleImport = () => {
-    const json = prompt("Paste your game_package.json content here:");
-    if (json) {
-      importPackage(json);
+  const applyPackageImport = (json: string) => {
+    const result = importPackage(json);
+    if (result.ok) {
+      setPackageJsonText("");
+      setPackageIoMessage({ tone: "success", text: result.message });
+      return;
+    }
+    if (result.ok === false) {
+      setPackageIoMessage({
+        tone: "error",
+        text: result.message,
+        detail: result.issues.slice(0, 3).join(" | "),
+      });
     }
   };
 
+  const handleImportFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    setIsImportingPackage(true);
+    try {
+      applyPackageImport(await file.text());
+    } catch (err) {
+      setPackageIoMessage({
+        tone: "error",
+        text: "Import failed: file could not be read.",
+        detail: err instanceof Error ? err.message : undefined,
+      });
+    } finally {
+      setIsImportingPackage(false);
+    }
+  };
+
+  const handleImportPaste = () => {
+    applyPackageImport(packageJsonText);
+  };
+
   const handleExport = () => {
-    const json = exportPackage();
-    const blob = new Blob([json], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "game_package.json";
-    a.click();
-    URL.revokeObjectURL(url);
+    try {
+      const json = exportPackage();
+      const blob = new Blob([json], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      const safeTitle = gamePackage.metadata.title
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-|-$/g, "") || "game";
+      a.href = url;
+      a.download = `${safeTitle}-package.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 0);
+      setPackageIoMessage({
+        tone: "success",
+        text: `Exported ${gamePackage.metadata.title} (${Math.round(blob.size / 1024)} KB).`,
+      });
+    } catch (err) {
+      setPackageIoMessage({
+        tone: "error",
+        text: "Export failed.",
+        detail: err instanceof Error ? err.message : undefined,
+      });
+    }
   };
 
   return (
@@ -286,12 +343,53 @@ function HomePanel() {
               Export Package
             </button>
             <button
-              onClick={handleImport}
+              onClick={() => importFileRef.current?.click()}
+              disabled={isImportingPackage}
               className="flex items-center justify-center gap-2 bg-neutral-900 border border-neutral-700 hover:bg-neutral-800 text-neutral-300 font-medium py-3 sm:py-2 px-4 rounded-lg transition-colors active:scale-[0.98]"
             >
               <Upload className="w-5 h-5 sm:w-4 sm:h-4" />
-              Import Package
+              {isImportingPackage ? "Importing..." : "Import JSON File"}
             </button>
+            <input
+              ref={importFileRef}
+              type="file"
+              accept="application/json,.json"
+              onChange={handleImportFile}
+              className="hidden"
+            />
+            <label className="space-y-1.5">
+              <span className="text-sm text-neutral-500 font-medium">Package JSON</span>
+              <textarea
+                value={packageJsonText}
+                onChange={(e) => setPackageJsonText(e.target.value)}
+                rows={5}
+                spellCheck={false}
+                className="w-full resize-y bg-neutral-900 border border-neutral-700 rounded-md py-2 px-3 text-xs text-neutral-200 outline-none focus:border-neutral-500 transition-colors font-mono"
+              />
+            </label>
+            <button
+              onClick={handleImportPaste}
+              disabled={!packageJsonText.trim()}
+              className="flex items-center justify-center gap-2 bg-neutral-900 border border-neutral-700 hover:bg-neutral-800 disabled:opacity-50 disabled:hover:bg-neutral-900 text-neutral-300 font-medium py-3 sm:py-2 px-4 rounded-lg transition-colors active:scale-[0.98]"
+            >
+              <Upload className="w-5 h-5 sm:w-4 sm:h-4" />
+              Import Pasted JSON
+            </button>
+            {packageIoMessage && (
+              <div
+                aria-live="polite"
+                className={`rounded-md border px-3 py-2 text-sm ${
+                  packageIoMessage.tone === "success"
+                    ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-200"
+                    : "border-red-500/40 bg-red-500/10 text-red-200"
+                }`}
+              >
+                <div>{packageIoMessage.text}</div>
+                {packageIoMessage.detail && (
+                  <div className="mt-1 text-xs opacity-80">{packageIoMessage.detail}</div>
+                )}
+              </div>
+            )}
           </div>
         </div>
         <div className="bg-neutral-800/50 rounded-xl border border-neutral-700/50 p-5 sm:p-6 space-y-4">

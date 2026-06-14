@@ -2236,6 +2236,32 @@ const pineTree = () =>
     },
   });
 
+const pineTreeLarge = () =>
+  sculpt({
+    id: "obj_pine_large",
+    name: "Large Pine Tree",
+    category: "nature",
+    tags: ["prop", "nature"],
+    materialKeys: ["cypress", "oliveBark"],
+    build: (m, rng) => {
+      tube(
+        m,
+        "trunk",
+        mat("oliveBark"),
+        [
+          [0, 0, 0],
+          [0, 0.8, 0],
+        ],
+        [0.16, 0.1],
+        5,
+      );
+      blob(m, "layer1", mat("cypress"), [0, 1.2, 0], [1.2, 0.8, 1.2], rng, 7, 3, 0.2);
+      blob(m, "layer2", mat("cypress"), [0, 2.2, 0], [0.9, 0.7, 0.9], rng, 7, 3, 0.2);
+      blob(m, "layer3", mat("cypress"), [0, 3.0, 0], [0.6, 0.6, 0.6], rng, 6, 2, 0.2);
+      blob(m, "top", mat("cypress"), [0, 3.6, 0], [0.3, 0.5, 0.3], rng, 5, 1, 0.1);
+    },
+  });
+
 // Fig tree: wide canopy with dense foliage.
 const figTree = () =>
   sculpt({
@@ -2326,8 +2352,9 @@ export const createWitnessTownLibrary = (): ObjectData[] => [
   cypress(),
   deadTree(),
   laurel(),
-  grassTuft(),
   pineTree(),
+  pineTreeLarge(),
   figTree(),
   flowerBush(),
+  grassTuft(),
 ];

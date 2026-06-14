@@ -4,6 +4,12 @@ import { generateTownCells, TOWN_W, TOWN_H } from "./town_gen";
 import { generateParishCells, PARISH_W, PARISH_H } from "./parish_gen";
 import { generateNetworkCells } from "./network_gen";
 import { generateNetworkDepthsCells } from "./network_depths_gen";
+import { generateOpenWorldCells, OPENWORLD_W, OPENWORLD_H } from "./openworld_gen";
+import { generateResidentialBlockCells, BLOCK_W, BLOCK_H } from "./residential_block_gen";
+import { generateTownSquareCells, SQUARE_W, SQUARE_H } from "./town_square_gen";
+import { generateTempleCordonCells, TEMPLE_W, TEMPLE_H } from "./temple_cordon_gen";
+import { generateCaveUpperCells, CAVE_UPPER_W, CAVE_UPPER_H } from "./cave_upper_gen";
+import { generateCaveDeepCells, CAVE_DEEP_W, CAVE_DEEP_H } from "./cave_deep_gen";
 import {
   FD_CUTSCENES,
   FD_DIALOGUE,
@@ -499,42 +505,58 @@ export const ObjectSchema = z.object({
   }),
 });
 
-export const SpriteSchema = z.object({
-  id: z.string(),
-  display_name: z.string(),
-  width: z.number().default(128),
-  height: z.number().default(128),
-  pixels: z.array(z.string()).default([]),
-  data_url: z.string().optional(),
-});
+export const SpriteSchema = z.preprocess(
+  (value) => {
+    if (!value || typeof value !== "object" || Array.isArray(value)) return value;
+    const sprite = value as Record<string, unknown>;
+    if (!Array.isArray(sprite.data_url)) return value;
+    const pixels = Array.isArray(sprite.pixels) && sprite.pixels.length ? sprite.pixels : sprite.data_url;
+    return { ...sprite, data_url: undefined, pixels };
+  },
+  z.object({
+    id: z.string(),
+    display_name: z.string(),
+    width: z.number().default(128),
+    height: z.number().default(128),
+    pixels: z.array(z.string()).default([]),
+    data_url: z.string().optional(),
+  }),
+);
+
+const DialogueOptionSchema = z.preprocess(
+  (value) => {
+    if (!value || typeof value !== "object" || Array.isArray(value)) return value;
+    const option = value as Record<string, unknown>;
+    if (option.next_node_id !== null) return value;
+    const { next_node_id: _nextNodeId, ...rest } = option;
+    return rest;
+  },
+  z.object({
+    text: z.string(),
+    next_node_id: z.string().optional(), // if undefined, ends dialogue
+    required_quest: z.string().optional(),
+    required_quest_state: z.string().optional(),
+    // Option is hidden unless the switch matches. required_switch_value
+    // defaults to true, so `required_switch: "x"` means "x must be on".
+    required_switch: z.string().optional(),
+    required_switch_value: z.boolean().optional(),
+    // General gate — see ConditionSchema. Combined (AND) with the
+    // legacy required_* fields above.
+    condition: ConditionSchema.optional(),
+    trigger_quest: z.string().optional(),
+    trigger_quest_state: z.string().optional(),
+    // Choosing this option sets a switch. set_switch_value defaults true.
+    set_switch: z.string().optional(),
+    set_switch_value: z.boolean().optional(),
+    trigger_cutscene: z.string().optional(),
+  }),
+);
 
 export const DialogueNodeSchema = z.object({
   id: z.string(),
   speaker: z.string(),
   text: z.string(),
-  options: z
-    .array(
-      z.object({
-        text: z.string(),
-        next_node_id: z.string().optional(), // if undefined, ends dialogue
-        required_quest: z.string().optional(),
-        required_quest_state: z.string().optional(),
-        // Option is hidden unless the switch matches. required_switch_value
-        // defaults to true, so `required_switch: "x"` means "x must be on".
-        required_switch: z.string().optional(),
-        required_switch_value: z.boolean().optional(),
-        // General gate — see ConditionSchema. Combined (AND) with the
-        // legacy required_* fields above.
-        condition: ConditionSchema.optional(),
-        trigger_quest: z.string().optional(),
-        trigger_quest_state: z.string().optional(),
-        // Choosing this option sets a switch. set_switch_value defaults true.
-        set_switch: z.string().optional(),
-        set_switch_value: z.boolean().optional(),
-        trigger_cutscene: z.string().optional(),
-      }),
-    )
-    .default([]),
+  options: z.array(DialogueOptionSchema).default([]),
 });
 
 export const DialogueSchema = z.object({
@@ -646,15 +668,20 @@ export const createEmptyGamePackage = (): GamePackage => {
   const parish = generateParishCells();
   const network = generateNetworkCells();
   const depths = generateNetworkDepthsCells();
+  const openworld = generateOpenWorldCells();
+  const residentialBlock = generateResidentialBlockCells();
+  const townSquare = generateTownSquareCells();
+  const templeCordon = generateTempleCordonCells();
+  const caveUpper = generateCaveUpperCells();
+  const caveDeep = generateCaveDeepCells();
   return {
     schema: "familiar_dark_game_package_v1",
     metadata: {
       title: "The Familiar Dark",
-      version: "0.8.0",
-      // The story begins above ground: the ceremony at the town gate.
-      // The Network is reached through the sealed trapdoor (Scene 4).
-      start_map_id: "map_parish",
-      start_spawn_id: "spawn_parish",
+      version: "1.0.0",
+      // Act 1: multi-map architecture, ceremony starts in Town Square.
+      start_map_id: "map_town_square",
+      start_spawn_id: "spawn_ceremony",
     },
     // The story opens at night beneath the black stars.
     settings: {
@@ -669,6 +696,12 @@ export const createEmptyGamePackage = (): GamePackage => {
         combat: "/music/underworld-battle theme.ogg",
       },
       map_music: {
+        map_town_square: "town",
+        map_residential: "town",
+        map_temple_cordon: "town",
+        map_cave_upper: "network",
+        map_cave_deep: "network",
+        map_open_world: "town",
         map_parish: "town",
         map_town: "town",
         map_network_upper: "network",
@@ -676,6 +709,191 @@ export const createEmptyGamePackage = (): GamePackage => {
       },
     },
     maps: [
+      // ════════════════════════════════════════════════════════════════════
+      // ACT 1: Multi-map architecture (5 maps connected by exits)
+      // ════════════════════════════════════════════════════════════════════
+      {
+        id: "map_town_square",
+        display_name: "Town Square",
+        width: SQUARE_W,
+        height: SQUARE_H,
+        spawns: [
+          { id: "spawn_ceremony", cell: [0, -12], facing: [0, 1] },
+          { id: "spawn_from_south", cell: [0, 19], facing: [0, -1] },
+          { id: "spawn_from_east", cell: [19, 0], facing: [-1, 0] },
+        ],
+        cells: townSquare.cells,
+        props: [],
+        custom_object_placements: townSquare.custom_object_placements,
+        item_placements: townSquare.item_placements,
+        container_placements: townSquare.container_placements,
+        entity_placements: townSquare.entity_placements,
+        triggers: townSquare.triggers,
+        exits: [
+          // South edge → Residential
+          ...([-3, -2, -1, 0, 1, 2, 3] as number[]).map(x => ({
+            cell: [x, 20] as [number, number],
+            target_map_id: "map_residential",
+            target_spawn_id: "spawn_from_north",
+            facing: [0, 1] as [number, number],
+          })),
+          // East edge → Temple/Cordon
+          ...([-3, -2, -1, 0, 1, 2, 3] as number[]).map(z => ({
+            cell: [20, z] as [number, number],
+            target_map_id: "map_temple_cordon",
+            target_spawn_id: "spawn_from_west",
+            facing: [1, 0] as [number, number],
+          })),
+        ],
+      },
+      {
+        id: "map_residential",
+        display_name: "Residential Quarter",
+        width: BLOCK_W,
+        height: BLOCK_H,
+        spawns: [
+          { id: "spawn_from_north", cell: [0, -19], facing: [0, 1] },
+          { id: "spawn_from_east", cell: [19, 0], facing: [-1, 0] },
+          { id: "spawn_from_south", cell: [0, 19], facing: [0, -1] },
+        ],
+        cells: residentialBlock.cells,
+        props: [],
+        custom_object_placements: residentialBlock.custom_object_placements,
+        item_placements: residentialBlock.item_placements,
+        container_placements: residentialBlock.container_placements,
+        entity_placements: [
+          ...residentialBlock.entity_placements,
+          // Add Lazare and innkeep to this map
+          { entity_id: "ent_lazare_vampire", cell: [-14, 13] },
+          { entity_id: "ent_innkeep", cell: [14, -14] },
+          { entity_id: "ent_mother", cell: [-12, 8] },
+          { entity_id: "ent_ferryman", cell: [-18, 0] },
+        ],
+        triggers: [
+          ...residentialBlock.triggers,
+          // Town music
+          { id: "trg_res_music", type: "on_load" as const, conditions: [], cutscene_id: "cut_town_music", once: false },
+          // Cave gate: can't go south without testimony + lazare
+          ...([- 3, -2, -1, 0, 1, 2, 3] as number[]).map((x, i) => ({
+            id: `trg_gate_cave_${i}`,
+            cell: [x, 19] as [number, number],
+            type: "step" as const,
+            conditions: [] as any[],
+            condition: { not: { all: [{ switch: "lazare_talked" }, { switch: "testimonies_gathered" }] } },
+            cutscene_id: "cut_gate_blocked_cave",
+            once: false,
+          })),
+        ],
+        exits: [
+          // North edge → Town Square
+          ...([-3, -2, -1, 0, 1, 2, 3] as number[]).map(x => ({
+            cell: [x, -20] as [number, number],
+            target_map_id: "map_town_square",
+            target_spawn_id: "spawn_from_south",
+            facing: [0, -1] as [number, number],
+          })),
+          // East edge → Temple/Cordon
+          ...([-3, -2, -1, 0, 1, 2, 3] as number[]).map(z => ({
+            cell: [20, z] as [number, number],
+            target_map_id: "map_temple_cordon",
+            target_spawn_id: "spawn_from_west",
+            facing: [1, 0] as [number, number],
+          })),
+          // South edge → Cave Upper (only works when gate conditions met)
+          ...([-3, -2, -1, 0, 1, 2, 3] as number[]).map(x => ({
+            cell: [x, 20] as [number, number],
+            target_map_id: "map_cave_upper",
+            target_spawn_id: "spawn_from_north",
+            facing: [0, 1] as [number, number],
+          })),
+        ],
+      },
+      {
+        id: "map_temple_cordon",
+        display_name: "Temple & Witness Cordon",
+        width: TEMPLE_W,
+        height: TEMPLE_H,
+        spawns: [
+          { id: "spawn_from_west", cell: [-19, 0], facing: [1, 0] },
+        ],
+        cells: templeCordon.cells,
+        props: [],
+        custom_object_placements: templeCordon.custom_object_placements,
+        item_placements: templeCordon.item_placements,
+        container_placements: templeCordon.container_placements,
+        entity_placements: templeCordon.entity_placements,
+        triggers: templeCordon.triggers,
+        exits: [
+          // West edge → Residential
+          ...([-3, -2, -1, 0, 1, 2, 3] as number[]).map(z => ({
+            cell: [-20, z] as [number, number],
+            target_map_id: "map_residential",
+            target_spawn_id: "spawn_from_east",
+            facing: [-1, 0] as [number, number],
+          })),
+        ],
+      },
+      {
+        id: "map_cave_upper",
+        display_name: "Eastern Caves",
+        width: CAVE_UPPER_W,
+        height: CAVE_UPPER_H,
+        spawns: [
+          { id: "spawn_from_north", cell: [0, -19], facing: [0, 1] },
+          { id: "spawn_from_south", cell: [0, 19], facing: [0, -1] },
+        ],
+        cells: caveUpper.cells,
+        props: [],
+        custom_object_placements: caveUpper.custom_object_placements,
+        item_placements: caveUpper.item_placements,
+        container_placements: caveUpper.container_placements,
+        entity_placements: caveUpper.entity_placements,
+        triggers: caveUpper.triggers,
+        exits: [
+          // North edge → Residential (surface return)
+          ...([-2, -1, 0, 1, 2] as number[]).map(x => ({
+            cell: [x, -20] as [number, number],
+            target_map_id: "map_residential",
+            target_spawn_id: "spawn_from_south",
+            facing: [0, -1] as [number, number],
+          })),
+          // South edge → Cave Deep
+          ...([-2, -1, 0, 1, 2] as number[]).map(x => ({
+            cell: [x, 20] as [number, number],
+            target_map_id: "map_cave_deep",
+            target_spawn_id: "spawn_from_north",
+            facing: [0, 1] as [number, number],
+          })),
+        ],
+      },
+      {
+        id: "map_cave_deep",
+        display_name: "The Depths",
+        width: CAVE_DEEP_W,
+        height: CAVE_DEEP_H,
+        spawns: [
+          { id: "spawn_from_north", cell: [0, -19], facing: [0, 1] },
+        ],
+        cells: caveDeep.cells,
+        props: [],
+        custom_object_placements: caveDeep.custom_object_placements,
+        item_placements: caveDeep.item_placements,
+        container_placements: caveDeep.container_placements,
+        entity_placements: caveDeep.entity_placements,
+        triggers: caveDeep.triggers,
+        exits: [
+          // North edge → Cave Upper (return)
+          ...([-2, -1, 0, 1, 2] as number[]).map(x => ({
+            cell: [x, -20] as [number, number],
+            target_map_id: "map_cave_upper",
+            target_spawn_id: "spawn_from_south",
+            facing: [0, -1] as [number, number],
+          })),
+        ],
+      },
+      // ════════════════════════════════════════════════════════════════════
+      // LEGACY MAPS (kept for reference/tooling, not used in Act 1 start)
+      // ════════════════════════════════════════════════════════════════════
       {
         id: "map_network_upper",
         display_name: "The Pagan Network - Upper Level",
@@ -794,6 +1012,7 @@ export const createEmptyGamePackage = (): GamePackage => {
         triggers: town.triggers,
         exits: [],
       },
+
     ],
     object_library: objectLibraryPresets as any,
     sprite_library: spriteLibraryPresets as any,
