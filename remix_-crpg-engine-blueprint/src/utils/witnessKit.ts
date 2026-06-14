@@ -1077,9 +1077,12 @@ const mouthstoneGate = () =>
     },
   });
 
-// The Bleeding Witness: a hooded marble votary on a high plinth, gold halo
-// ring behind the head, blood running from the eyes down the robe, glass
-// growth where the blood meets the ground.
+// The Bleeding Witness: a cloaked marble woman on a high plinth, carved in
+// the old imperial style and weathered like a dug-up Venus — face tipped
+// back to the sky, hood slid off the crown, arms lifted in supplication and
+// broken off mid-forearm. Blood runs from her upturned eyes down the cheeks,
+// throat, and robe; a gold halo ring tilts back behind the lifted head, and
+// glass grows where the blood meets the ground.
 const bleedingWitness = () =>
   sculpt({
     id: "obj_bleeding_witness",
@@ -1095,16 +1098,17 @@ const bleedingWitness = () =>
       loft(m, "plinth", mat("weatheredMarble"), [baseA, baseB, baseC]);
       cap(m, "plinth_top", mat("weatheredMarble"), baseC);
 
-      // Robed body: a lathe whose silhouette flares at the hem, pinches at
-      // the waist, and swells at the shoulders — seven uneven facets so the
-      // robe reads carved, not turned.
+      // Robed body: a lathe with a feminine silhouette — flared hem,
+      // pinched waist, soft swell at the chest, narrow shoulders — seven
+      // uneven facets so the robe reads carved, not turned.
       const body = [
-        [0.46, 0.56],
-        [0.4, 0.9],
-        [0.27, 1.5],
-        [0.23, 1.9],
-        [0.3, 2.3],
-        [0.27, 2.56],
+        [0.48, 0.58],
+        [0.41, 0.92],
+        [0.3, 1.42],
+        [0.225, 1.82],
+        [0.285, 2.12],
+        [0.235, 2.36],
+        [0.1, 2.48],
       ] as P2[];
       lathe(m, "robe", mat("marble"), body, 7, {
         jitter: 0.02,
@@ -1114,68 +1118,160 @@ const bleedingWitness = () =>
         capTop: false,
       });
 
-      // Hooded head: small lathe, open to the front (suggested by an inset
-      // dark face plane).
-      lathe(
+      // Cloak panels falling off the shoulders down the back sides.
+      strip(
         m,
-        "hood",
-        mat("marble"),
+        "cloak_left",
+        mat("weatheredMarble"),
         [
-          [0.27, 2.56],
-          [0.21, 2.74],
-          [0.17, 2.95],
-          [0.06, 3.08],
+          [-0.245, 2.34, -0.02],
+          [-0.31, 1.7, -0.05],
+          [-0.36, 1.0, -0.1],
+          [-0.42, 0.6, -0.14],
         ],
-        7,
-        { scaleZ: 0.8, capBottom: false }
+        [
+          [-0.2, 2.34, -0.14],
+          [-0.26, 1.7, -0.17],
+          [-0.31, 1.0, -0.22],
+          [-0.36, 0.6, -0.3],
+        ],
       );
       strip(
         m,
-        "face_shadow",
+        "cloak_right",
         mat("weatheredMarble"),
         [
-          [-0.1, 2.62, 0.17],
-          [-0.08, 2.86, 0.13],
+          [0.2, 2.34, -0.14],
+          [0.26, 1.7, -0.17],
+          [0.31, 1.0, -0.22],
+          [0.36, 0.6, -0.3],
         ],
         [
-          [0.1, 2.62, 0.17],
-          [0.08, 2.86, 0.13],
+          [0.245, 2.34, -0.02],
+          [0.31, 1.7, -0.05],
+          [0.36, 1.0, -0.1],
+          [0.42, 0.6, -0.14],
         ],
       );
 
-      // Folded arms: two short tubes meeting over the waist.
+      // Head thrown back to the sky: neck-to-crown rings drift backward as
+      // they rise, so the whole skull tips up and the chin lifts.
+      const neckRing = placeRing(
+        m,
+        circleProfile(7, 0.08, { jitter: 0.008, rng }),
+        [0, 2.46, 0],
+        1,
+        0.9,
+      );
+      const jawRing = placeRing(
+        m,
+        circleProfile(7, 0.125, { jitter: 0.008, rng }),
+        [0, 2.6, -0.05],
+        1,
+        0.85,
+      );
+      const browRing = placeRing(
+        m,
+        circleProfile(7, 0.135, { jitter: 0.008, rng }),
+        [0, 2.74, -0.12],
+        1,
+        0.85,
+      );
+      const crownRing = placeRing(
+        m,
+        circleProfile(7, 0.07, { jitter: 0.008, rng }),
+        [0, 2.83, -0.2],
+        1,
+        0.8,
+      );
+      loft(m, "head", mat("marble"), [neckRing, jawRing, browRing, crownRing]);
+      cap(m, "head_crown", mat("marble"), crownRing);
+
+      // Upturned face: a smooth plane angled at the sky, chin proud.
+      strip(
+        m,
+        "face",
+        mat("marble"),
+        [
+          [-0.07, 2.585, 0.09],
+          [-0.08, 2.67, 0.06],
+          [-0.075, 2.74, 0.005],
+        ],
+        [
+          [0.07, 2.585, 0.09],
+          [0.08, 2.67, 0.06],
+          [0.075, 2.74, 0.005],
+        ],
+      );
+
+      // Hood slid back off the crown: a carved rim arcing over the head,
+      // collapsing into a bunched fold of cloth behind the shoulders.
       tube(
+        m,
+        "hood_rim",
+        mat("marble"),
+        [
+          [-0.175, 2.55, 0.03],
+          [-0.155, 2.76, -0.06],
+          [0, 2.9, -0.13],
+          [0.155, 2.76, -0.06],
+          [0.175, 2.55, 0.03],
+        ],
+        [0.05, 0.055, 0.06, 0.055, 0.05],
+        5,
+        { jitter: 0.008, rng },
+      );
+      blob(m, "hood_fold", mat("marble"), [0, 2.38, -0.21], [0.42, 0.2, 0.18], rng, 6, 2);
+
+      // Arms lifted in supplication and broken off mid-forearm, the way a
+      // dug-up Venus survives: rough weathered break faces, no hands, one
+      // arm snapped shorter than the other.
+      const armLeft = tube(
         m,
         "arm_left",
         mat("marble"),
         [
-          [-0.26, 2.2, 0.05],
-          [-0.12, 1.98, 0.2],
-          [0.06, 1.88, 0.22],
+          [-0.2, 2.28, 0.05],
+          [-0.33, 2.44, 0.12],
+          [-0.385, 2.62, 0.17],
         ],
-        [0.09, 0.08, 0.06],
+        [0.075, 0.065, 0.058],
         6,
+        { jitter: 0.01, rng, capEnds: false },
       );
-      tube(
+      cap(m, "arm_left_root", mat("marble"), armLeft[0], true);
+      cap(m, "arm_left_break", mat("weatheredMarble"), armLeft[armLeft.length - 1]);
+      const armRight = tube(
         m,
         "arm_right",
         mat("marble"),
         [
-          [0.26, 2.24, 0.03],
-          [0.12, 2.0, 0.18],
-          [-0.05, 1.92, 0.21],
+          [0.2, 2.28, 0.05],
+          [0.305, 2.42, 0.11],
+          [0.345, 2.5, 0.13],
         ],
-        [0.09, 0.08, 0.06],
+        [0.075, 0.066, 0.062],
         6,
+        { jitter: 0.01, rng, capEnds: false },
       );
+      cap(m, "arm_right_root", mat("marble"), armRight[0], true);
+      cap(m, "arm_right_break", mat("weatheredMarble"), armRight[armRight.length - 1]);
 
-      // Halo: a thin gold ring standing behind the head.
+      // Halo: a thin gold ring behind the head, tilted back with it.
       const haloOuter = circleProfile(14, 0.34);
       const haloInner = circleProfile(14, 0.26);
-      const haloFront = haloOuter.map(([x, y]) => addV(m, [x, 2.88 + y, -0.18]));
-      const haloBack = haloOuter.map(([x, y]) => addV(m, [x, 2.88 + y, -0.23]));
-      const haloFrontIn = haloInner.map(([x, y]) => addV(m, [x, 2.88 + y, -0.18]));
-      const haloBackIn = haloInner.map(([x, y]) => addV(m, [x, 2.88 + y, -0.23]));
+      const haloV = (profilePoints: P2[], back: boolean) =>
+        profilePoints.map(([x, y]) =>
+          addV(m, [
+            x,
+            2.92 + y * 0.82 - (back ? 0.029 : 0),
+            -0.24 - y * 0.57 - (back ? 0.041 : 0),
+          ]),
+        );
+      const haloFront = haloV(haloOuter, false);
+      const haloBack = haloV(haloOuter, true);
+      const haloFrontIn = haloV(haloInner, false);
+      const haloBackIn = haloV(haloInner, true);
       for (let i = 0; i < 14; i += 1) {
         const j = (i + 1) % 14;
         addFace(m, `halo_face_${i}`, [haloFront[i], haloFront[j], haloFrontIn[j], haloFrontIn[i]], mat("gold"), "halo");
@@ -1184,24 +1280,29 @@ const bleedingWitness = () =>
         addFace(m, `halo_rim_in_${i}`, [haloFrontIn[i], haloFrontIn[j], haloBackIn[j], haloBackIn[i]], mat("gold"), "halo");
       }
 
-      // Blood: two thin runs from the hood down the robe to the plinth.
+      // Blood: with the face tipped back the runs start at the eyes, slide
+      // down the cheeks to the jaw, then the throat, bodice, and robe.
       strip(
         m,
         "blood_run_a",
         mat("blood"),
         [
-          [-0.05, 2.7, 0.18],
-          [-0.1, 2.2, 0.27],
-          [-0.16, 1.5, 0.245],
-          [-0.22, 0.78, 0.36],
-          [-0.3, 0.57, 0.5],
+          [-0.052, 2.705, 0.04],
+          [-0.1, 2.6, 0.075],
+          [-0.105, 2.47, 0.09],
+          [-0.155, 2.1, 0.2],
+          [-0.185, 1.5, 0.195],
+          [-0.235, 0.8, 0.31],
+          [-0.3, 0.585, 0.44],
         ],
         [
-          [0.0, 2.7, 0.18],
-          [-0.04, 2.2, 0.28],
-          [-0.08, 1.5, 0.255],
-          [-0.12, 0.78, 0.37],
-          [-0.14, 0.57, 0.52],
+          [-0.012, 2.71, 0.05],
+          [-0.055, 2.6, 0.095],
+          [-0.06, 2.47, 0.105],
+          [-0.1, 2.1, 0.225],
+          [-0.115, 1.5, 0.215],
+          [-0.13, 0.8, 0.345],
+          [-0.16, 0.585, 0.49],
         ],
       );
       strip(
@@ -1209,23 +1310,27 @@ const bleedingWitness = () =>
         "blood_run_b",
         mat("blood"),
         [
-          [0.06, 2.66, 0.17],
-          [0.1, 2.0, 0.27],
-          [0.13, 1.3, 0.27],
-          [0.17, 0.6, 0.45],
+          [0.045, 2.705, 0.04],
+          [0.09, 2.59, 0.08],
+          [0.095, 2.46, 0.095],
+          [0.13, 2.0, 0.215],
+          [0.15, 1.3, 0.2],
+          [0.185, 0.62, 0.4],
         ],
         [
-          [0.1, 2.66, 0.16],
-          [0.15, 2.0, 0.25],
-          [0.19, 1.3, 0.25],
-          [0.26, 0.6, 0.42],
+          [0.075, 2.7, 0.045],
+          [0.125, 2.59, 0.07],
+          [0.13, 2.46, 0.085],
+          [0.175, 2.0, 0.2],
+          [0.2, 1.3, 0.185],
+          [0.25, 0.62, 0.37],
         ],
       );
       // Pooled blood on the plinth.
       const pool = placeRing(
         m,
         circleProfile(8, 0.3, { jitter: 0.07, rng }),
-        [-0.18, 0.585, 0.3],
+        [-0.18, 0.585, 0.32],
         1,
         0.7,
       );
@@ -2104,6 +2209,89 @@ const grassTuft = () =>
     },
   });
 
+// Pine tree: a tall, layered conical shape.
+const pineTree = () =>
+  sculpt({
+    id: "obj_pine",
+    name: "Pine Tree",
+    category: "nature",
+    tags: ["prop", "nature"],
+    materialKeys: ["cypress", "oliveBark"],
+    build: (m, rng) => {
+      tube(
+        m,
+        "trunk",
+        mat("oliveBark"),
+        [
+          [0, 0, 0],
+          [0, 0.4, 0],
+        ],
+        [0.08, 0.05],
+        5,
+      );
+      blob(m, "layer1", mat("cypress"), [0, 0.6, 0], [0.6, 0.4, 0.6], rng, 7, 3, 0.1);
+      blob(m, "layer2", mat("cypress"), [0, 1.1, 0], [0.45, 0.35, 0.45], rng, 7, 3, 0.1);
+      blob(m, "layer3", mat("cypress"), [0, 1.5, 0], [0.3, 0.3, 0.3], rng, 6, 2, 0.1);
+      blob(m, "top", mat("cypress"), [0, 1.8, 0], [0.15, 0.25, 0.15], rng, 5, 1, 0.05);
+    },
+  });
+
+// Fig tree: wide canopy with dense foliage.
+const figTree = () =>
+  sculpt({
+    id: "obj_fig_tree",
+    name: "Fig Tree",
+    category: "nature",
+    tags: ["prop", "nature"],
+    materialKeys: ["oliveLeaf", "oliveBark"],
+    build: (m, rng) => {
+      tube(
+        m,
+        "trunk",
+        mat("oliveBark"),
+        [
+          [0, 0, 0],
+          [0, 0.8, 0],
+        ],
+        [0.12, 0.08],
+        6,
+      );
+      // Main wide canopy
+      blob(m, "canopy_center", mat("oliveLeaf"), [0, 1.2, 0], [1.2, 0.6, 1.2], rng, 8, 4, 0.2);
+      blob(m, "canopy_side1", mat("oliveLeaf"), [0.6, 1.0, 0.2], [0.8, 0.5, 0.8], rng, 7, 3, 0.15);
+      blob(m, "canopy_side2", mat("oliveLeaf"), [-0.5, 1.1, -0.4], [0.9, 0.5, 0.9], rng, 7, 3, 0.15);
+      blob(m, "canopy_side3", mat("oliveLeaf"), [-0.2, 0.9, 0.7], [0.7, 0.4, 0.7], rng, 6, 3, 0.15);
+    },
+  });
+
+// Flowering bush: similar to laurel but with flower blobs
+const flowerBush = () =>
+  sculpt({
+    id: "obj_flower_bush",
+    name: "Flowering Bush",
+    category: "nature",
+    tags: ["prop", "nature"],
+    materialKeys: ["cypress", "oliveBark", "blood"],
+    build: (m, rng) => {
+      tube(
+        m,
+        "stem",
+        mat("oliveBark"),
+        [
+          [0, 0, 0],
+          [0.02, 0.18, 0.01],
+        ],
+        [0.05, 0.04],
+        5,
+      );
+      blob(m, "leaf_a", mat("cypress"), [0.06, 0.46, 0.04], [0.62, 0.5, 0.58], rng, 7, 3, 0.1);
+      blob(m, "leaf_b", mat("cypress"), [-0.18, 0.36, -0.1], [0.42, 0.34, 0.4], rng, 6, 2, 0.08);
+      blob(m, "flower_1", mat("blood"), [0.2, 0.5, 0.2], [0.15, 0.15, 0.15], rng, 5, 2, 0.05);
+      blob(m, "flower_2", mat("blood"), [-0.3, 0.4, 0.1], [0.12, 0.12, 0.12], rng, 5, 2, 0.05);
+      blob(m, "flower_3", mat("blood"), [0.1, 0.6, -0.2], [0.1, 0.1, 0.1], rng, 4, 1, 0.04);
+    },
+  });
+
 // ── Library export ──────────────────────────────────────────────────────────
 
 export const createWitnessTownLibrary = (): ObjectData[] => [
@@ -2139,4 +2327,7 @@ export const createWitnessTownLibrary = (): ObjectData[] => [
   deadTree(),
   laurel(),
   grassTuft(),
+  pineTree(),
+  figTree(),
+  flowerBush(),
 ];

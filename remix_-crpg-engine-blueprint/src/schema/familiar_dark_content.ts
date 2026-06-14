@@ -43,21 +43,21 @@ export const FD_ENTITIES: EntityData[] = [
   {
     id: "ent_rite_remnant_1",
     display_name: "Rite Remnant",
-    sprite_id: "spr_rite_remnant",
+    sprite_id: "spr_cyberghost",
     is_npc: false,
     max_hp: 8, max_mp: 0, attack: 4, defense: 1, speed: 8,
   },
   {
     id: "ent_rite_remnant_2",
     display_name: "Rite Remnant",
-    sprite_id: "spr_rite_remnant",
+    sprite_id: "spr_cyberghost",
     is_npc: false,
     max_hp: 8, max_mp: 0, attack: 4, defense: 1, speed: 8,
   },
   {
     id: "ent_rite_remnant_3",
     display_name: "Rite Remnant",
-    sprite_id: "spr_rite_remnant",
+    sprite_id: "spr_cyberghost",
     is_npc: false,
     max_hp: 8, max_mp: 0, attack: 4, defense: 1, speed: 8,
   },
@@ -66,28 +66,28 @@ export const FD_ENTITIES: EntityData[] = [
   {
     id: "ent_rite_remnant_4",
     display_name: "Rite Remnant",
-    sprite_id: "spr_rite_remnant",
+    sprite_id: "spr_cyberghost",
     is_npc: false,
     max_hp: 8, max_mp: 0, attack: 4, defense: 1, speed: 8,
   },
   {
     id: "ent_rite_remnant_5",
     display_name: "Rite Remnant",
-    sprite_id: "spr_rite_remnant",
+    sprite_id: "spr_cyberghost",
     is_npc: false,
     max_hp: 8, max_mp: 0, attack: 4, defense: 1, speed: 8,
   },
   {
     id: "ent_rite_remnant_6",
     display_name: "Rite Remnant",
-    sprite_id: "spr_rite_remnant",
+    sprite_id: "spr_cyberghost",
     is_npc: false,
     max_hp: 8, max_mp: 0, attack: 4, defense: 1, speed: 8,
   },
   {
     id: "ent_rite_remnant_7",
     display_name: "Rite Remnant",
-    sprite_id: "spr_rite_remnant",
+    sprite_id: "spr_cyberghost",
     is_npc: false,
     max_hp: 8, max_mp: 0, attack: 4, defense: 1, speed: 8,
   },
@@ -96,28 +96,28 @@ export const FD_ENTITIES: EntityData[] = [
   {
     id: "ent_candle_eaten_1",
     display_name: "Candle-Eaten",
-    sprite_id: "spr_rite_remnant",
+    sprite_id: "spr_cyberghost",
     is_npc: false,
     max_hp: 5, max_mp: 0, attack: 3, defense: 0, speed: 14,
   },
   {
     id: "ent_candle_eaten_2",
     display_name: "Candle-Eaten",
-    sprite_id: "spr_rite_remnant",
+    sprite_id: "spr_cyberghost",
     is_npc: false,
     max_hp: 5, max_mp: 0, attack: 3, defense: 0, speed: 14,
   },
   {
     id: "ent_candle_eaten_3",
     display_name: "Candle-Eaten",
-    sprite_id: "spr_rite_remnant",
+    sprite_id: "spr_cyberghost",
     is_npc: false,
     max_hp: 5, max_mp: 0, attack: 3, defense: 0, speed: 14,
   },
   {
     id: "ent_candle_eaten_4",
     display_name: "Candle-Eaten",
-    sprite_id: "spr_rite_remnant",
+    sprite_id: "spr_cyberghost",
     is_npc: false,
     max_hp: 5, max_mp: 0, attack: 3, defense: 0, speed: 14,
   },
@@ -125,35 +125,35 @@ export const FD_ENTITIES: EntityData[] = [
   {
     id: "ent_partial_conversion_1",
     display_name: "Partial Conversion",
-    sprite_id: "spr_glass_remnant",
+    sprite_id: "spr_cyberghost",
     is_npc: false,
     max_hp: 16, max_mp: 0, attack: 5, defense: 3, speed: 5,
   },
   {
     id: "ent_partial_conversion_2",
     display_name: "Partial Conversion",
-    sprite_id: "spr_glass_remnant",
+    sprite_id: "spr_cyberghost",
     is_npc: false,
     max_hp: 16, max_mp: 0, attack: 5, defense: 3, speed: 5,
   },
   {
     id: "ent_partial_conversion_3",
     display_name: "Partial Conversion",
-    sprite_id: "spr_glass_remnant",
+    sprite_id: "spr_cyberghost",
     is_npc: false,
     max_hp: 16, max_mp: 0, attack: 5, defense: 3, speed: 5,
   },
   {
     id: "ent_partial_conversion_4",
     display_name: "Partial Conversion",
-    sprite_id: "spr_glass_remnant",
+    sprite_id: "spr_cyberghost",
     is_npc: false,
     max_hp: 16, max_mp: 0, attack: 5, defense: 3, speed: 5,
   },
   {
     id: "ent_partial_conversion_5",
     display_name: "Partial Conversion",
-    sprite_id: "spr_glass_remnant",
+    sprite_id: "spr_cyberghost",
     is_npc: false,
     max_hp: 16, max_mp: 0, attack: 5, defense: 3, speed: 5,
   },
@@ -162,7 +162,7 @@ export const FD_ENTITIES: EntityData[] = [
   {
     id: "ent_bound_remnant",
     display_name: "Bound Remnant",
-    sprite_id: "spr_rite_remnant",
+    sprite_id: "spr_cyberghost",
     is_npc: false,
     max_hp: 30, max_mp: 0, attack: 6, defense: 2, speed: 7,
   },
@@ -272,6 +272,38 @@ export const FD_ENTITIES: EntityData[] = [
     is_npc: true,
     max_hp: 13, max_mp: 0, attack: 0, defense: 0, speed: 11,
   },
+  {
+    id: "ent_gate_anchorite",
+    display_name: "Sister Vela of the Mouthstone",
+    sprite_id: "spr_father_imre",
+    dialogue_id: "dia_gate_anchorite",
+    is_npc: true,
+    max_hp: 11, max_mp: 4, attack: 0, defense: 0, speed: 8,
+  },
+  {
+    id: "ent_glass_apprentice",
+    display_name: "Orin, Glassworks Hand",
+    sprite_id: "spr_petra_stonecutter",
+    dialogue_id: "dia_glass_apprentice",
+    is_npc: true,
+    max_hp: 10, max_mp: 0, attack: 0, defense: 0, speed: 9,
+  },
+  {
+    id: "ent_burial_keeper",
+    display_name: "Marta of the Lower Graves",
+    sprite_id: "spr_liss",
+    dialogue_id: "dia_burial_keeper",
+    is_npc: true,
+    max_hp: 10, max_mp: 0, attack: 0, defense: 0, speed: 7,
+  },
+  {
+    id: "ent_lazare_vampire",
+    display_name: "Lazare Behind the Shutters",
+    sprite_id: "spr_lazare_vampire",
+    dialogue_id: "dia_lazare_vampire",
+    is_npc: true,
+    max_hp: 18, max_mp: 8, attack: 0, defense: 1, speed: 0,
+  },
 ];
 
 // ── Dialogue ────────────────────────────────────────────────────────────────
@@ -285,7 +317,7 @@ export const FD_DIALOGUE: DialogueData[] = [
       {
         id: "node_1",
         speaker: "Scene",
-        text: "The procession road climbs away south, lined with small stone watchers, terrace over terrace, up to a marble precinct where something white stands behind a fence line and a guard who never turns around. Even from here you can see the dark threads running down its face.",
+        text: "The Old Exile Road ends at the Mouthstone: three tiles of black stone set across the parish limit, polished by hands that were never admitted into the church records. South of it, Alderamontico climbs in terraces toward the cordoned Witness. Even from the gate you can see the white figure on the high square and the dark threads running down its face.",
         options: [{ text: "So that is the Witness.", next_node_id: "node_2" }],
       },
       {
@@ -319,7 +351,7 @@ export const FD_DIALOGUE: DialogueData[] = [
       {
         id: "node_3",
         speaker: "Scene",
-        text: "Before the clerk can fold the writ, a grey-haired brother crosses the gate plaza — not at procession pace. He comes to you the way a man comes to an old friend at a funeral.",
+        text: "Before the clerk can fold the writ, a grey-haired brother crosses the gate plaza - not at procession pace. He comes to you the way a man comes to an old friend at a funeral.",
         options: [{ text: "Aldric. You came down yourself.", next_node_id: "node_4" }],
       },
       {
@@ -331,7 +363,7 @@ export const FD_DIALOGUE: DialogueData[] = [
       {
         id: "node_5",
         speaker: "Brother Aldric",
-        text: "My scriptorium is the first door east off the way — you can see the lamp from here. The Hall of Custody faces it across the procession; Nessa is behind its bars. Paper first, Intercessor. Then her. The way is lined with watchers; let them see us do this properly.",
+        text: "My office is the east scriptorium hall, just off the authority lane. The gaol annex is across the procession to the west; Nessa is behind its bars. Paper first, Intercessor. Then her. The way is lined with watchers; let them see us do this properly.",
         options: [
           {
             text: "Begin the inquiry.",
@@ -403,13 +435,13 @@ export const FD_DIALOGUE: DialogueData[] = [
       {
         id: "node_go_office",
         speaker: "Brother Aldric",
-        text: "The scriptorium — first door east off the way, just past the gate lane. The writ, the witness lists, the cordon records. I will not have you meet her with an empty folder. Paper first.",
+        text: "My office - the east scriptorium hall off the authority lane. The writ, the witness lists, the cordon records. I will not have you meet her with an empty folder. Paper first.",
         options: [{ text: "Paper first." }],
       },
       {
         id: "node_go_gaol",
         speaker: "Brother Aldric",
-        text: "The Hall of Custody, west across the procession — the marble hall facing my door. Warden Sefa keeps her. Sefa is not cruel, whatever you have heard about wardens. Speak to Nessa through the bars. I will be beside you, and I will not interrupt unless she lies.",
+        text: "The gaol annex, the west hall across the procession from my door. Warden Sefa keeps her. Sefa is not cruel, whatever you have heard about wardens. Speak to Nessa through the bars. I will be beside you, and I will not interrupt unless she lies.",
         options: [{ text: "Unless she lies?" , next_node_id: "node_go_gaol2"}],
       },
       {
@@ -457,7 +489,7 @@ export const FD_DIALOGUE: DialogueData[] = [
       {
         id: "node_town",
         speaker: "Brother Aldric",
-        text: "Notice where they built thresholds. Fences, bars, terraces, cordons. Alderamontico survives by deciding what may be approached and what must only be witnessed. This town is honest about it, at least — it put its holiest thing at the top of the stairs and forbade itself the climb.",
+        text: "Notice where they built thresholds. Fences, bars, terraces, cordons. Alderamontico survives by deciding what may be approached and what must only be witnessed. This town is honest about it, at least — it raised its cathedral on the hill and roped its wound off in the square below, and still cannot say which of the two the people are forbidden.",
         options: [{ text: "That includes Nessa.", next_node_id: "node_town2" }],
       },
       {
@@ -823,7 +855,7 @@ export const FD_DIALOGUE: DialogueData[] = [
       {
         id: "node_stone",
         speaker: "Gate Guard Holt",
-        text: "The door we never built and cannot close. Exiles go through the split and the pagan lands take them. My grandmother said it was a mouth before it was a gate, and I notice nobody ever corrected her — they only stopped letting her say it near the priest.",
+        text: "The door we never built and cannot close. Exiles are walked out past it and the pagan lands take them. My grandmother said it was a mouth before it was a gate, and I notice nobody ever corrected her — they only stopped letting her say it near the priest.",
         options: [{ text: "Go back.", next_node_id: "node_1" }],
       },
       {
@@ -882,7 +914,7 @@ export const FD_DIALOGUE: DialogueData[] = [
       {
         id: "node_1",
         speaker: "Maro",
-        text: "Welcome to the Counted Cup — best pour on the procession, which is easy, being the only one. Sit anywhere that isn't the hearth stone. You're the Intercessor. Everyone has been in twice today to not-talk about you.",
+        text: "Welcome to the Counted Cup — best pour on the square, which is easy, being the only one. Sit anywhere that isn't the hearth stone. You're the Intercessor. Everyone has been in twice today to not-talk about you.",
         options: [
           { text: "What does the town not-say about Nessa?", next_node_id: "node_gossip" },
           {
@@ -924,7 +956,7 @@ export const FD_DIALOGUE: DialogueData[] = [
       {
         id: "node_1",
         speaker: "Sela",
-        text: "You walk like paper, Intercessor — all straight lines. Sit by the fountain a moment; the water remembers being spoken to, whatever the priest says now.",
+        text: "You walk like paper, Intercessor — all straight lines. Stand a while among the stones with me; the dead here remember being spoken to, whatever the priest says now.",
         options: [
           { text: "Tell me about the river customs.", next_node_id: "node_river" },
           { text: "You're the widow's cousin?", next_node_id: "node_widow" },
@@ -962,7 +994,7 @@ export const FD_DIALOGUE: DialogueData[] = [
       {
         id: "node_temple",
         speaker: "Petra",
-        text: "My line dressed every block on that terrace back to the founding. Witness-grade marble, quarried under petition, set with the grain facing heaven. You do not forget the feel of stone like that. Which is how I know what I felt in the new fence posts is not the marble.",
+        text: "My line dressed every block up at the chapter house, back to the founding. Witness-grade marble, quarried under petition, set with the grain facing heaven. You do not forget the feel of stone like that. Which is how I know what I felt in the new cordon posts is not the marble.",
         options: [{ text: "What did you feel?", next_node_id: "node_warm" }],
       },
       {
@@ -1083,6 +1115,135 @@ export const FD_DIALOGUE: DialogueData[] = [
     ],
   },
 
+  // --- Outer district witnesses ---
+  {
+    id: "dia_gate_anchorite",
+    display_name: "Sister Vela of the Mouthstone",
+    nodes: [
+      {
+        id: "node_1",
+        speaker: "Sister Vela",
+        text: "I keep the old road swept because the gate does not like offerings left untended. The Church calls that superstition. The Church also sends me oil, keys, and a guard who pretends not to listen.",
+        options: [
+          { text: "What does the Mouthstone do?", next_node_id: "node_gate" },
+          { text: "Why stand so far from the Witness?", next_node_id: "node_far" },
+          { text: "Keep your watch." },
+        ],
+      },
+      {
+        id: "node_gate",
+        speaker: "Sister Vela",
+        text: "It marks the last counted tile. Past it, a person belongs to no parish ledger. That sounds like freedom until you understand how hungry an uncounted place can be.",
+        options: [{ text: "Go back.", next_node_id: "node_1" }],
+      },
+      {
+        id: "node_far",
+        speaker: "Sister Vela",
+        text: "Because the Witness is the town's wound, and the Mouthstone is its mouth. Wounds draw eyes. Mouths remember names. I prefer the older danger.",
+        options: [{ text: "Go back.", next_node_id: "node_1" }],
+      },
+    ],
+  },
+  {
+    id: "dia_glass_apprentice",
+    display_name: "Orin, Glassworks Hand",
+    nodes: [
+      {
+        id: "node_1",
+        speaker: "Orin",
+        text: "Don't step on the cullet. Sacred glass cuts cleaner than bottle glass, and that is not a compliment. Petra says I can sweep until I learn the difference by sight.",
+        options: [
+          { text: "What are you making out here?", next_node_id: "node_work" },
+          {
+            text: "Have you seen the Glass figures move?",
+            condition: { switch: "seen_cordon" },
+            next_node_id: "node_move",
+          },
+          { text: "Back to work." },
+        ],
+      },
+      {
+        id: "node_work",
+        speaker: "Orin",
+        text: "Cordon lamps, black-star panes, little blessed windows for houses that cannot afford marble. The Church buys the big panes and pretends the small ones are folk taste.",
+        options: [{ text: "Go back.", next_node_id: "node_1" }],
+      },
+      {
+        id: "node_move",
+        speaker: "Orin",
+        text: "Only in reflection. You look at a dark pane and one of them is standing half a breath wrong. Never in the square, never when a guard asks. Glass knows authority.",
+        options: [{ text: "Go back.", next_node_id: "node_1" }],
+      },
+    ],
+  },
+  {
+    id: "dia_burial_keeper",
+    display_name: "Marta of the Lower Graves",
+    nodes: [
+      {
+        id: "node_1",
+        speaker: "Marta",
+        text: "Lower graves for lower questions. The churchyard keeps names. Down here we keep what the names were afraid to say.",
+        options: [
+          { text: "What do the southern stones mark?", next_node_id: "node_stones" },
+          { text: "Does the old rite still have followers?", next_node_id: "node_followers" },
+          { text: "I'll leave you to the graves." },
+        ],
+      },
+      {
+        id: "node_stones",
+        speaker: "Marta",
+        text: "Families too pagan to face the nave and too useful to bury outside the walls. Alderamontico has always known how to condemn a thing and inherit it.",
+        options: [{ text: "Go back.", next_node_id: "node_1" }],
+      },
+      {
+        id: "node_followers",
+        speaker: "Marta",
+        text: "Followers? No. Habits. A habit can outlive a god, a bishop, and a law. That is why habits are dangerous.",
+        options: [{ text: "Go back.", next_node_id: "node_1" }],
+      },
+    ],
+  },
+  {
+    id: "dia_lazare_vampire",
+    display_name: "Lazare Behind the Shutters",
+    nodes: [
+      {
+        id: "node_1",
+        speaker: "Lazare",
+        text: "The door opens only as far as the chain allows. A pale man inclines his head from a room kept dark at noon and darker at dusk. 'Intercessor. Please do not invite yourself further in. I am trying to remain polite.'",
+        options: [
+          { text: "You never leave this house.", next_node_id: "node_stay" },
+          { text: "What are you?", next_node_id: "node_what" },
+          {
+            text: "Do you know anything about the rite?",
+            condition: { switch: "met_nessa" },
+            next_node_id: "node_rite",
+          },
+          { text: "Close the door." },
+        ],
+      },
+      {
+        id: "node_stay",
+        speaker: "Lazare",
+        text: "Correct. I have a covenant with the shutters, a bill with the butcher, and no argument with sunlight that requires personal inspection.",
+        options: [{ text: "Go back.", next_node_id: "node_1" }],
+      },
+      {
+        id: "node_what",
+        speaker: "Lazare",
+        text: "An old parish mistake. A tolerated hunger. The Church has three categories for me and none of them are friend. I prefer tenant.",
+        options: [{ text: "Go back.", next_node_id: "node_1" }],
+      },
+      {
+        id: "node_rite",
+        speaker: "Lazare",
+        text: "Only this: the night the Witness bled, every mirror in this room showed the old road instead of my face. I know the difference, Intercessor. One of those has never belonged to me.",
+        options: [{ text: "Go back.", next_node_id: "node_1" }],
+      },
+    ],
+  },
+
   // ——— Fixtures ———
   {
     id: "dia_merchant",
@@ -1091,7 +1252,7 @@ export const FD_DIALOGUE: DialogueData[] = [
       {
         id: "node_1",
         speaker: "Provisioner Dimos",
-        text: "Intercessor! Supplies, sundries, and no opinions — the only stall on the procession that sells all three. What will it be?",
+        text: "Intercessor! Supplies, sundries, and no opinions — the only stall on the square that sells all three. What will it be?",
         options: [
           { text: "Show me your goods.", trigger_cutscene: "cut_open_shop" },
           {
@@ -1115,7 +1276,7 @@ export const FD_DIALOGUE: DialogueData[] = [
       {
         id: "node_opinion",
         speaker: "Provisioner Dimos",
-        text: "He leans in, glances both ways along the stoa. — Free of charge, because you'll hear it anyway: half this town bought candles from me the week before the rite. Sevens. Always sevens. I sell no opinions, Intercessor, but I sell a great many candles, and I can count.",
+        text: "He leans in, glances both ways along the market row. — Free of charge, because you'll hear it anyway: half this town bought candles from me the week before the rite. Sevens. Always sevens. I sell no opinions, Intercessor, but I sell a great many candles, and I can count.",
         options: [{ text: "Go back.", next_node_id: "node_1" }],
       },
     ],
@@ -1127,8 +1288,20 @@ export const FD_DIALOGUE: DialogueData[] = [
       {
         id: "node_1",
         speaker: "System",
-        text: "The Mouthstone Exile Gate: one black stone broken into two leaning halves, the split between them breathing a thin light that is not lamplight. The pagan lands begin where its shadow ends. Things written low on the inner faces have been chiselled out, twice.",
+        text: "The Mouthstone: three tiles of polished black stone, taller than two men, its broad faces smooth as still water in the dark. Down each thin edge runs a column of golden hummingbirds - worn, but unmistakable, and far older than the Church that renamed this the Exile Gate. The pagan lands begin where its shadow ends. Things once cut low on the faces have been chiselled away, twice.",
         options: [{ text: "Leave it be." }],
+      },
+    ],
+  },
+  {
+    id: "dia_old_rite_shrine",
+    display_name: "Old Rite Stone",
+    nodes: [
+      {
+        id: "node_1",
+        speaker: "System",
+        text: "A low black shrine stone, older than the church paths around it. Candle wax has filled the worn cuts in its face, but not evenly; someone still knows which grooves matter.",
+        options: [{ text: "Step back." }],
       },
     ],
   },
@@ -1376,10 +1549,11 @@ export const FD_CUTSCENES: CutsceneData[] = [
     actions: [
       { type: "play_music", music_url: "/music/roll away.ogg" },
       { type: "screen_fade", fade: "out", duration: 0 },
-      { type: "move_entity", entity_id: "ent_aldric", cell: [0, -29], facing: [0, -1] },
+      { type: "move_entity", entity_id: "ent_aldric", cell: [1, -63], facing: [0, 1] },
       { type: "screen_fade", fade: "in", duration: 1500 },
-      // The procession in one shot: gate, the climb, the bleeding Witness.
-      { type: "camera_pan", cell: [0, -10], duration: 1400 },
+      // The procession in one shot: Mouthstone, exile road, bleeding Witness.
+      { type: "camera_pan", cell: [0, -70], duration: 1300 },
+      { type: "camera_pan", cell: [0, -51], duration: 1300 },
       { type: "camera_pan", cell: [0, 26], duration: 1800 },
       { type: "wait", duration: 700 },
       { type: "camera_pan", duration: 1800 },
@@ -1417,9 +1591,11 @@ export const FD_CUTSCENES: CutsceneData[] = [
       { type: "set_switch", switch_id: "office_briefed", switch_value: true },
       // The writ is the key that unseals the cellar trapdoor (Scene 4).
       { type: "set_switch", switch_id: "act1_assigned", switch_value: true },
+      { type: "camera_pan", cell: [13, -24], duration: 900 },
       { type: "read_document", document_id: "doc_writ" },
       { type: "show_dialogue", dialogue_id: "dia_office_briefing" },
       { type: "read_document", document_id: "doc_field_note" },
+      { type: "camera_pan", duration: 700 },
     ],
   },
   {
@@ -1428,7 +1604,9 @@ export const FD_CUTSCENES: CutsceneData[] = [
     is_blocking: true,
     actions: [
       { type: "set_switch", switch_id: "gaol_entered", switch_value: true },
+      { type: "camera_pan", cell: [-13, -29], duration: 900 },
       { type: "show_dialogue", dialogue_id: "dia_gaol_entry_scene" },
+      { type: "camera_pan", duration: 700 },
     ],
   },
   {
@@ -1457,7 +1635,9 @@ export const FD_CUTSCENES: CutsceneData[] = [
     is_blocking: true,
     actions: [
       { type: "set_switch", switch_id: "seen_funeral", switch_value: true },
+      { type: "camera_pan", cell: [-9, 9], duration: 900 },
       { type: "show_dialogue", dialogue_id: "dia_funeral" },
+      { type: "camera_pan", duration: 700 },
     ],
   },
   {
@@ -1466,7 +1646,9 @@ export const FD_CUTSCENES: CutsceneData[] = [
     is_blocking: true,
     actions: [
       { type: "set_switch", switch_id: "seen_cellar", switch_value: true },
+      { type: "camera_pan", cell: [-18, -11], duration: 900 },
       { type: "show_dialogue", dialogue_id: "dia_cellar" },
+      { type: "camera_pan", duration: 700 },
     ],
   },
   {
@@ -1547,7 +1729,9 @@ export const FD_CUTSCENES: CutsceneData[] = [
     is_blocking: true,
     actions: [
       { type: "set_switch", switch_id: "act1_complete", switch_value: true },
+      { type: "camera_pan", cell: [13, -24], duration: 900 },
       { type: "show_dialogue", dialogue_id: "dia_office_after" },
+      { type: "camera_pan", duration: 700 },
     ],
   },
   {
@@ -1579,7 +1763,11 @@ export const FD_CUTSCENES: CutsceneData[] = [
     id: "cut_trapdoor_locked",
     display_name: "The Sealed Cellar",
     is_blocking: true,
-    actions: [{ type: "show_dialogue", dialogue_id: "dia_trapdoor_sealed" }],
+    actions: [
+      { type: "camera_pan", cell: [-18, -11], duration: 800 },
+      { type: "show_dialogue", dialogue_id: "dia_trapdoor_sealed" },
+      { type: "camera_pan", duration: 600 },
+    ],
   },
   {
     id: "cut_trapdoor_enter",

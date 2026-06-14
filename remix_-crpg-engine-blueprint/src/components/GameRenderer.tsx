@@ -41,7 +41,7 @@ const spriteTextureCache = new Map<
   { texture: THREE.Texture | null; spriteDef: any }
 >();
 
-const ILLUSTRATED_CHARACTER_HEIGHT = 1.55;
+const ILLUSTRATED_CHARACTER_HEIGHT = 1.9;
 const DEFAULT_CHARACTER_HEIGHT = 1;
 
 const isIllustrationSpriteDef = (sprite: any) =>
@@ -89,13 +89,12 @@ const getSpriteTextureEntry = (
   if (sprite.data_url) {
     const texture = new THREE.TextureLoader().load(sprite.data_url);
     const isIllustrationSprite = isIllustrationSpriteDef(sprite);
-    texture.magFilter = isIllustrationSprite
-      ? THREE.LinearFilter
-      : THREE.NearestFilter;
-    texture.minFilter = isIllustrationSprite
-      ? THREE.LinearMipmapLinearFilter
-      : THREE.NearestFilter;
-    texture.generateMipmaps = isIllustrationSprite;
+    texture.magFilter = THREE.LinearFilter;
+    texture.minFilter = THREE.LinearMipmapLinearFilter;
+    texture.generateMipmaps = true;
+    // Anisotropic sampling keeps minified illustration sprites sharp instead
+    // of letting trilinear mipmaps smear them (clamped to hardware max).
+    texture.anisotropy = 8;
     texture.colorSpace = THREE.SRGBColorSpace;
     const entry = { texture, spriteDef: sprite };
     spriteTextureCache.set(cacheKey, entry);

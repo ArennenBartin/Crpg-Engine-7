@@ -72,8 +72,17 @@ const PLAYER_STEP_READY_DISTANCE = 0.18;
 const MOVEMENT_REPEAT_START_MS = 105;
 const MOVEMENT_REPEAT_INTERVAL_MS = 105;
 const PLAY_RENDER_RADIUS = 20;
-const PLAY_DPR_MIN = 0.75;
-const PLAY_DPR_MAX = 1.0;
+const PLAY_NATIVE_DPR = Math.max(
+  1,
+  typeof window === "undefined" ? 1 : window.devicePixelRatio || 1,
+);
+const PLAY_DPR_MIN = Math.min(1.25, PLAY_NATIVE_DPR);
+// Render at native DPR or a modest supersample where there is headroom, while
+// keeping the adaptive floor high enough that character art does not turn soft.
+const PLAY_DPR_MAX = Math.max(
+  1.5,
+  Math.min(PLAY_NATIVE_DPR + 0.25, 2.25),
+);
 const PLAY_DPR_DROP = 0.08;
 const PLAY_DPR_RAISE = 0.04;
 const NPC_SIMULATION_RADIUS = 16;
@@ -211,6 +220,16 @@ const SPEAKER_PORTRAITS: Record<string, Omit<DialoguePortraitConfig, "side" | "a
     id: "wayside-candle",
     src: "/portraits/npcs/wayside-candle.png",
     alt: "Wayside Candle",
+  },
+  lazare: {
+    id: "lazare-vampire",
+    src: "/portraits/npcs/the lonely vampire.png",
+    alt: "Lazare Behind the Shutters",
+  },
+  "lazare behind the shutters": {
+    id: "lazare-vampire",
+    src: "/portraits/npcs/the lonely vampire.png",
+    alt: "Lazare Behind the Shutters",
   },
 };
 
@@ -820,7 +839,7 @@ function DialoguePortraitStage({ speaker }: { speaker: string }) {
               alt=""
               aria-hidden="true"
               className={`h-[24rem] sm:h-[32rem] md:h-[36rem] max-w-[56vw] sm:max-w-[42vw] object-contain object-bottom select-none drop-shadow-[0_0_26px_rgba(0,0,0,0.9)] ${
-                portrait.active ? "opacity-90" : "opacity-[0.58]"
+                portrait.id === "player" ? "opacity-100" : (portrait.active ? "opacity-100" : "opacity-[0.58]")
               }`}
               style={{
                 transform: portrait.flipX ? "scaleX(-1)" : undefined,

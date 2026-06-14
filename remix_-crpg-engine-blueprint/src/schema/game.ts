@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { objectLibraryPresets, spriteLibraryPresets } from "./presets";
-import { generateTownCells } from "./town_gen";
+import { generateTownCells, TOWN_W, TOWN_H } from "./town_gen";
+import { generateParishCells, PARISH_W, PARISH_H } from "./parish_gen";
 import { generateNetworkCells } from "./network_gen";
 import { generateNetworkDepthsCells } from "./network_depths_gen";
 import {
@@ -642,6 +643,7 @@ export type ShopPriceModifierData = z.infer<typeof ShopPriceModifierSchema>;
 
 export const createEmptyGamePackage = (): GamePackage => {
   const town = generateTownCells();
+  const parish = generateParishCells();
   const network = generateNetworkCells();
   const depths = generateNetworkDepthsCells();
   return {
@@ -651,8 +653,8 @@ export const createEmptyGamePackage = (): GamePackage => {
       version: "0.8.0",
       // The story begins above ground: the ceremony at the town gate.
       // The Network is reached through the sealed trapdoor (Scene 4).
-      start_map_id: "map_town",
-      start_spawn_id: "spawn_intercessor",
+      start_map_id: "map_parish",
+      start_spawn_id: "spawn_parish",
     },
     // The story opens at night beneath the black stars.
     settings: {
@@ -667,6 +669,7 @@ export const createEmptyGamePackage = (): GamePackage => {
         combat: "/music/underworld-battle theme.ogg",
       },
       map_music: {
+        map_parish: "town",
         map_town: "town",
         map_network_upper: "network",
         map_network_depths: "network",
@@ -708,13 +711,13 @@ export const createEmptyGamePackage = (): GamePackage => {
           // North end of the Surface Seam: the ladder back up to the cellar.
           {
             cell: [0, -19],
-            target_map_id: "map_town",
+            target_map_id: "map_parish",
             target_spawn_id: "spawn_from_network",
             facing: [0, 1],
           },
           {
             cell: [-1, -19],
-            target_map_id: "map_town",
+            target_map_id: "map_parish",
             target_spawn_id: "spawn_from_network",
             facing: [0, 1],
           },
@@ -749,19 +752,36 @@ export const createEmptyGamePackage = (): GamePackage => {
         ],
       },
       {
+        id: "map_parish",
+        display_name: "Alderamontico Parish",
+        width: PARISH_W,
+        height: PARISH_H,
+        // Spawns + exits now flow out of parish_gen via the DSL; the layout
+        // file owns its own anchors so game.ts doesn't drift out of sync.
+        spawns: parish.spawns,
+        cells: parish.cells,
+        props: [],
+        custom_object_placements: parish.custom_object_placements,
+        item_placements: parish.item_placements,
+        container_placements: parish.container_placements,
+        entity_placements: parish.entity_placements,
+        triggers: parish.triggers,
+        exits: parish.exits,
+      },
+      {
         id: "map_town",
         display_name: "The Town of the Witness",
-        width: 57,
-        height: 73,
+        width: TOWN_W,
+        height: TOWN_H,
         spawns: [
           {
             id: "spawn_intercessor",
-            cell: [0, -31],
+            cell: [0, -63],
             facing: [0, 1],
           },
           {
             id: "spawn_from_network",
-            cell: [17, -10],
+            cell: [-18, -12],
             facing: [0, 1],
           },
         ],

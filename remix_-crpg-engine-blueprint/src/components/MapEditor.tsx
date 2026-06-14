@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Canvas } from "@react-three/fiber";
-import { OrbitControls } from "@react-three/drei";
+import { OrbitControls, OrthographicCamera, PerspectiveCamera } from "@react-three/drei";
 import { useEngineStore } from "../store/engineStore";
 import { usePlayStore } from "../store/playStore";
 import { GameRenderer } from "./GameRenderer";
@@ -37,6 +37,15 @@ import {
 } from "lucide-react";
 import { AIGenerationModal } from "./AIGenerationModal";
 import { ConditionEditor } from "./ConditionEditor";
+import {
+  createMap as createSandboxMap,
+  getStampNames,
+  runStamp,
+} from "../utils/mapAuthoring";
+import { parishTheme } from "../utils/parishTheme";
+import { validateMap, type MapProblem } from "../utils/mapValidator";
+// Side-effect: registers stamps with the DSL registry.
+import { STAMP_PRESETS } from "../utils/parishStamps";
 
 type InspectorSelection =
   | { kind: "entity"; index: number }
@@ -83,8 +92,38 @@ export function MapEditor() {
     | "tile"
     | "interact"
     | "enemy"
-    | "trigger";
+    | "trigger"
+    | "stamp";
   const [currentTool, setCurrentTool] = useState<EditTool>("walkable");
+  // Brush size for cell-modifying tools (walkable/blocked/raise/lower/tile).
+  const [brushSize, setBrushSize] = useState<number>(1);
+  // Lint overlay: paints validator warnings on the live map.
+  const [lintEnabled, setLintEnabled] = useState<boolean>(false);
+  // Stamp dropdown picks one of the registered presets.
+  void getStampNames; // kept available for future raw-stamp tools
+  const [placementPresetIdx, setPlacementPresetIdx] = useState<number>(0);
+
+  // Lint problems for the active map — only computed when the overlay is on.
+  const lintProblems = React.useMemo<MapProblem[]>(() => {
+    if (!lintEnabled || !activeMap) return [];
+    const result = {
+      cells: activeMap.cells,
+      custom_object_placements: activeMap.custom_object_placements,
+      item_placements: activeMap.item_placements,
+      container_placements: activeMap.container_placements,
+      entity_placements: activeMap.entity_placements,
+      triggers: activeMap.triggers,
+      spawns: activeMap.spawns as any,
+      exits: activeMap.exits as any,
+      bounds: {
+        width: activeMap.width, height: activeMap.height,
+        minX: -Math.floor(activeMap.width / 2),
+        minZ: -Math.floor(activeMap.height / 2),
+      },
+      anchors: {}, zones: {},
+    };
+    return validateMap(result as any, { knownMaps: gamePackage.maps as any });
+  }, [lintEnabled, activeMap, gamePackage.maps]);
   const [placementObjectId, setPlacementObjectId] = useState<string | null>(
     gamePackage.object_library[0]?.id || null,
   );
@@ -104,6 +143,11 @@ export function MapEditor() {
   const [editLayerY, setEditLayerY] = useState(0);
   const [selection, setSelection] = useState<InspectorSelection>(null);
   const [inspectorOpen, setInspectorOpen] = useState(false);
+  // Editor camera: perspective iso by default; top-down ortho for precise,
+  // height-independent clicking on tiered maps. orbitRef lets "Fit" reset view.
+  const [topDown, setTopDown] = useState(false);
+  const [hoverCell, setHoverCell] = useState<{ x: number; z: number } | null>(null);
+  const orbitRef = useRef<any>(null);
 
   useEffect(() => {
     if (
@@ -213,72 +257,130 @@ export function MapEditor() {
     updateMap(activeMap.id, { width: cw, height: ch, cells: newCells });
   };
 
-  const handleCellClick = (x: number, z: number) => {
-    if (!activeMap) return;
-
-    const newCells = [...activeMap.cells];
+  // Apply a single-cell tool effect to a cells array. Returns the same array
+  // (mutated). Brush tools call this once per cell within the brush radius.
+  const applyBrushAt = (newCells: CellData[], x: number, z: number): CellData[] => {
     const idx = newCells.findIndex(
       (c) => c.x === x && c.z === z && c.y === editLayerY,
     );
-
     let cell: CellData;
     if (idx === -1) {
-      if (
-        currentTool === "blocked" ||
-        currentTool === "interact" ||
-        currentTool === "enemy" ||
-        currentTool === "trigger"
-      ) {
-        // for objects and entities, we can just let it create a floor if none exists at this layer
-      }
       cell = {
-        x,
-        y: editLayerY,
-        z,
-        active: true,
-        walkable: true,
-        blocks_los: false,
-        height: 0,
-        visual_height: 0,
-        terrain: "default",
-        surface_tag: "none",
+        x, y: editLayerY, z,
+        active: true, walkable: true, blocks_los: false,
+        height: 0, visual_height: 0,
+        terrain: "default", surface_tag: "none",
       };
       newCells.push(cell);
     } else {
       cell = { ...newCells[idx] };
       newCells[idx] = cell;
     }
-
-    let spawns = [...activeMap.spawns];
-
     switch (currentTool) {
       case "walkable":
-        cell.walkable = true;
-        cell.blocks_los = false;
-        cell.visual_height = 0;
-        break;
+        cell.walkable = true; cell.blocks_los = false; cell.visual_height = 0; break;
       case "blocked":
-        cell.walkable = false;
-        cell.blocks_los = true;
-        cell.visual_height = 2; // quick visual block
-        break;
+        cell.walkable = false; cell.blocks_los = true; cell.visual_height = 2; break;
       case "height_up":
-        cell.visual_height += 1;
-        break;
+        cell.visual_height += 1; break;
       case "height_down":
-        cell.visual_height = Math.max(0, cell.visual_height - 1);
-        break;
-      case "spawn":
-        spawns = [{ id: "start", cell: [x, z], facing: [0, 1] }]; // only support one for now
-        break;
+        cell.visual_height = Math.max(0, cell.visual_height - 1); break;
       case "tile":
         if (placementObjectId) {
-          if (cell.object_id === placementObjectId) {
-            cell.object_id = undefined;
-          } else {
-            cell.object_id = placementObjectId;
-          }
+          cell.object_id = cell.object_id === placementObjectId ? undefined : placementObjectId;
         }
+        break;
+    }
+    return newCells;
+  };
+
+  // Stamp tool: run the picked preset in a sandbox builder, merge into the
+  // active map. Sandbox is initialised empty (skipInit) so only the cells
+  // the stamp explicitly writes get merged.
+  const handleStampDrop = (cx: number, cz: number) => {
+    if (!activeMap) return;
+    const preset = STAMP_PRESETS[placementPresetIdx];
+    if (!preset) return;
+    const halfW = Math.floor(activeMap.width / 2);
+    const halfH = Math.floor(activeMap.height / 2);
+    const m = createSandboxMap({
+      width: activeMap.width, height: activeMap.height,
+      minX: -halfW, minZ: -halfH,
+      theme: parishTheme, skipInit: true,
+    });
+    try {
+      runStamp(m, preset.stampName, preset.build(cx, cz));
+    } catch (err) {
+      console.error(`stamp "${preset.stampName}" failed:`, err);
+      alert(`Stamp failed: ${(err as Error).message}`);
+      return;
+    }
+    const result = m.build();
+    const cells = [...activeMap.cells];
+    const ck = (c: CellData) => `${c.x}|${c.y || 0}|${c.z}`;
+    const byKey = new Map<string, number>();
+    cells.forEach((c, i) => byKey.set(ck(c), i));
+    for (const sc of result.cells) {
+      const k = ck(sc);
+      const ei = byKey.get(k);
+      if (ei !== undefined) cells[ei] = sc;
+      else { cells.push(sc); byKey.set(k, cells.length - 1); }
+    }
+    updateMap(activeMap.id, {
+      cells,
+      custom_object_placements: [...activeMap.custom_object_placements, ...result.custom_object_placements],
+      item_placements: [...activeMap.item_placements, ...result.item_placements],
+      container_placements: [...activeMap.container_placements, ...result.container_placements],
+      entity_placements: [...activeMap.entity_placements, ...result.entity_placements],
+      triggers: [...activeMap.triggers, ...result.triggers],
+    });
+  };
+
+  const handleCellClick = (x: number, z: number) => {
+    if (!activeMap) return;
+    if (currentTool === "stamp") { handleStampDrop(x, z); return; }
+
+    // Brush tools — apply the effect across the brush radius in one update.
+    if (
+      currentTool === "walkable" ||
+      currentTool === "blocked" ||
+      currentTool === "height_up" ||
+      currentTool === "height_down" ||
+      currentTool === "tile"
+    ) {
+      const r = Math.floor(brushSize / 2);
+      let newCells = [...activeMap.cells];
+      for (let dx = -r; dx <= r; dx++) {
+        for (let dz = -r; dz <= r; dz++) {
+          newCells = applyBrushAt(newCells, x + dx, z + dz);
+        }
+      }
+      updateMap(activeMap.id, { cells: newCells });
+      return;
+    }
+
+    // One-shot tools (existing behaviour).
+    const newCells = [...activeMap.cells];
+    const idx = newCells.findIndex(
+      (c) => c.x === x && c.z === z && c.y === editLayerY,
+    );
+    let cell: CellData;
+    if (idx === -1) {
+      cell = {
+        x, y: editLayerY, z,
+        active: true, walkable: true, blocks_los: false,
+        height: 0, visual_height: 0,
+        terrain: "default", surface_tag: "none",
+      };
+      newCells.push(cell);
+    } else {
+      cell = { ...newCells[idx] };
+      newCells[idx] = cell;
+    }
+    let spawns = [...activeMap.spawns];
+    switch (currentTool) {
+      case "spawn":
+        spawns = [{ id: "start", cell: [x, z], facing: [0, 1] }];
         break;
       case "object":
         if (placementObjectId) {
@@ -514,6 +616,7 @@ export function MapEditor() {
     },
     { id: "enemy", label: "Entity", icon: <Swords className="w-4 h-4" /> },
     { id: "trigger", label: "Trigger", icon: <Box className="w-4 h-4" /> },
+    { id: "stamp", label: "Stamp", icon: <Sparkles className="w-4 h-4" /> },
   ];
 
   return (
@@ -598,17 +701,45 @@ export function MapEditor() {
           <button
             onClick={handleCreateMap}
             className="p-2 text-neutral-400 hover:bg-neutral-800 hover:text-white rounded-md transition-colors"
+            title="New Map"
           >
             <Plus className="w-4 h-4" />
           </button>
-          {/* Inspector toggle — mobile only */}
+          {/* Camera view toggle — top-down ortho gives pixel-accurate clicks
+              on tiered maps; iso is the angled preview. */}
+          <button
+            onClick={() => setTopDown((v) => !v)}
+            className={`p-2 rounded-md transition-colors flex items-center gap-1.5 px-3 text-sm font-medium ${topDown ? "bg-indigo-600/30 text-indigo-300" : "text-neutral-400 hover:bg-neutral-800 hover:text-white"}`}
+            title={topDown ? "Switch to isometric view" : "Switch to top-down view (accurate editing)"}
+          >
+            <Mountain className="w-4 h-4" />
+            <span className="hidden sm:inline">{topDown ? "Top-down" : "Iso"}</span>
+          </button>
+          <button
+            onClick={() => orbitRef.current?.reset?.()}
+            className="p-2 text-neutral-400 hover:bg-neutral-800 hover:text-white rounded-md transition-colors flex items-center gap-1.5 px-3 text-sm font-medium"
+            title="Fit / reset camera"
+          >
+            <Move className="w-4 h-4" />
+            <span className="hidden sm:inline">Fit</span>
+          </button>
+          {/* Lint overlay: paint validator warnings on the map. */}
+          <button
+            onClick={() => setLintEnabled((v) => !v)}
+            className={`p-2 rounded-md transition-colors flex items-center gap-1.5 px-3 text-sm font-medium ${lintEnabled ? "bg-amber-600/30 text-amber-300" : "text-neutral-400 hover:bg-neutral-800 hover:text-white"}`}
+            title={lintEnabled ? "Hide map lint warnings" : "Show map lint warnings"}
+          >
+            <AlertTriangle className="w-4 h-4" />
+            <span className="hidden sm:inline">Lint</span>
+          </button>
+          {/* Inspector toggle */}
           <button
             onClick={() => setInspectorOpen((v) => !v)}
-            className={`sm:hidden p-2 rounded-md transition-colors flex items-center gap-1.5 px-3 text-sm font-medium ${inspectorOpen ? "bg-neutral-700 text-white" : "text-neutral-400 hover:bg-neutral-800 hover:text-white"}`}
+            className={`p-2 rounded-md transition-colors flex items-center gap-1.5 px-3 text-sm font-medium ${inspectorOpen ? "bg-neutral-700 text-white" : "text-neutral-400 hover:bg-neutral-800 hover:text-white"}`}
             title="Toggle Inspector"
           >
             <GripHorizontal className="w-4 h-4" />
-            <span>Inspector</span>
+            <span className="hidden sm:inline">Inspector</span>
           </button>
           <button
             onClick={handleTestPlay}
@@ -620,14 +751,25 @@ export function MapEditor() {
         </div>
       </div>
 
-      {/* 3D Canvas */}
-      <div className="flex-1 relative min-h-0">
+      {/* 3D Canvas + docked inspector */}
+      <div className="flex-1 flex min-h-0">
+        <div className="relative flex-1 min-h-0">
         <Canvas
-          camera={{ position: [0, 10, 10], fov: 45 }}
           dpr={[1, 1.5]}
           frameloop="demand"
           gl={{ antialias: false, powerPreference: "high-performance" }}
         >
+          {topDown ? (
+            <OrthographicCamera
+              makeDefault
+              position={[0, 100, 0.001]}
+              zoom={Math.max(4, Math.min(40, 620 / Math.max(activeMap.width || 10, activeMap.height || 10)))}
+              near={0.1}
+              far={1000}
+            />
+          ) : (
+            <PerspectiveCamera makeDefault position={[0, 10, 10]} fov={45} />
+          )}
           <color attach="background" args={["#111111"]} />
           <ambientLight intensity={0.5} />
           <directionalLight position={[10, 20, 10]} intensity={1} castShadow />
@@ -641,15 +783,90 @@ export function MapEditor() {
               activeMap.spawns[0]?.facing as [number, number] | undefined
             }
             onCellClick={handleCellClick}
+            onCellHover={(x, z) => setHoverCell({ x, z })}
+            onPointerOut={() => setHoverCell(null)}
+            hoveredCell={hoverCell ? [hoverCell.x, hoverCell.z] : null}
+            showGrid
             editLayerY={editLayerY}
           />
+          {/* Lint overlay: a flat coloured square per validator problem. */}
+          {lintEnabled && (
+            <group>
+              {lintProblems.map((p, i) => {
+                if (!p.cell) return null;
+                const color =
+                  p.severity === "error" ? "#ff3030"
+                  : p.severity === "warn" ? "#ffcc00"
+                  : "#3080ff";
+                return (
+                  <mesh
+                    key={`lint_${i}`}
+                    position={[p.cell[0], 2.6, p.cell[1]]}
+                    rotation={[-Math.PI / 2, 0, 0]}
+                    raycast={() => null}
+                  >
+                    <planeGeometry args={[0.92, 0.92]} />
+                    <meshBasicMaterial color={color} transparent opacity={0.62} depthTest={false} />
+                  </mesh>
+                );
+              })}
+            </group>
+          )}
+          {/* Brush footprint preview — shows what the brush will touch. */}
+          {hoverCell && brushSize > 1 && (
+            currentTool === "walkable" ||
+            currentTool === "blocked" ||
+            currentTool === "height_up" ||
+            currentTool === "height_down" ||
+            currentTool === "tile"
+          ) && (
+            <mesh
+              position={[hoverCell.x, 2.55, hoverCell.z]}
+              rotation={[-Math.PI / 2, 0, 0]}
+              raycast={() => null}
+            >
+              <planeGeometry args={[brushSize, brushSize]} />
+              <meshBasicMaterial color="#88C0D0" transparent opacity={0.18} depthTest={false} />
+            </mesh>
+          )}
           <OrbitControls
+            ref={orbitRef}
             target={[0, 0, 0]}
+            enableRotate={!topDown}
             maxPolarAngle={Math.PI / 2.2}
             minDistance={2}
-            maxDistance={30}
+            maxDistance={60}
           />
         </Canvas>
+        {/* Coordinate / cell read-out HUD */}
+        <div className="pointer-events-none absolute left-3 bottom-3 z-10 rounded-md bg-neutral-950/80 backdrop-blur border border-neutral-800 px-3 py-2 text-[11px] font-mono text-neutral-300 leading-relaxed">
+          {(() => {
+            if (!hoverCell) return <span className="text-neutral-500">Hover the map…</span>;
+            const c = activeMap.cells
+              .filter((cell) => cell.x === hoverCell.x && cell.z === hoverCell.z)
+              .sort((a, b) => (b.y || 0) - (a.y || 0))[0];
+            return (
+              <>
+                <div className="text-neutral-100">x {hoverCell.x} · z {hoverCell.z}</div>
+                {c ? (
+                  <div className="text-neutral-400">
+                    y {c.y || 0} · vh {c.visual_height || 0} · {c.walkable === false ? "blocked" : "walkable"}
+                    <br />
+                    {c.object_id || "(empty)"}
+                  </div>
+                ) : (
+                  <div className="text-neutral-500">(no cell)</div>
+                )}
+                <div className="text-indigo-300/80">{currentTool} · layer {editLayerY}{brushSize > 1 ? ` · brush ${brushSize}×${brushSize}` : ""}</div>
+                {lintEnabled && hoverCell && (() => {
+                  const here = lintProblems.find((p) => p.cell && p.cell[0] === hoverCell.x && p.cell[1] === hoverCell.z);
+                  return here ? <div className="text-amber-300">⚠ {here.kind}: {here.message}</div> : null;
+                })()}
+              </>
+            );
+          })()}
+        </div>
+        </div>
         <MapPlacementInspector
           map={activeMap}
           gamePackage={gamePackage}
@@ -784,6 +1001,44 @@ export function MapEditor() {
             <span className="text-xs text-neutral-400 hidden sm:inline">
               Click a cell to toggle trigger. On-load creates a map-level trigger.
             </span>
+          </div>
+        )}
+        {currentTool === "stamp" && (
+          <div className="flex items-center gap-3 ml-4">
+            <select
+              className="bg-neutral-800 border border-neutral-700 text-sm rounded-md px-2 py-2 outline-none text-white flex-shrink-0"
+              value={placementPresetIdx}
+              onChange={(e) => setPlacementPresetIdx(Number(e.target.value))}
+            >
+              {STAMP_PRESETS.map((p, i) => (
+                <option key={p.presetName} value={i}>
+                  {p.presetName}
+                </option>
+              ))}
+            </select>
+            <span className="text-xs text-neutral-400 hidden sm:inline">
+              Click to drop. Use Top-down view for accurate placement.
+            </span>
+          </div>
+        )}
+        {/* Brush size — visible only for cell-modifying tools. */}
+        {(currentTool === "walkable" ||
+          currentTool === "blocked" ||
+          currentTool === "height_up" ||
+          currentTool === "height_down" ||
+          currentTool === "tile") && (
+          <div className="flex items-center gap-2 ml-4 flex-shrink-0">
+            <label className="text-xs text-neutral-400">Brush</label>
+            <select
+              className="bg-neutral-800 border border-neutral-700 text-sm rounded-md px-2 py-2 outline-none text-white"
+              value={brushSize}
+              onChange={(e) => setBrushSize(Number(e.target.value))}
+            >
+              <option value={1}>1×1</option>
+              <option value={3}>3×3</option>
+              <option value={5}>5×5</option>
+              <option value={7}>7×7</option>
+            </select>
           </div>
         )}
       </div>
@@ -1123,9 +1378,10 @@ function MapPlacementInspector({
         />
       )}
       <aside className={`
-        sm:absolute sm:right-0 sm:top-0 sm:bottom-0 sm:w-80 sm:border-l sm:border-neutral-800 sm:bg-neutral-950/95 sm:backdrop-blur sm:overflow-y-auto sm:shadow-2xl sm:translate-y-0
         fixed bottom-0 left-0 right-0 max-h-[65vh] border-t border-neutral-800 bg-neutral-950 overflow-y-auto shadow-2xl z-30 transition-transform duration-300
-        ${isOpen ? 'translate-y-0' : 'translate-y-full sm:translate-y-0'}
+        ${isOpen ? 'translate-y-0' : 'translate-y-full'}
+        sm:static sm:max-h-none sm:h-full sm:w-80 sm:shrink-0 sm:border-t-0 sm:border-l sm:border-neutral-800 sm:bg-neutral-950/95 sm:backdrop-blur sm:shadow-none sm:translate-y-0 sm:z-0
+        ${isOpen ? 'sm:block' : 'sm:hidden'}
       `}>
       <div className="sticky top-0 z-10 border-b border-neutral-800 bg-neutral-950 p-3">
         {/* Mobile drag handle */}

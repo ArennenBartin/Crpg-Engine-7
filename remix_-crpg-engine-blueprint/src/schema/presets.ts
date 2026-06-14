@@ -1,5 +1,6 @@
 import { createWitnessTownLibrary } from "../utils/witnessKit";
 import { createPaganNetworkKit } from "../utils/networkKit";
+import { createParishKit } from "../utils/parishKit";
 
 export const asciiToPixels = (
   ascii: string,
@@ -1079,6 +1080,13 @@ const characterSpriteOverrides: Record<string, IllustratedSpriteDefinition> = {
     data_url: "/sprites/npcs/wayside-candle.png",
     pixels: [],
   },
+  spr_lazare_vampire: {
+    display_name: "Lazare Behind the Shutters",
+    width: 450,
+    height: 512,
+    data_url: "/sprites/npcs/the lonely vampire.png",
+    pixels: [],
+  },
 };
 
 const baseSpritePresetIds = new Set(baseSpriteLibraryPresets.map((sprite) => sprite.id));
@@ -2044,7 +2052,108 @@ const legacyObjectLibraryPresets = [
   },
 ];
 
-export const objectLibraryPresets = [
+const witnessStatueAssetPreset = {
+  id: "obj_bleeding_witness",
+  display_name: "Witness of the Dark Lights",
+  category: "setpiece",
+  tags: ["prop", "setpiece", "interactable", "statue", "glb", "nine_tile"],
+  origin: "center_floor",
+  bounds: [2.85, 3.721, 2.827],
+  materials: ["asset_material_1"],
+  material_settings: [],
+  model_kind: "asset",
+  parts: [],
+  decals: [],
+  reference_images: [],
+  asset: {
+    data_url: "/models/weeping-liberty-witness.glb",
+    filename: "weeping-liberty-witness.glb",
+    source_type: "glb",
+    offset: [0, 0.953033, 0.001957],
+    rotation: [0, 0, 0],
+    scale: [1.952213, 1.952213, 1.952213],
+    source_min: [-0.729941, -0.953033, -0.726027],
+    source_center: [0, 0, -0.001957],
+    source_bounds: [1.459882, 1.906066, 1.44814],
+    material_names: ["asset_material_1"],
+    stats: {
+      meshes: 1,
+      vertices: 10946,
+      triangles: 13124,
+      materials: 1,
+      textures: 4,
+      bytes: 10458360,
+    },
+  },
+  collision: {
+    profile: "custom_footprint",
+    footprint: [
+      [-1, -1],
+      [0, -1],
+      [1, -1],
+      [-1, 0],
+      [0, 0],
+      [1, 0],
+      [-1, 1],
+      [0, 1],
+      [1, 1],
+    ],
+  },
+};
+
+const mouthstoneGateAssetPreset = {
+  id: "obj_mouthstone_gate",
+  display_name: "Mouthstone Exile Gate",
+  category: "setpiece",
+  tags: ["prop", "setpiece", "interactable", "gate", "glb", "three_tile"],
+  origin: "center_floor",
+  bounds: [3, 8.05, 1.32],
+  materials: ["asset_material_1"],
+  material_settings: [],
+  model_kind: "asset",
+  parts: [],
+  decals: [],
+  reference_images: [],
+  asset: {
+    data_url: "/models/golden-hummingbirds-mouthstone.glb",
+    filename: "golden-hummingbirds-mouthstone.glb",
+    source_type: "glb",
+    offset: [0.000041, 0.950048, 0.000814],
+    rotation: [0, -3.141593, 0],
+    scale: [4.239761, 4.239761, 4.239761],
+    source_min: [-0.353834, -0.950048, -0.156439],
+    source_center: [-0.000041, -0.000708, -0.000814],
+    source_bounds: [0.707587, 1.89868, 0.31125],
+    material_names: ["asset_material_1"],
+    stats: {
+      meshes: 1,
+      vertices: 140041,
+      triangles: 235532,
+      materials: 1,
+      textures: 4,
+      bytes: 15409896,
+    },
+  },
+  collision: {
+    profile: "custom_footprint",
+    footprint: [
+      [-1, 0],
+      [0, 0],
+      [1, 0],
+    ],
+  },
+};
+
+const baseObjectLibraryPresets = [
   ...createWitnessTownLibrary(),
   ...createPaganNetworkKit(),
+  ...createParishKit(),
 ];
+
+export const objectLibraryPresets = baseObjectLibraryPresets.map((object) =>
+  object.id === witnessStatueAssetPreset.id
+    ? witnessStatueAssetPreset
+    : object.id === mouthstoneGateAssetPreset.id
+      ? mouthstoneGateAssetPreset
+      : object,
+);
