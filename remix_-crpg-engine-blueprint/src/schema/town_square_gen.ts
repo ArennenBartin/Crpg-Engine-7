@@ -160,8 +160,10 @@ export const generateTownSquareCells = (): {
   }
 
   // ── Roads ──────────────────────────────────────────────────────────────
+  // N-S: north exit (Mouthstone Field) and south exit (Residential) both exist
   paveRect(-3, MIN_Z, 3, MAX_Z); // North-South spine (full height)
-  paveRect(MIN_X, -3, MAX_X, 3); // East-West road
+  // E-W: east exit (Temple) exists, but NO west exit — stop at plaza edge
+  paveRect(-12, -3, MAX_X, 3); // East-West road (only to east edge)
   paveRect(-12, -12, 12, 12); // central plaza floor
 
   // ── Mouthstone Gate (north edge, z = -18 to -16) ──────────────────────

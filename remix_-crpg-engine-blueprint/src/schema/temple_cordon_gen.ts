@@ -157,8 +157,10 @@ export const generateTempleCordonCells = (): {
   }
 
   // ── Roads ──────────────────────────────────────────────────────────────
-  paveRect(MIN_X, -3, MAX_X, 3); // East-West road (connects west → residential, NW → square)
-  paveRect(-3, MIN_Z, 3, MAX_Z); // North-South approach to temple
+  // E-W: west exit (Residential) and east exit (Glassworks) both exist
+  paveRect(MIN_X, -3, MAX_X, 3); // East-West road (full width, both edges have exits)
+  // N-S: NO north or south exits — only runs interior (terrace to lower graves)
+  paveRect(-3, -18, 3, 16); // North-South approach (interior only, no path to edges)
 
   // Raised terrace for temple (upper half)
   paveRect(-12, -18, 12, -6);

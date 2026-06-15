@@ -158,9 +158,10 @@ export const generateCaveUpperCells = (): {
   });
   placeItem("wi_cave_potion_1", "itm_health_potion", -8, 2);
 
-  // ── East Branch (x = 4 to 12, z = -2 to 2) ────────────────────────────
-  carveRect(4, -2, 12, 2); // side alcove
+  // ── East Branch (x = 4 to 20, z = -2 to 2) — extends to east edge exit (→ Cave Grotto)
+  carveRect(4, -2, 20, 2); // corridor to east exit
   placeIfClear("obj_column_broken", 8, 0, [0, 1]);
+  placeIfClear("obj_lantern_post", 16, 0, [0, 1]);
   placeItem("wi_cave_potion_2", "itm_health_potion", 10, 1);
 
   // ── South Corridor (z = 6 to 18, narrow) ──────────────────────────────
