@@ -4,7 +4,14 @@
 //   ceremony: opening_ceremony_complete, class_scholar/warrior/mystic
 //   act 1:    office_briefed → gaol_entered → met_nessa → seen_cellar
 //   texture:  heard_rhyme, seen_cordon, seen_funeral, nessa_saw_stone,
-//             gave_votive, read_ledger, read_orders
+//             gave_votive, read_ledger, read_orders,
+//             side_lazare_threshold_evidence, side_tally_animal_clue,
+//             side_orin_glassworks_clue, side_marta_burial_clue,
+//             side_wayside_candle_text, orin_public_accusation_seen,
+//             testimony_holt, found_orin_shard_link, found_darro_name,
+//             found_mara_name, orin_private_questioned, orin_pressure_1,
+//             orin_after_verdict_seen, lazare_after_verdict_seen,
+//             orin_disciplined, act1_end_seen
 
 import type {
   CutsceneData,
@@ -43,128 +50,145 @@ export const FD_ENTITIES: EntityData[] = [
   {
     id: "ent_rite_remnant_1",
     display_name: "Rite Remnant",
-    sprite_id: "spr_cyberghost",
+    sprite_id: "spr_rite_remnant",
     is_npc: false,
     max_hp: 8, max_mp: 0, attack: 4, defense: 1, speed: 8,
+    xp_reward: 12,
   },
   {
     id: "ent_rite_remnant_2",
     display_name: "Rite Remnant",
-    sprite_id: "spr_cyberghost",
+    sprite_id: "spr_rite_remnant",
     is_npc: false,
     max_hp: 8, max_mp: 0, attack: 4, defense: 1, speed: 8,
+    xp_reward: 12,
   },
   {
     id: "ent_rite_remnant_3",
     display_name: "Rite Remnant",
-    sprite_id: "spr_cyberghost",
+    sprite_id: "spr_rite_remnant",
     is_npc: false,
     max_hp: 8, max_mp: 0, attack: 4, defense: 1, speed: 8,
+    xp_reward: 12,
   },
   // ── Network bestiary (placed across the upper level and the depths) ──────
   // Rite remnants: slow shapes the interrupted rites left standing.
   {
     id: "ent_rite_remnant_4",
     display_name: "Rite Remnant",
-    sprite_id: "spr_cyberghost",
+    sprite_id: "spr_rite_remnant",
     is_npc: false,
     max_hp: 8, max_mp: 0, attack: 4, defense: 1, speed: 8,
+    xp_reward: 12,
   },
   {
     id: "ent_rite_remnant_5",
     display_name: "Rite Remnant",
-    sprite_id: "spr_cyberghost",
+    sprite_id: "spr_rite_remnant",
     is_npc: false,
     max_hp: 8, max_mp: 0, attack: 4, defense: 1, speed: 8,
+    xp_reward: 12,
   },
   {
     id: "ent_rite_remnant_6",
     display_name: "Rite Remnant",
-    sprite_id: "spr_cyberghost",
+    sprite_id: "spr_rite_remnant",
     is_npc: false,
     max_hp: 8, max_mp: 0, attack: 4, defense: 1, speed: 8,
+    xp_reward: 12,
   },
   {
     id: "ent_rite_remnant_7",
     display_name: "Rite Remnant",
-    sprite_id: "spr_cyberghost",
+    sprite_id: "spr_rite_remnant",
     is_npc: false,
     max_hp: 8, max_mp: 0, attack: 4, defense: 1, speed: 8,
+    xp_reward: 12,
   },
   // Candle-eaten: fast and frail — what is left of someone who fed the
   // wrong flame. They hunt in pairs along the ossuary courses.
   {
     id: "ent_candle_eaten_1",
     display_name: "Candle-Eaten",
-    sprite_id: "spr_cyberghost",
+    sprite_id: "spr_candle_eaten",
     is_npc: false,
     max_hp: 5, max_mp: 0, attack: 3, defense: 0, speed: 14,
+    xp_reward: 10,
   },
   {
     id: "ent_candle_eaten_2",
     display_name: "Candle-Eaten",
-    sprite_id: "spr_cyberghost",
+    sprite_id: "spr_candle_eaten",
     is_npc: false,
     max_hp: 5, max_mp: 0, attack: 3, defense: 0, speed: 14,
+    xp_reward: 10,
   },
   {
     id: "ent_candle_eaten_3",
     display_name: "Candle-Eaten",
-    sprite_id: "spr_cyberghost",
+    sprite_id: "spr_candle_eaten",
     is_npc: false,
     max_hp: 5, max_mp: 0, attack: 3, defense: 0, speed: 14,
+    xp_reward: 10,
   },
   {
     id: "ent_candle_eaten_4",
     display_name: "Candle-Eaten",
-    sprite_id: "spr_cyberghost",
+    sprite_id: "spr_candle_eaten",
     is_npc: false,
     max_hp: 5, max_mp: 0, attack: 3, defense: 0, speed: 14,
+    xp_reward: 10,
   },
   // Partial conversions: the Grid got halfway. Slow, glass-plated, patient.
   {
     id: "ent_partial_conversion_1",
     display_name: "Partial Conversion",
-    sprite_id: "spr_cyberghost",
+    sprite_id: "spr_partial_conversion",
     is_npc: false,
     max_hp: 16, max_mp: 0, attack: 5, defense: 3, speed: 5,
+    xp_reward: 24,
   },
   {
     id: "ent_partial_conversion_2",
     display_name: "Partial Conversion",
-    sprite_id: "spr_cyberghost",
+    sprite_id: "spr_partial_conversion",
     is_npc: false,
     max_hp: 16, max_mp: 0, attack: 5, defense: 3, speed: 5,
+    xp_reward: 24,
   },
   {
     id: "ent_partial_conversion_3",
     display_name: "Partial Conversion",
-    sprite_id: "spr_cyberghost",
+    sprite_id: "spr_partial_conversion",
     is_npc: false,
     max_hp: 16, max_mp: 0, attack: 5, defense: 3, speed: 5,
+    xp_reward: 24,
   },
   {
     id: "ent_partial_conversion_4",
     display_name: "Partial Conversion",
-    sprite_id: "spr_cyberghost",
+    sprite_id: "spr_partial_conversion",
     is_npc: false,
     max_hp: 16, max_mp: 0, attack: 5, defense: 3, speed: 5,
+    xp_reward: 24,
   },
   {
     id: "ent_partial_conversion_5",
     display_name: "Partial Conversion",
-    sprite_id: "spr_cyberghost",
+    sprite_id: "spr_partial_conversion",
     is_npc: false,
     max_hp: 16, max_mp: 0, attack: 5, defense: 3, speed: 5,
+    xp_reward: 24,
   },
   // The Bound Remnant: what the interrupted rite left tied to Mara's
   // basement. The Act 1 finale fight — it rises when the ledger is read.
   {
     id: "ent_bound_remnant",
     display_name: "Bound Remnant",
-    sprite_id: "spr_cyberghost",
+    sprite_id: "spr_bound_remnant",
     is_npc: false,
     max_hp: 30, max_mp: 0, attack: 6, defense: 2, speed: 7,
+    xp_reward: 70,
   },
   // A cyberghost over the drowned shrine — consciousness that did not
   // finish leaving. Only a Mystic hears more than static.
@@ -275,15 +299,23 @@ export const FD_ENTITIES: EntityData[] = [
   {
     id: "ent_gate_anchorite",
     display_name: "Sister Vela of the Mouthstone",
-    sprite_id: "spr_father_imre",
+    sprite_id: "spr_sister_vela",
     dialogue_id: "dia_gate_anchorite",
     is_npc: true,
     max_hp: 11, max_mp: 4, attack: 0, defense: 0, speed: 8,
   },
   {
+    id: "ent_high_clerk",
+    display_name: "High Clerk",
+    sprite_id: "spr_high_clerk",
+    dialogue_id: "dia_high_clerk",
+    is_npc: true,
+    max_hp: 10, max_mp: 0, attack: 0, defense: 0, speed: 8,
+  },
+  {
     id: "ent_glass_apprentice",
     display_name: "Orin, Glassworks Hand",
-    sprite_id: "spr_petra_stonecutter",
+    sprite_id: "spr_orin_glassworks_hand",
     dialogue_id: "dia_glass_apprentice",
     is_npc: true,
     max_hp: 10, max_mp: 0, attack: 0, defense: 0, speed: 9,
@@ -291,7 +323,7 @@ export const FD_ENTITIES: EntityData[] = [
   {
     id: "ent_burial_keeper",
     display_name: "Marta of the Lower Graves",
-    sprite_id: "spr_liss",
+    sprite_id: "spr_marta_lower_graves",
     dialogue_id: "dia_burial_keeper",
     is_npc: true,
     max_hp: 10, max_mp: 0, attack: 0, defense: 0, speed: 7,
@@ -323,7 +355,7 @@ export const FD_DIALOGUE: DialogueData[] = [
       {
         id: "node_2",
         speaker: "High Clerk",
-        text: "Eyes down, Intercessor. You will have your fill of it. By procedural mercy you are sworn tonight: Acolyte Nessa stands accused of witch-work at the Witness of the Dark Lights. Three of her friends are Glass. You will inquire before sentence is sealed.",
+        text: "Eyes forward, Intercessor. A body was found in the eastern caves this dawn: Darro Keel, partly Glass-taken, surrounded by animals opened and counted. The town says Lazare Behind the Shutters. Orin Vale says Lazare with both hands in the air and half the market listening. You will inquire before fear learns better lines.",
         options: [{ text: "I accept the writ.", next_node_id: "node_class" }],
       },
       {
@@ -363,11 +395,11 @@ export const FD_DIALOGUE: DialogueData[] = [
       {
         id: "node_5",
         speaker: "Brother Aldric",
-        text: "My office is the east scriptorium hall, just off the authority lane. The gaol annex is across the procession to the west; Nessa is behind its bars. Paper first, Intercessor. Then her. The way is lined with watchers; let them see us do this properly.",
+        text: "My office is the east scriptorium hall, just off the authority lane. We begin with paper, then testimony, then suspects. Dimos saw what the town bought. Marta saw what the body was not. Holt counted the road. Orin has made himself evidence by speaking loudly. Come. Let us do this properly.",
         options: [
           {
             text: "Begin the inquiry.",
-            trigger_quest: "quest_investigate",
+            trigger_quest: "quest_vampire",
             trigger_quest_state: "sworn",
           },
         ],
@@ -386,9 +418,9 @@ export const FD_DIALOGUE: DialogueData[] = [
         text: "Aldric keeps your pace without being asked. He watches the town the way other men watch weather.",
         options: [
           {
-            text: "You have gone quiet.",
-            condition: { switch: "act1_complete" },
-            next_node_id: "node_after_office",
+            text: "The cave evidence clears Lazare.",
+            condition: { switch: "vampire_cleared" },
+            next_node_id: "node_vampire_cleared",
           },
           {
             text: "The rite text is real.",
@@ -401,8 +433,33 @@ export const FD_DIALOGUE: DialogueData[] = [
             next_node_id: "node_go_office",
           },
           {
+            text: "How do we treat Lazare as a suspect?",
+            condition: { all: [{ switch: "act1_assigned" }, { not: { switch: "lazare_talked" } }] },
+            next_node_id: "node_vampire_case",
+          },
+          {
+            text: "I spoke with Lazare.",
+            condition: { all: [{ switch: "lazare_talked" }, { not: { switch: "vampire_cleared" } }] },
+            next_node_id: "node_lazare",
+          },
+          {
+            text: "The town's testimonies agree badly.",
+            condition: { all: [{ switch: "testimonies_gathered" }, { not: { switch: "vampire_cleared" } }] },
+            next_node_id: "node_testimony",
+          },
+          {
+            text: "The cave logs point past Lazare.",
+            condition: {
+              all: [
+                { any: [{ switch: "found_log_1" }, { switch: "found_log_2" }, { switch: "found_log_3" }, { switch: "found_log_4" }] },
+                { not: { switch: "vampire_cleared" } },
+              ],
+            },
+            next_node_id: "node_cave_logs",
+          },
+          {
             text: "Take me to her.",
-            condition: { all: [{ switch: "office_briefed" }, { not: { switch: "met_nessa" } }] },
+            condition: { all: [{ switch: "nessa_thread_started" }, { not: { switch: "met_nessa" } }] },
             next_node_id: "node_go_gaol",
           },
           {
@@ -421,7 +478,7 @@ export const FD_DIALOGUE: DialogueData[] = [
           },
           {
             text: "About Nessa.",
-            condition: { switch: "office_briefed" },
+            condition: { switch: "nessa_thread_started" },
             next_node_id: "node_nessa",
           },
           {
@@ -435,8 +492,38 @@ export const FD_DIALOGUE: DialogueData[] = [
       {
         id: "node_go_office",
         speaker: "Brother Aldric",
-        text: "My office - the east scriptorium hall off the authority lane. The writ, the witness lists, the cordon records. I will not have you meet her with an empty folder. Paper first.",
+        text: "My office - the east scriptorium hall off the authority lane. The writ, Darro's cave report, Lazare's license, Orin's handling slip, and Holt's slate. I will not send you into the caves holding only fear. Paper first.",
         options: [{ text: "Paper first." }],
+      },
+      {
+        id: "node_vampire_case",
+        speaker: "Brother Aldric",
+        text: "Lazare's hunger is documented. That does not make him innocent. It makes him knowable. Speak to Dimos, Marta, Holt, and Orin. Then speak to the man everyone has already convicted.",
+        options: [{ text: "Admissible testimony first." }],
+      },
+      {
+        id: "node_lazare",
+        speaker: "Brother Aldric",
+        text: "He has not crossed a parish count in years, and Holt's slate supports it. That does not make Lazare harmless. It means this death may belong to a category the town does not have ready. Those are the cases that rot a file from the inside.",
+        options: [{ text: "Then we keep asking." }],
+      },
+      {
+        id: "node_testimony",
+        speaker: "Brother Aldric",
+        text: "Good. Four witnesses, four kinds of contradiction: commerce, burial, road, and craft. None of them prove Lazare's hand. Together they prove the town knew the signs were wrong and wanted an easier word anyway.",
+        options: [{ text: "The cave next." }],
+      },
+      {
+        id: "node_cave_logs",
+        speaker: "Brother Aldric",
+        text: "Grid sickness, not possession. Exposure, fixation, self-loss. Darro wrote his own disappearance on a cave wall, and Orin's 'spent' shard sits at the start of it.",
+        options: [{ text: "This starts to sound like Nessa.", next_node_id: "node_cave_logs2" }],
+      },
+      {
+        id: "node_cave_logs2",
+        speaker: "Brother Aldric",
+        text: "Do not rush there. Nessa's case is not cleaner because Lazare's is dirty. But yes - the same town that wanted a vampire now wants a witch. That is not evidence. It is a habit.",
+        options: [{ text: "Then we break the habit carefully." }],
       },
       {
         id: "node_go_gaol",
@@ -487,6 +574,18 @@ export const FD_DIALOGUE: DialogueData[] = [
         options: [{ text: "Then we spend carefully." }],
       },
       {
+        id: "node_vampire_cleared",
+        speaker: "Brother Aldric",
+        text: "You cleared him properly. That matters. Not because Lazare is gentle - he is not - but because the town must learn that a filed hunger is not responsible for every unfiled terror. The cave truth is admissible. Now the harder case opens.",
+        options: [{ text: "Nessa.", next_node_id: "node_vampire_cleared2" }],
+      },
+      {
+        id: "node_vampire_cleared2",
+        speaker: "Brother Aldric",
+        text: "Nessa. My student, my failure, and perhaps not the shape of guilt I thought I saw. The Hall of Custody will admit us now. Do not confuse pity with witness. But do not let procedure make your eyes smaller.",
+        options: [{ text: "Take me to the bars." }],
+      },
+      {
         id: "node_town",
         speaker: "Brother Aldric",
         text: "Notice where they built thresholds. Fences, bars, terraces, cordons. Alderamontico survives by deciding what may be approached and what must only be witnessed. This town is honest about it, at least — it raised its cathedral on the hill and roped its wound off in the square below, and still cannot say which of the two the people are forbidden.",
@@ -530,8 +629,13 @@ export const FD_DIALOGUE: DialogueData[] = [
         text: "The cell block is colder than the office, the way stone gets when nobody warms it on purpose. Nessa watches you come the whole length of the corridor. She does not stand at the bars and she does not hide from them.",
         options: [
           {
+            text: "The warden does not open the inner line yet.",
+            condition: { not: { switch: "vampire_cleared" } },
+            next_node_id: "node_too_early",
+          },
+          {
             text: "Approach the bars.",
-            condition: { not: { switch: "met_nessa" } },
+            condition: { all: [{ switch: "vampire_cleared" }, { not: { switch: "met_nessa" } }] },
             next_node_id: "node_first",
           },
           {
@@ -539,6 +643,7 @@ export const FD_DIALOGUE: DialogueData[] = [
             condition: {
               all: [
                 { has_item: "itm_carried_stone" },
+                { switch: "vampire_cleared" },
                 { not: { switch: "nessa_saw_stone" } },
               ],
             },
@@ -546,7 +651,7 @@ export const FD_DIALOGUE: DialogueData[] = [
           },
           {
             text: "Speak with her.",
-            condition: { all: [{ switch: "met_nessa" }, { not: { switch: "act1_complete" } }] },
+            condition: { all: [{ switch: "met_nessa" }, { switch: "vampire_cleared" }, { not: { switch: "act1_complete" } }] },
             next_node_id: "node_hub",
           },
           {
@@ -557,21 +662,27 @@ export const FD_DIALOGUE: DialogueData[] = [
         ],
       },
       {
+        id: "node_too_early",
+        speaker: "Warden Sefa",
+        text: "Not yet. The cave case is still open and the Hall of Custody is not a curiosity cabinet. Bring Aldric an admissible finding, then we will see which doors his name can open.",
+        options: [{ text: "Step back from the bars." }],
+      },
+      {
         id: "node_first",
         speaker: "Acolyte Nessa",
-        text: "If Aldric brought you to watch me confess, tell him I confessed years ago — to curiosity. Apparently that is the only sin anyone needs. The rest they will write in for me.",
+        text: "So. They cleared the vampire and came to the witch. That must feel like progress.",
         options: [{ text: "I came to ask what happened.", next_node_id: "node_first2" }],
       },
       {
         id: "node_first2",
         speaker: "Brother Aldric",
-        text: "You are here to answer admissibly, Nessa.",
+        text: "Nessa.",
         options: [{ text: "Let her speak, Aldric.", next_node_id: "node_first3" }],
       },
       {
         id: "node_first3",
         speaker: "Acolyte Nessa",
-        text: "Admissibly. Fine. Tollen and Iria touched the Witness after it began to bleed — they are Glass, and that is true. Mara was gone before anyone touched anything, and that is true, and no one will write it down because no one can say what 'gone' means. I screamed because I survived. Write that down.",
+        text: "No. Let the new Intercessor hear the word. It is the only part of the case everyone agrees on.\n\nDarro's cave named Mara, did it not? Then the cave remembered more than the Church.\n\nMara was my friend. Not my follower. Not my victim. Not a prop for your mercy.",
         options: [
           {
             text: "Why does Mara matter so much?",
@@ -582,13 +693,14 @@ export const FD_DIALOGUE: DialogueData[] = [
       {
         id: "node_first4",
         speaker: "Acolyte Nessa",
-        text: "Because the statue did not open alone. Something opened *through* Mara — and I did not build that door, whatever I believed I was doing with my clean church rite. Find where she learned to pray before I corrected her. This town keeps its praying underneath itself. Start under the oldest roof it has.",
+        text: "Because the statue did not open alone. Darro heard the hinge, or part of it.\n\nMara learned old prayers under this town before she ever learned mine. Ask Maro about the Counted Cup cellar.\n\nTell Aldric I am tired of being the simplest answer in the room. He will understand that as pride.",
         options: [
           {
             text: "(Quietly) I'll look beneath the town.",
             set_switch: "met_nessa",
             trigger_quest: "quest_investigate",
             trigger_quest_state: "her_words",
+            trigger_cutscene: "cut_act1_end",
           },
         ],
       },
@@ -612,6 +724,7 @@ export const FD_DIALOGUE: DialogueData[] = [
           {
             text: "(Pocket the stone carefully.)",
             set_switch: "met_nessa",
+            trigger_cutscene: "cut_act1_end",
           },
         ],
       },
@@ -655,6 +768,16 @@ export const FD_DIALOGUE: DialogueData[] = [
             text: "You listen the way I do. (Mystic)",
             condition: { switch: "class_mystic" },
             next_node_id: "node_mystic",
+          },
+          {
+            text: "I read records for a living. Help me read yours. (Scholar)",
+            condition: { switch: "class_scholar" },
+            next_node_id: "node_scholar",
+          },
+          {
+            text: "Say it plainly. What do I have to stand against? (Warrior)",
+            condition: { switch: "class_warrior" },
+            next_node_id: "node_warrior",
           },
           { text: "That's all for now." },
         ],
@@ -719,6 +842,18 @@ export const FD_DIALOGUE: DialogueData[] = [
         text: "Then you already know the worst part. It is not silent down there. It has never been silent. The Church calls that blasphemy; I call it the reason I could not stop. Be more careful than I was — you have someone walking beside you who cannot afford to lose two of us.",
         options: [{ text: "Go back.", next_node_id: "node_hub" }],
       },
+      {
+        id: "node_scholar",
+        speaker: "Acolyte Nessa",
+        text: "Then read absence first. The filed case needs me to be alone with a forbidden text. Mara's basement rites are missing from that file, and so is the hour the Witness began to bleed before I stood at it. Empty margins are also handwriting.",
+        options: [{ text: "Go back.", next_node_id: "node_hub" }],
+      },
+      {
+        id: "node_warrior",
+        speaker: "Acolyte Nessa",
+        text: "Stand against the first clean word they hand you. Witch. Monster. Miracle. Any word that lets everyone stop looking is a blade pointed at the wrong throat.",
+        options: [{ text: "Go back.", next_node_id: "node_hub" }],
+      },
     ],
   },
   {
@@ -762,8 +897,23 @@ export const FD_DIALOGUE: DialogueData[] = [
         speaker: "Warden Sefa",
         text: "Still here, Intercessor. Twenty-two years a warden and this is the first prisoner the town is frightened *for* rather than *of*. What do you need?",
         options: [
+          {
+            text: "Why keep me from Nessa?",
+            condition: { not: { switch: "vampire_cleared" } },
+            next_node_id: "node_before_clear",
+          },
           { text: "How is she treated?", next_node_id: "node_care" },
           { text: "Show me the ledger.", next_node_id: "node_ledger" },
+          {
+            text: "Lazare is cleared.",
+            condition: { switch: "vampire_cleared" },
+            next_node_id: "node_post_clear",
+          },
+          {
+            text: "Aldric says the Nessa case is open again.",
+            condition: { switch: "nessa_thread_started" },
+            next_node_id: "node_nessa_open",
+          },
           {
             text: "Night shifts must be long here.",
             condition: { time_of_day: ["night", "dusk"] },
@@ -771,6 +921,12 @@ export const FD_DIALOGUE: DialogueData[] = [
           },
           { text: "Nothing now." },
         ],
+      },
+      {
+        id: "node_before_clear",
+        speaker: "Warden Sefa",
+        text: "Finish the cave finding first: testimonies, Lazare, forest road, cave logs, then Aldric's verdict.\n\nA cell is not a market stall, even when the town wants a spectacle.\n\nThe custody ledger keeps hours, meals, screams, and omissions in the same ink.",
+        options: [{ text: "Go back.", next_node_id: "node_1" }],
       },
       {
         id: "node_care",
@@ -795,6 +951,18 @@ export const FD_DIALOGUE: DialogueData[] = [
         text: "Long, and lately loud. The river says things against the pilings at the witching hour, and I have stopped telling myself it is water. Keep that between us and the bars.",
         options: [{ text: "Go back.", next_node_id: "node_1" }],
       },
+      {
+        id: "node_post_clear",
+        speaker: "Warden Sefa",
+        text: "Now Aldric can move the file from Lazare to the girl behind my bars.\n\nA named monster is a convenient door to close; you made them leave it open.\n\nCorrect-good is not cheerful-good, but it keeps a gaol from becoming a pantry for fear.",
+        options: [{ text: "Go back.", next_node_id: "node_1" }],
+      },
+      {
+        id: "node_nessa_open",
+        speaker: "Warden Sefa",
+        text: "Speak to Nessa through the bars and keep the questions small enough to answer.\n\nShe eats when spoken to gently; do not tell the Clerk I noticed.\n\nAt night the iron sweats warm, which is not a property listed in the custody manual.",
+        options: [{ text: "Go back.", next_node_id: "node_1" }],
+      },
     ],
   },
 
@@ -811,6 +979,16 @@ export const FD_DIALOGUE: DialogueData[] = [
           { text: "You watch it all day. What do you see?", next_node_id: "node_sees" },
           { text: "Show me the standing orders.", next_node_id: "node_orders" },
           {
+            text: "Lazare was not the cave killer.",
+            condition: { switch: "vampire_cleared" },
+            next_node_id: "node_post_clear",
+          },
+          {
+            text: "What changes now that Nessa is the question?",
+            condition: { switch: "nessa_thread_started" },
+            next_node_id: "node_nessa",
+          },
+          {
             text: "It's the witching hour. You're shaking.",
             condition: { time_of_day: ["witching_hour"] },
             next_node_id: "node_witching",
@@ -821,7 +999,7 @@ export const FD_DIALOGUE: DialogueData[] = [
       {
         id: "node_sees",
         speaker: "Cordon Guard Bren",
-        text: "I see the back of my own helmet, mostly, because I have learned not to look at her face for long. The blood does not run when you watch. It has run every night since, all the same. You can check the stains in the morning like a tide chart.",
+        text: "Check the stains in the morning if you need a pattern; the flow changes when nobody is watching.\n\nI have learned not to stare at her face for long, which is not courage but good employment.\n\nThe blood keeps a schedule better than half the parish bells.",
         options: [{ text: "Go back.", next_node_id: "node_1" }],
       },
       {
@@ -836,6 +1014,18 @@ export const FD_DIALOGUE: DialogueData[] = [
         text: "I am not ashamed of it. At this hour the lamps go small, and the Witness stands a little less like a statue. If the Church wants a man who does not shake at that, they will have to cast one.",
         options: [{ text: "Go back.", next_node_id: "node_1" }],
       },
+      {
+        id: "node_post_clear",
+        speaker: "Cordon Guard Bren",
+        text: "The statue has been quieter since your cave business. I do not like quieter. Quiet is what people call a thing once they have stopped listening to it.",
+        options: [{ text: "Go back.", next_node_id: "node_1" }],
+      },
+      {
+        id: "node_nessa",
+        speaker: "Cordon Guard Bren",
+        text: "Ask Orin what coherent Glass means before you decide what Nessa could control.\n\nIf she did it on purpose, she is more than a witch; if she did not, I have guarded a question with a spear.\n\nSame shapes every dawn, same lean toward the rope, same cold at my teeth.",
+        options: [{ text: "Go back.", next_node_id: "node_1" }],
+      },
     ],
   },
   {
@@ -845,10 +1035,40 @@ export const FD_DIALOGUE: DialogueData[] = [
       {
         id: "node_1",
         speaker: "Gate Guard Holt",
-        text: "Counted in. That is the whole of my work now, Intercessor — counting people in, counting them out, and reporting when the numbers disagree. They have disagreed twice this year. Both times it was the river road.",
+        text: "State your road, name, and reason. In that order if you want me calm. If you are here about Darro Keel, I have the slate. People hate the slate until it clears them.",
         options: [
           { text: "What is the Mouthstone, really?", next_node_id: "node_stone" },
           { text: "Who left and didn't come back?", next_node_id: "node_missing" },
+          {
+            text: "Did Lazare ever cross your slate?",
+            condition: { switch: "act1_assigned" },
+            next_node_id: "node_lazare",
+          },
+          {
+            text: "Did Orin pass through?",
+            condition: { switch: "act1_assigned" },
+            next_node_id: "node_orin",
+          },
+          {
+            text: "Did Darro pass through?",
+            condition: { switch: "act1_assigned" },
+            next_node_id: "node_darro",
+          },
+          {
+            text: "Record Holt's testimony.",
+            condition: { switch: "act1_assigned" },
+            trigger_cutscene: "cut_record_holt",
+          },
+          {
+            text: "The count was right. Lazare stayed in.",
+            condition: { switch: "vampire_cleared" },
+            next_node_id: "node_post_clear",
+          },
+          {
+            text: "Will the Mouthstone be used for Nessa?",
+            condition: { switch: "nessa_thread_started" },
+            next_node_id: "node_nessa",
+          },
           { text: "Keep counting, Holt." },
         ],
       },
@@ -862,6 +1082,36 @@ export const FD_DIALOGUE: DialogueData[] = [
         id: "node_missing",
         speaker: "Gate Guard Holt",
         text: "A trapper in spring. And the Vey girl's father, the week after the rite went wrong — walked out at dawn with river mud already on his boots, and the count has been wrong ever since. Nobody sent for him. Make of that your business; it is past mine.",
+        options: [{ text: "Go back.", next_node_id: "node_1" }],
+      },
+      {
+        id: "node_lazare",
+        speaker: "Gate Guard Holt",
+        text: "No mark. No gate. No night tally.\n\nLazare has not crossed my line in nine years; unless he flies, sinks, or walks through walls, he did not take the road.\n\nThe slate hangs by the north post, and every counted mark is a little act of mercy or exile.",
+        options: [{ text: "Go back.", next_node_id: "node_1" }],
+      },
+      {
+        id: "node_orin",
+        speaker: "Gate Guard Holt",
+        text: "Orin Vale crossed before dusk. Said Glassworks inventory.\n\nHe came back after dark with less in his satchel and more in his mouth.\n\nBy morning he was saying Lazare loudly enough to make a tally jealous.",
+        options: [{ text: "Go back.", next_node_id: "node_1" }],
+      },
+      {
+        id: "node_darro",
+        speaker: "Gate Guard Holt",
+        text: "Darro Keel crossed two nights before the body. Alone. No pack listed.\n\nI remember because he thanked the gate, and people only thank a gate when they are afraid of what opens after it.\n\nA tally is not truth, but it is harder to flatter than a witness.",
+        options: [{ text: "Go back.", next_node_id: "node_1" }],
+      },
+      {
+        id: "node_post_clear",
+        speaker: "Gate Guard Holt",
+        text: "I am relieved, which is not the same as pleased. A wrong count can be corrected. A correct count that everyone ignored makes me wonder what else is written plainly and still unseen.",
+        options: [{ text: "Go back.", next_node_id: "node_1" }],
+      },
+      {
+        id: "node_nessa",
+        speaker: "Gate Guard Holt",
+        text: "Exile is Act Two paperwork, they say. I count the road anyway. Some gates are locked to keep people out. Some are locked so the town can sleep while it decides who belongs outside.",
         options: [{ text: "Go back.", next_node_id: "node_1" }],
       },
     ],
@@ -880,6 +1130,16 @@ export const FD_DIALOGUE: DialogueData[] = [
           { text: "Do you believe Nessa is a witch?", next_node_id: "node_nessa" },
           { text: "Why do you pray below the cordon?", next_node_id: "node_cordon" },
           {
+            text: "Lazare has been cleared.",
+            condition: { switch: "vampire_cleared" },
+            next_node_id: "node_post_clear",
+          },
+          {
+            text: "The Nessa case is opening now.",
+            condition: { switch: "nessa_thread_started" },
+            next_node_id: "node_nessa_open",
+          },
+          {
             text: "You listen for it too. (Mystic)",
             condition: { switch: "class_mystic" },
             next_node_id: "node_mystic",
@@ -890,7 +1150,7 @@ export const FD_DIALOGUE: DialogueData[] = [
       {
         id: "node_nessa",
         speaker: "Father Imre",
-        text: "I believe the doctrine requires a cause, and a cause with a name is a mercy to everyone except the name. You will notice I did not answer your question. That is the most honest I am permitted to be.",
+        text: "Read the records and speak to the girl before you let doctrine supply the missing cause.\n\nA cause with a name is a mercy to everyone except the name.\n\nYou will notice I did not answer plainly; that is the most honest I am permitted to be.",
         options: [{ text: "Go back.", next_node_id: "node_1" }],
       },
       {
@@ -903,6 +1163,18 @@ export const FD_DIALOGUE: DialogueData[] = [
         id: "node_mystic",
         speaker: "Father Imre",
         text: "Lower your voice. — Yes. Under the doctrine, under the gift, under the appreciating: a sound like counting. I have heard it twice in forty years and both times the Witness bled within the season. You are licensed to listen, Mystic. I am only licensed to appreciate.",
+        options: [{ text: "Go back.", next_node_id: "node_1" }],
+      },
+      {
+        id: "node_post_clear",
+        speaker: "Father Imre",
+        text: "Take the cleared finding back to Aldric and let the record do its cold work.\n\nLazare's name was a shelter for fear; you removed it, and fear will look for a better roof.\n\nThe nave candles burned low this morning, as if the wax had been listening.",
+        options: [{ text: "Go back.", next_node_id: "node_1" }],
+      },
+      {
+        id: "node_nessa_open",
+        speaker: "Father Imre",
+        text: "Pray for Nessa, then question her; the order matters less than the restraint.\n\nDo not mistake my prayer for declaring her innocent.\n\nI have watched certainty bury the living, and the marble remembers shovel-sounds too well.",
         options: [{ text: "Go back.", next_node_id: "node_1" }],
       },
     ],
@@ -918,9 +1190,24 @@ export const FD_DIALOGUE: DialogueData[] = [
         options: [
           { text: "What does the town not-say about Nessa?", next_node_id: "node_gossip" },
           {
+            text: "What did the town say about Lazare?",
+            condition: { switch: "act1_assigned" },
+            next_node_id: "node_lazare",
+          },
+          {
             text: "What's behind the seal on your cellar?",
             condition: { switch: "met_nessa" },
             next_node_id: "node_cellar",
+          },
+          {
+            text: "Lazare's name is cleared.",
+            condition: { switch: "vampire_cleared" },
+            next_node_id: "node_post_clear",
+          },
+          {
+            text: "The case has turned toward Nessa.",
+            condition: { switch: "nessa_thread_started" },
+            next_node_id: "node_nessa",
           },
           {
             text: "Who drinks in the back room?",
@@ -947,6 +1234,24 @@ export const FD_DIALOGUE: DialogueData[] = [
         text: "River trade. A man they call the Riverman keeps the corner table by day and the bridge by night, and I do not ask which direction his cargo prays. The Cup counts cups. That is the whole of my theology.",
         options: [{ text: "Go back.", next_node_id: "node_1" }],
       },
+      {
+        id: "node_lazare",
+        speaker: "Maro",
+        text: "Ask Holt's tally and Lazare's threshold before you call absence a footprint.\n\nThe town talks about him like he left a cloak over every chair because a vampire is easier than a neighbor.\n\nThe Cup counts cups, debts, and lies told loudly enough to become civic furniture.",
+        options: [{ text: "Go back.", next_node_id: "node_1" }],
+      },
+      {
+        id: "node_post_clear",
+        speaker: "Maro",
+        text: "Good for the record, bad for business. People drink softer when they know whom to hate. Now they buy two cups and stare into the second like it owes them a name.",
+        options: [{ text: "Go back.", next_node_id: "node_1" }],
+      },
+      {
+        id: "node_nessa",
+        speaker: "Maro",
+        text: "When Aldric points you to Nessa, check what old routes run below the Cup.\n\nEveryone wants old truth until it asks rent from their own cellar.\n\nThe Church sealed half these floors after using the other half to keep warm.",
+        options: [{ text: "Go back.", next_node_id: "node_1" }],
+      },
     ],
   },
   {
@@ -960,6 +1265,16 @@ export const FD_DIALOGUE: DialogueData[] = [
         options: [
           { text: "Tell me about the river customs.", next_node_id: "node_river" },
           { text: "You're the widow's cousin?", next_node_id: "node_widow" },
+          {
+            text: "Lazare did not kill the cave victim.",
+            condition: { switch: "vampire_cleared" },
+            next_node_id: "node_post_clear",
+          },
+          {
+            text: "What should I know before seeing Nessa?",
+            condition: { switch: "nessa_thread_started" },
+            next_node_id: "node_nessa",
+          },
           { text: "Another time, Sela." },
         ],
       },
@@ -975,6 +1290,18 @@ export const FD_DIALOGUE: DialogueData[] = [
         text: "Cousin to her, yes — the fracture-touched one who keeps the flooded house downriver. She handled Glass before the Church wrote rules for it, and buried a husband the water gave back wrong. If your inquiry ever walks the river road, walk it gently and bring her something warm. She will know things about witness-work that no scriptorium does.",
         options: [{ text: "I'll remember that.", next_node_id: "node_1" }],
       },
+      {
+        id: "node_post_clear",
+        speaker: "Sela",
+        text: "You did right. The town will forgive you slowly for making it wrong. Grief has a sound when it belongs to you. The cordon grief hums wrong, and now people are hearing that again.",
+        options: [{ text: "Go back.", next_node_id: "node_1" }],
+      },
+      {
+        id: "node_nessa",
+        speaker: "Sela",
+        text: "Do not touch Glass when you are lonely. It answers too easily. That girl was lonely with questions, which is a dangerous kind. My cousin says the river keeps names longer than the Church keeps mercy.",
+        options: [{ text: "Go back.", next_node_id: "node_1" }],
+      },
     ],
   },
   {
@@ -988,6 +1315,21 @@ export const FD_DIALOGUE: DialogueData[] = [
         options: [
           { text: "You've worked the temple stone?", next_node_id: "node_temple" },
           { text: "What keeps you up at night?", next_node_id: "node_warm" },
+          {
+            text: "The cave wall damage was not a bite.",
+            condition: { any: [{ switch: "found_log_1" }, { switch: "found_log_2" }, { switch: "found_log_3" }, { switch: "found_log_4" }] },
+            next_node_id: "node_cave",
+          },
+          {
+            text: "Lazare has been cleared.",
+            condition: { switch: "vampire_cleared" },
+            next_node_id: "node_post_clear",
+          },
+          {
+            text: "What about the Witness stone?",
+            condition: { switch: "nessa_thread_started" },
+            next_node_id: "node_nessa",
+          },
           { text: "Work well, Petra." },
         ],
       },
@@ -1001,6 +1343,24 @@ export const FD_DIALOGUE: DialogueData[] = [
         id: "node_warm",
         speaker: "Petra",
         text: "Warmth. Stone takes the day's heat and gives it back by dusk, every mason knows the schedule of it — and the cordon posts give it back at the witching hour instead, all together, like breath. I reported it. The clerk wrote 'thermal irregularity' and underlined it, and that underline is the whole of the Church's curiosity these days.",
+        options: [{ text: "Go back.", next_node_id: "node_1" }],
+      },
+      {
+        id: "node_cave",
+        speaker: "Petra",
+        text: "Your vampire did not do that cave wall. Hunger leaves mess. Pressure leaves pattern. If the stone pinched inward like you say, something was trying to make a room smaller around a mind.",
+        options: [{ text: "Go back.", next_node_id: "node_1" }],
+      },
+      {
+        id: "node_post_clear",
+        speaker: "Petra",
+        text: "Good. Stone tells you what touched it. Priests tell you what to call the touch. This time the stone won.",
+        options: [{ text: "Go back.", next_node_id: "node_1" }],
+      },
+      {
+        id: "node_nessa",
+        speaker: "Petra",
+        text: "That statue did not crack like old stone. It tightened. Prepared stone does that when force finds an old line already cut. Whoever asks about Nessa should ask who cut the first line.",
         options: [{ text: "Go back.", next_node_id: "node_1" }],
       },
     ],
@@ -1021,6 +1381,16 @@ export const FD_DIALOGUE: DialogueData[] = [
           },
           { text: "What do the votives mean?", next_node_id: "node_votive" },
           { text: "Does he speak of the hand?", next_node_id: "node_boy" },
+          {
+            text: "Lazare was not the answer.",
+            condition: { switch: "vampire_cleared" },
+            next_node_id: "node_post_clear",
+          },
+          {
+            text: "What do you think of Nessa?",
+            condition: { switch: "nessa_thread_started" },
+            next_node_id: "node_nessa",
+          },
           { text: "(Leave her to the shrine.)" },
         ],
       },
@@ -1042,6 +1412,18 @@ export const FD_DIALOGUE: DialogueData[] = [
         text: "She sets your votive in the row of seven and is quiet a long moment. — The Church counts what it takes. Someone should count what is given. Thank you, Intercessor. The town will hear of it, in the way the town hears everything.",
         options: [{ text: "(Say nothing. It's enough.)" }],
       },
+      {
+        id: "node_post_clear",
+        speaker: "Liss",
+        text: "They said Lazare because saying one name lets you put the children to bed. Now I do not know what to tell my boy when his hand points at the temple in his sleep.",
+        options: [{ text: "Go back.", next_node_id: "node_1" }],
+      },
+      {
+        id: "node_nessa",
+        speaker: "Liss",
+        text: "They say Nessa did it. I want that to be true. One person is easier to fear than the sky. Please do not tell me Glass remembers children; I have to sleep somewhere.",
+        options: [{ text: "Go back.", next_node_id: "node_1" }],
+      },
     ],
   },
   {
@@ -1054,6 +1436,16 @@ export const FD_DIALOGUE: DialogueData[] = [
         text: "Three towns I have walked since the feast of laying-down, and every one keeps its Witness behind a fence now. Yours is the only one that bleeds. I mean that as praise, though I no longer remember why.",
         options: [
           { text: "Why pilgrimage at all, now?", next_node_id: "node_why" },
+          {
+            text: "You have seen other towns blame the wrong thing?",
+            condition: { switch: "vampire_cleared" },
+            next_node_id: "node_post_clear",
+          },
+          {
+            text: "What does a case become when it outgrows a town?",
+            condition: { switch: "nessa_thread_started" },
+            next_node_id: "node_nessa",
+          },
           {
             text: "It's late to be on the stairs.",
             condition: { time_of_day: ["night", "witching_hour"] },
@@ -1074,6 +1466,18 @@ export const FD_DIALOGUE: DialogueData[] = [
         text: "The stairs are honest at night. By day this town performs itself. After dark you can hear what it is: water, counting, and a statue everyone dreams about and no one mentions at breakfast. I sleep at the gate where the count is kept. It seems the safest arithmetic.",
         options: [{ text: "Go back.", next_node_id: "node_1" }],
       },
+      {
+        id: "node_post_clear",
+        speaker: "Cosmas",
+        text: "Every town thinks its wound is private. Yours named a vampire, which was at least traditional. The road has taught me tradition is often fear with better posture.",
+        options: [{ text: "Go back.", next_node_id: "node_1" }],
+      },
+      {
+        id: "node_nessa",
+        speaker: "Cosmas",
+        text: "Your case has started using names. Be careful. Cases do that before they become sins. Walk long enough under the dark lights and every road becomes a procession.",
+        options: [{ text: "Go back.", next_node_id: "node_1" }],
+      },
     ],
   },
   {
@@ -1089,6 +1493,16 @@ export const FD_DIALOGUE: DialogueData[] = [
             text: "I'm at the bridge. Talk. (Night)",
             condition: { time_of_day: ["night", "dusk", "witching_hour"] },
             next_node_id: "node_trade",
+          },
+          {
+            text: "The cave did not belong to Lazare.",
+            condition: { switch: "vampire_cleared" },
+            next_node_id: "node_post_clear",
+          },
+          {
+            text: "What does the river know about Mara Vey?",
+            condition: { switch: "nessa_thread_started" },
+            next_node_id: "node_nessa",
           },
           { text: "Another time, then." },
         ],
@@ -1112,6 +1526,18 @@ export const FD_DIALOGUE: DialogueData[] = [
         text: "Keep your shard — the question is payment enough, it tells me the Church finally sent someone who asks. That week I ferried nothing. Understand: nothing, for six nights, because the water would not take weight. It sat the boats high and wrong like it was already carrying something heavier. Whatever opened at the Witness, the river felt it first.",
         options: [{ text: "The river felt it first...", next_node_id: "node_1" }],
       },
+      {
+        id: "node_post_clear",
+        speaker: "The Riverman",
+        text: "River takes names slow. Church takes them fast. Today the river was kinder.",
+        options: [{ text: "Go back.", next_node_id: "node_1" }],
+      },
+      {
+        id: "node_nessa",
+        speaker: "The Riverman",
+        text: "Mara put candles where the bank caves under the old bridge. Not as a child playing priest. As someone paying a debt. If you go west, bring something you can afford to lose.",
+        options: [{ text: "Go back.", next_node_id: "node_1" }],
+      },
     ],
   },
 
@@ -1127,6 +1553,16 @@ export const FD_DIALOGUE: DialogueData[] = [
         options: [
           { text: "What does the Mouthstone do?", next_node_id: "node_gate" },
           { text: "Why stand so far from the Witness?", next_node_id: "node_far" },
+          {
+            text: "Lazare is cleared.",
+            condition: { switch: "vampire_cleared" },
+            next_node_id: "node_post_clear",
+          },
+          {
+            text: "Nessa's case is facing this road now.",
+            condition: { switch: "nessa_thread_started" },
+            next_node_id: "node_nessa",
+          },
           { text: "Keep your watch." },
         ],
       },
@@ -1142,6 +1578,18 @@ export const FD_DIALOGUE: DialogueData[] = [
         text: "Because the Witness is the town's wound, and the Mouthstone is its mouth. Wounds draw eyes. Mouths remember names. I prefer the older danger.",
         options: [{ text: "Go back.", next_node_id: "node_1" }],
       },
+      {
+        id: "node_post_clear",
+        speaker: "Sister Vela",
+        text: "A cleared name is a door left open behind you. Do not look only at the grateful man. Look at what the town now has no word to blame.",
+        options: [{ text: "Go back.", next_node_id: "node_1" }],
+      },
+      {
+        id: "node_nessa",
+        speaker: "Sister Vela",
+        text: "You walked past the Mouthstone with questions the Church has not answered. Be careful which direction curiosity faces. Some gates open inward when everyone swears they open out.",
+        options: [{ text: "Go back.", next_node_id: "node_1" }],
+      },
     ],
   },
   {
@@ -1151,9 +1599,50 @@ export const FD_DIALOGUE: DialogueData[] = [
       {
         id: "node_1",
         speaker: "Orin",
-        text: "Don't step on the cullet. Sacred glass cuts cleaner than bottle glass, and that is not a compliment. Petra says I can sweep until I learn the difference by sight.",
+        text: "Do not stand too close to the furnace line. Even cold Glass can learn bad habits from heat. You heard the market, Intercessor; at least one person in this town is willing to say the obvious thing out loud.",
         options: [
-          { text: "What are you making out here?", next_node_id: "node_work" },
+          { text: "Why Lazare?", next_node_id: "node_lazare" },
+          {
+            text: "What did you give Darro?",
+            condition: { switch: "act1_assigned" },
+            next_node_id: "node_darro_offcut",
+          },
+          {
+            text: "Dimos says you bought candles.",
+            condition: { switch: "testimony_dimos" },
+            next_node_id: "node_dimos",
+          },
+          {
+            text: "Holt says you went out.",
+            condition: { switch: "testimony_holt" },
+            next_node_id: "node_holt",
+          },
+          {
+            text: "The log says: 'O said it was spent.'",
+            condition: { switch: "found_log_1" },
+            next_node_id: "node_log_pressure",
+          },
+          { text: "Record Orin's testimony.", next_node_id: "node_record" },
+          {
+            text: "Show me what glass can store.",
+            condition: { switch: "act1_assigned" },
+            next_node_id: "node_side_glassworks",
+          },
+          {
+            text: "The cave logs describe grid sickness.",
+            condition: { any: [{ switch: "found_log_1" }, { switch: "found_log_2" }, { switch: "found_log_3" }, { switch: "found_log_4" }] },
+            next_node_id: "node_logs",
+          },
+          {
+            text: "Lazare has been cleared.",
+            condition: { switch: "vampire_cleared" },
+            next_node_id: "node_post_clear",
+          },
+          {
+            text: "What about the Witness Glass?",
+            condition: { switch: "nessa_thread_started" },
+            next_node_id: "node_nessa",
+          },
           {
             text: "Have you seen the Glass figures move?",
             condition: { switch: "seen_cordon" },
@@ -1163,16 +1652,79 @@ export const FD_DIALOGUE: DialogueData[] = [
         ],
       },
       {
+        id: "node_lazare",
+        speaker: "Orin",
+        text: "Because Darro is dead and Lazare is hungry.\n\nBecause animals were opened and vampires open animals. Must every obvious thing be made polite before the Church believes it?\n\nA sealed monster is still a monster, even if the seal has good handwriting.",
+        options: [{ text: "Go back.", next_node_id: "node_1" }],
+      },
+      {
+        id: "node_darro_offcut",
+        speaker: "Orin",
+        text: "I gave him an offcut. Spent Glass. Cold. Useless. Furnace scrap.\n\nYou can find worse in any Church reliquary if you are allowed to open the cabinet.\n\nDarro asked questions. Questions do not make me his keeper.",
+        options: [{ text: "Mark the shard link.", set_switch: "found_orin_shard_link", next_node_id: "node_1" }],
+      },
+      {
+        id: "node_dimos",
+        speaker: "Orin",
+        text: "Seven candles is not a rite. Seven is a number.\n\nDimos sells candles to widows, cowards, lovers, and priests; he thinks that makes him a theologian.\n\nI bought supplies for furnace work.",
+        options: [{ text: "Go back.", next_node_id: "node_1" }],
+      },
+      {
+        id: "node_holt",
+        speaker: "Orin",
+        text: "I went to the edge road. Glassworks business.\n\nDarro wanted to see whether the offcut still held warmth. I told him not to do anything stupid.\n\nHe did not ask my permission to die.",
+        options: [{ text: "Go back.", next_node_id: "node_1" }],
+      },
+      {
+        id: "node_log_pressure",
+        speaker: "Orin",
+        text: "Then the log is accurate. I said spent. I believed spent.\n\nI survived this. Hiding came after.\n\nI wanted the monster to be the monster. Is that so rare here?",
+        options: [
+          { text: "Record the shard link.", set_switch: "found_orin_shard_link", next_node_id: "node_1" },
+          { text: "Go back.", next_node_id: "node_1" },
+        ],
+      },
+      {
+        id: "node_record",
+        speaker: "Orin",
+        text: "Record that Darro was unstable before I saw him. Record that Lazare is dangerous. Record that the cave was not my doing.\n\nIf you have Dimos and Holt, record the harder part too: I gave Darro a spent offcut and saw him on the old road.\n\nAll of those can be true at once.",
+        options: [{ text: "Record Orin's testimony.", trigger_cutscene: "cut_record_orin", set_switch: "found_orin_shard_link" }],
+      },
+      {
         id: "node_work",
         speaker: "Orin",
-        text: "Cordon lamps, black-star panes, little blessed windows for houses that cannot afford marble. The Church buys the big panes and pretends the small ones are folk taste.",
-        options: [{ text: "Go back.", set_switch: "testimony_orin", next_node_id: "node_1" }],
+        text: "Take my testimony after Dimos and before Marta if you want the craft answer in order.\n\nThe Church buys the big panes and pretends the small ones are folk taste.\n\nCordon lamps, black-star panes, little blessed windows: all of them keep more feeling than glass ought to keep.",
+        options: [{ text: "Record Orin's testimony.", trigger_cutscene: "cut_record_orin" }],
+      },
+      {
+        id: "node_side_glassworks",
+        speaker: "Orin",
+        text: "Watch for warm shards and repeated reflections on the cave road; that means stored pattern, not teeth.\n\nArtisans know glass remembers, but priests prefer the word witness because it sounds obedient.\n\nSome panes borrow a feeling from the last hand on them and return it to the next.",
+        options: [{ text: "Mark Orin's glassworks clue.", set_switch: "side_orin_glassworks_clue", next_node_id: "node_1" }],
       },
       {
         id: "node_move",
         speaker: "Orin",
-        text: "Only in reflection. You look at a dark pane and one of them is standing half a breath wrong. Never in the square, never when a guard asks. Glass knows authority.",
-        options: [{ text: "Go back.", set_switch: "testimony_orin", next_node_id: "node_1" }],
+        text: "Compare the square reflections to the cave shards; both can hold a pattern without moving.\n\nNever when a guard asks, of course. Glass knows authority.\n\nIn a dark pane one figure stands half a breath wrong, and your skin notices before your eyes do.",
+        options: [{ text: "Record Orin's testimony.", trigger_cutscene: "cut_record_orin" }],
+      },
+      {
+        id: "node_logs",
+        speaker: "Orin",
+        text: "Bring that finding to Aldric: hot-patterned stone is exposure, not vampire feeding.\n\nGlass does not have to move to be active; that is what people do not understand.\n\nThe cave shard was not clean Church work either, and that is the part I will not say near Petra.",
+        options: [{ text: "Record Orin's testimony.", trigger_cutscene: "cut_record_orin" }],
+      },
+      {
+        id: "node_post_clear",
+        speaker: "Orin",
+        text: "They took my furnace key. Handling breach. Failure to report. Unlicensed transfer.\n\nNot murder. The distinction should comfort me.\n\nIt does not.",
+        options: [{ text: "Go back.", next_node_id: "node_1" }],
+      },
+      {
+        id: "node_nessa",
+        speaker: "Orin",
+        text: "The Witness figures are too coherent. I do not like coherent. Ordinary Glass holds pattern. That stuff holds intention, or something close enough that my hands do not know the difference.",
+        options: [{ text: "Go back.", next_node_id: "node_1" }],
       },
     ],
   },
@@ -1185,22 +1737,88 @@ export const FD_DIALOGUE: DialogueData[] = [
         speaker: "Marta",
         text: "Lower graves for lower questions. The churchyard keeps names. Down here we keep what the names were afraid to say.",
         options: [
+          {
+            text: "Did Lazare feed on Darro?",
+            condition: { switch: "act1_assigned" },
+            next_node_id: "node_feeding",
+          },
+          {
+            text: "What did Darro's body show?",
+            condition: { switch: "act1_assigned" },
+            next_node_id: "node_body",
+          },
+          {
+            text: "Did you know Darro?",
+            condition: { switch: "act1_assigned" },
+            next_node_id: "node_darro",
+          },
           { text: "What do the southern stones mark?", next_node_id: "node_stones" },
           { text: "Does the old rite still have followers?", next_node_id: "node_followers" },
+          {
+            text: "What would prove this was not feeding?",
+            condition: { switch: "act1_assigned" },
+            next_node_id: "node_side_burial",
+          },
+          {
+            text: "The cave death was grid sickness.",
+            condition: { switch: "vampire_cleared" },
+            next_node_id: "node_post_clear",
+          },
+          {
+            text: "What do the dead say about the Witness?",
+            condition: { switch: "nessa_thread_started" },
+            next_node_id: "node_nessa",
+          },
           { text: "I'll leave you to the graves." },
         ],
       },
       {
         id: "node_stones",
         speaker: "Marta",
-        text: "Families too pagan to face the nave and too useful to bury outside the walls. Alderamontico has always known how to condemn a thing and inherit it.",
-        options: [{ text: "Go back.", set_switch: "testimony_marta", next_node_id: "node_1" }],
+        text: "Record this if you need testimony: old rites were family habit before they were a crime file.\n\nFamilies too pagan to face the nave were still too useful to bury outside the walls.\n\nAlderamontico has always known how to condemn a thing and inherit it.",
+        options: [{ text: "Record Marta's testimony.", trigger_cutscene: "cut_record_marta" }],
+      },
+      {
+        id: "node_feeding",
+        speaker: "Marta",
+        text: "No. Vampire death has signs.\n\nHunger is ugly, but it is honest about where it entered. Darro's wounds started where no teeth could reach.\n\nIf they want Lazare for this, they will need a different body.",
+        options: [{ text: "Record Marta's testimony.", trigger_cutscene: "cut_record_marta" }],
+      },
+      {
+        id: "node_body",
+        speaker: "Marta",
+        text: "Hands burned through. Nails full of soil. Chest tight inward, like the body tried to become a container and failed.\n\nI have seen Glass pressure before. It is not feeding.\n\nThe dead do not become cleaner because the living want a simpler monster.",
+        options: [{ text: "Record Marta's testimony.", trigger_cutscene: "cut_record_marta" }],
+      },
+      {
+        id: "node_darro",
+        speaker: "Marta",
+        text: "He carried stones for graves sometimes. Quiet boy. Got quieter.\n\nQuiet can be peace, sickness, or a person learning not to answer.\n\nBy the end his hands looked like they had been asking the ground for permission.",
+        options: [{ text: "Record Marta's testimony.", trigger_cutscene: "cut_record_marta" }],
+      },
+      {
+        id: "node_side_burial",
+        speaker: "Marta",
+        text: "Look for collapse, heat, and glassy pressure in the cave victim; feeding leaves hunger marks, not a body burned from within.\n\nThe Church likes tidy monsters because tidy monsters fit tidy coffins.\n\nDown here the graves know the difference between a killing and a burning-out.",
+        options: [{ text: "Mark Marta's burial clue.", set_switch: "side_marta_burial_clue", next_node_id: "node_1" }],
       },
       {
         id: "node_followers",
         speaker: "Marta",
-        text: "Followers? No. Habits. A habit can outlive a god, a bishop, and a law. That is why habits are dangerous.",
-        options: [{ text: "Go back.", set_switch: "testimony_marta", next_node_id: "node_1" }],
+        text: "Ask this after the cave logs if you want the Mara thread to make sense.\n\nFollowers? No. Habits. A habit can outlive a god, a bishop, and a law.\n\nThe old candles were housekeeping long before anyone made them conspiracy.",
+        options: [{ text: "Record Marta's testimony.", trigger_cutscene: "cut_record_marta" }],
+      },
+      {
+        id: "node_post_clear",
+        speaker: "Marta",
+        text: "You did right. The lower graves know the difference between a killing and a burning-out. Glass does not bury. It waits.",
+        options: [{ text: "Go back.", next_node_id: "node_1" }],
+      },
+      {
+        id: "node_nessa",
+        speaker: "Marta",
+        text: "The dead at the Witness are not resting. Do not ask me how I know. The names are still there, but the silence around them has been spent.",
+        options: [{ text: "Go back.", next_node_id: "node_1" }],
       },
     ],
   },
@@ -1211,10 +1829,29 @@ export const FD_DIALOGUE: DialogueData[] = [
       {
         id: "node_1",
         speaker: "Lazare",
-        text: "The door opens only as far as the chain allows. A pale man inclines his head from a room kept dark at noon and darker at dusk. 'Intercessor. Please do not invite yourself further in. I am trying to remain polite.'",
+        text: "The shuttered house does not creak. It listens. A pale man inclines his head from a room kept dark at noon and darker at dusk. 'Intercessor. Brother Aldric. The town has finally become bored enough of fearing me from a distance.'",
         options: [
+          { text: "Did you kill Darro Keel?", next_node_id: "node_kill" },
+          { text: "Why does the town fear you?", next_node_id: "node_fear" },
           { text: "You never leave this house.", next_node_id: "node_stay" },
+          {
+            text: "May I inspect the threshold?",
+            condition: { switch: "act1_assigned" },
+            next_node_id: "node_threshold",
+          },
+          { text: "What did you see?", next_node_id: "node_mirror" },
+          { text: "What do you know of Orin?", next_node_id: "node_orin" },
           { text: "What are you?", next_node_id: "node_what" },
+          {
+            text: "Your name is cleared.",
+            condition: { switch: "vampire_cleared" },
+            next_node_id: "node_cleared",
+          },
+          {
+            text: "Will you help with Nessa?",
+            condition: { all: [{ switch: "vampire_cleared" }, { not: { switch: "lazare_recruited" } }] },
+            next_node_id: "node_recruit",
+          },
           {
             text: "Do you know anything about the rite?",
             condition: { switch: "met_nessa" },
@@ -1224,15 +1861,45 @@ export const FD_DIALOGUE: DialogueData[] = [
         ],
       },
       {
+        id: "node_kill",
+        speaker: "Lazare",
+        text: "No. I am capable of hunger. I am capable of cruelty. I am capable of remembering both with more honesty than this town would prefer.\n\nI did not kill Darro Keel.\n\nDo not improve that into innocence.",
+        options: [{ text: "Go back.", next_node_id: "node_1" }],
+      },
+      {
+        id: "node_fear",
+        speaker: "Lazare",
+        text: "Because fear likes a body.\n\nThe Grid has no throat to hang. Glass has no address.\n\nI do.",
+        options: [{ text: "Go back.", next_node_id: "node_1" }],
+      },
+      {
         id: "node_stay",
         speaker: "Lazare",
-        text: "Correct. I have a covenant with the shutters, a bill with the butcher, and no argument with sunlight that requires personal inspection.",
+        text: "Check the threshold and Holt's slate if you need proof I stayed where the town prefers me.\n\nI have a covenant with the shutters, a bill with the butcher, and no argument with sunlight that requires personal inspection.\n\nAlderamontico loves a locked door when it can imagine anything behind it.",
+        options: [{ text: "Go back.", next_node_id: "node_1" }],
+      },
+      {
+        id: "node_threshold",
+        speaker: "Lazare",
+        text: "Look at the dust outside the chain: one butcher's hook, two delivery scuffs, no night prints leaving south.\n\nI am an easy category, Intercessor, which is a polite way to say the accusation arrived before the evidence.\n\nThe threshold is swept in salt and black tea every dawn, an old courtesy to hunger and gossip alike.",
+        options: [{ text: "Mark the threshold evidence.", set_switch: "side_lazare_threshold_evidence", next_node_id: "node_1" }],
+      },
+      {
+        id: "node_mirror",
+        speaker: "Lazare",
+        text: "I saw the old road in my mirror. Not by choice.\n\nOld vampire houses learn reflections the way churches learn bells. Something opened toward the cave.\n\nIt smelled of hot Glass and prayer spoken through clenched teeth.",
+        options: [{ text: "Go back.", set_switch: "lazare_mirror_admitted", next_node_id: "node_1" }],
+      },
+      {
+        id: "node_orin",
+        speaker: "Lazare",
+        text: "Guilt has a young man's posture when it has not learned elegance.\n\nOrin is not wrong to fear me. That is what makes his fear useful.\n\nA false accusation does not need a harmless target. It needs a believable one.",
         options: [{ text: "Go back.", next_node_id: "node_1" }],
       },
       {
         id: "node_what",
         speaker: "Lazare",
-        text: "An old parish mistake. A tolerated hunger. The Church has three categories for me and none of them are friend. I prefer tenant.",
+        text: "A licensed appetite. A tolerated scandal. A monster with proper papers.\n\nDangerous does not mean guilty of this death.\n\nDo not improve me in your notes.",
         options: [{ text: "Go back.", set_switch: "lazare_talked", next_node_id: "node_1" }],
       },
       {
@@ -1240,6 +1907,18 @@ export const FD_DIALOGUE: DialogueData[] = [
         speaker: "Lazare",
         text: "Only this: the night the Witness bled, every mirror in this room showed the old road instead of my face. I know the difference, Intercessor. One of those has never belonged to me.",
         options: [{ text: "Go back.", set_switch: "lazare_talked", next_node_id: "node_1" }],
+      },
+      {
+        id: "node_cleared",
+        speaker: "Lazare",
+        text: "My shutters are open. People keep pretending not to see.\n\nCleared is a Church word. It means the ink has moved on.\n\nThe town cleared me with its teeth clenched. I prefer hatred when it is honest about the jaw.",
+        options: [{ text: "Go back.", next_node_id: "node_1" }],
+      },
+      {
+        id: "node_recruit",
+        speaker: "Lazare",
+        text: "Open my shutters and call it gratitude? No. I am innocent of this death, not safe. But if your inquiry reaches a locked threshold after dusk, knock once. I may answer from inside the dark.",
+        options: [{ text: "Accept the boundary.", set_switch: "lazare_recruited", next_node_id: "node_1" }],
       },
     ],
   },
@@ -1256,6 +1935,21 @@ export const FD_DIALOGUE: DialogueData[] = [
         options: [
           { text: "Show me your goods.", trigger_cutscene: "cut_open_shop" },
           {
+            text: "What did Lazare buy?",
+            condition: { switch: "act1_assigned" },
+            next_node_id: "node_lazare_buys",
+          },
+          {
+            text: "What did Orin buy?",
+            condition: { switch: "act1_assigned" },
+            next_node_id: "node_orin_buys",
+          },
+          {
+            text: "What did Darro buy?",
+            condition: { switch: "act1_assigned" },
+            next_node_id: "node_darro_buys",
+          },
+          {
             text: "Trading at this hour?",
             condition: { time_of_day: ["dusk", "night"] },
             next_node_id: "node_late",
@@ -1263,6 +1957,16 @@ export const FD_DIALOGUE: DialogueData[] = [
           {
             text: "No opinions? About the trial?",
             next_node_id: "node_opinion",
+          },
+          {
+            text: "People are buying differently after Lazare.",
+            condition: { switch: "vampire_cleared" },
+            next_node_id: "node_post_clear",
+          },
+          {
+            text: "What are they buying now that Nessa's name is back?",
+            condition: { switch: "nessa_thread_started" },
+            next_node_id: "node_nessa",
           },
           { text: "Not now." },
         ],
@@ -1276,8 +1980,38 @@ export const FD_DIALOGUE: DialogueData[] = [
       {
         id: "node_opinion",
         speaker: "Provisioner Dimos",
-        text: "He leans in, glances both ways along the market row. — Free of charge, because you'll hear it anyway: half this town bought candles from me the week before the rite. Sevens. Always sevens. I sell no opinions, Intercessor, but I sell a great many candles, and I can count.",
-        options: [{ text: "Go back.", set_switch: "testimony_dimos", next_node_id: "node_1" }],
+        text: "Write this down: Lazare bought nothing, Orin bought rite-looking supplies and called them work, and Darro stopped buying ordinary things before he died.\n\nThat is testimony, not a verdict.\n\nI sell no opinions, Intercessor, but I sell a great many candles, and I can count.",
+        options: [{ text: "Record Dimos's testimony.", trigger_cutscene: "cut_record_dimos" }],
+      },
+      {
+        id: "node_lazare_buys",
+        speaker: "Provisioner Dimos",
+        text: "Nothing. Lazare never buys candles, rope, salt, or oil.\n\nPeople afraid of Lazare buy those things, which is a distinction most of my business depends on.\n\nFear spends better when it has an address.",
+        options: [{ text: "Go back.", next_node_id: "node_1" }],
+      },
+      {
+        id: "node_orin_buys",
+        speaker: "Provisioner Dimos",
+        text: "Seven candles. Lamp oil. Wrapping cloth. Glass-safe twine.\n\nHe said furnace scrap, and maybe it was. Young men lie better when they use work words.\n\nThe cloth had the good weave, the kind you use when you do not want Glass dust on your skin.",
+        options: [{ text: "Go back.", next_node_id: "node_1" }],
+      },
+      {
+        id: "node_darro_buys",
+        speaker: "Provisioner Dimos",
+        text: "Bread twice. Cheap gloves once. A tin cup.\n\nThe week before he died, nothing. People in trouble stop buying ordinary things first.\n\nMorning has a market smell; Darro stopped smelling like morning was expected.",
+        options: [{ text: "Go back.", next_node_id: "node_1" }],
+      },
+      {
+        id: "node_post_clear",
+        speaker: "Provisioner Dimos",
+        text: "People buy rope before they admit they are afraid of falling. Today it is candles again. More candles than when they thought they had a vampire. That should tell you how comforted they are.",
+        options: [{ text: "Go back.", next_node_id: "node_1" }],
+      },
+      {
+        id: "node_nessa",
+        speaker: "Provisioner Dimos",
+        text: "Glass-safe gloves cost extra because fear has hands. If the Church lets this case breathe, I will sell through my whole crate by dusk and hate every coin of it.",
+        options: [{ text: "Go back.", next_node_id: "node_1" }],
       },
     ],
   },
@@ -1351,8 +2085,450 @@ export const FD_DIALOGUE: DialogueData[] = [
         text: "A votive candle burns at the wayside shrine, steady against the night wind. The flame keeps what you give it.",
         options: [
           { text: "Pray, and give it this moment.", trigger_cutscene: "cut_save" },
+          { text: "Read the candle rule.", next_node_id: "node_rule" },
           { text: "Leave it burning." },
         ],
+      },
+      {
+        id: "node_rule",
+        speaker: "Wayside Candle",
+        text: "Use wayside candles to save and gather yourself before the cave road.\n\nThe Church calls it licensed rest; villagers call it not dying from pride.\n\nWax at the base is marked with older thumbprints than the current parish seal.",
+        options: [{ text: "Remember the rule.", set_switch: "side_wayside_candle_text", next_node_id: "node_1" }],
+      },
+    ],
+  },
+  {
+    id: "dia_case_board",
+    display_name: "Aldric's Case Board",
+    nodes: [
+      {
+        id: "node_1",
+        speaker: "Case Board",
+        text: "CASE: DARRO KEEL / EASTERN CAVE BODY.\n\nAldric has pinned the case in working order. His hand is neat enough to be unkind.\n\nRed thread runs from Darro's cave report to Lazare's license, Orin's Glassworks slip, Holt's slate, and Nessa's sealed custody file.",
+        options: [
+          {
+            text: "Current: take Aldric's briefing.",
+            condition: { not: { switch: "office_briefed" } },
+            next_node_id: "node_need_briefing",
+          },
+          {
+            text: "Current: gather testimony and visit Lazare.",
+            condition: {
+              all: [
+                { switch: "act1_assigned" },
+                { not: { switch: "vampire_cleared" } },
+                { any: [{ not: { switch: "testimonies_gathered" } }, { not: { switch: "lazare_talked" } }] },
+              ],
+            },
+            next_node_id: "node_testimony_loop",
+          },
+          {
+            text: "Current: take the south road to the caves.",
+            condition: {
+              all: [
+                { switch: "lazare_talked" },
+                { switch: "testimonies_gathered" },
+                { not: { switch: "found_log_4" } },
+              ],
+            },
+            next_node_id: "node_forest_route",
+          },
+          {
+            text: "Current: return the cave finding to Aldric.",
+            condition: { all: [{ switch: "found_log_4" }, { not: { switch: "vampire_cleared" } }] },
+            next_node_id: "node_return_verdict",
+          },
+          {
+            text: "Current: speak with Nessa in custody.",
+            condition: { all: [{ switch: "nessa_thread_started" }, { not: { switch: "met_nessa" } }] },
+            next_node_id: "node_nessa_hook",
+          },
+          {
+            text: "Current: follow the cellar thread.",
+            condition: { all: [{ switch: "met_nessa" }, { not: { switch: "seen_cellar" } }] },
+            next_node_id: "node_cellar_thread",
+          },
+          { text: "Optional evidence pins.", next_node_id: "node_side_board" },
+          { text: "Step away." },
+        ],
+      },
+      {
+        id: "node_need_briefing",
+        speaker: "Case Board",
+        text: "Start here in the scriptorium and ask Aldric for the cave writ.\n\nHe has already decided the accusation needs procedure before it gets a name.\n\nThe board smells of lampblack, sealing wax, and paper dried too close to holy heat.",
+        options: [{ text: "Back to the board.", next_node_id: "node_1" }],
+      },
+      {
+        id: "node_testimony_loop",
+        speaker: "Case Board",
+        text: "Required: question Dimos, Marta, Holt, and Orin, then speak to Lazare Behind the Shutters.\n\nDo not enter the eastern cave until testimony is recorded. The living must contradict each other before the dead are asked to explain.\n\nFour witness slips hang beside Lazare's threshold sketch and Orin's handling slip.",
+        options: [{ text: "Back to the board.", next_node_id: "node_1" }],
+      },
+      {
+        id: "node_forest_route",
+        speaker: "Case Board",
+        text: "Use the residential south gate: Old Processional Wood, Glass-Touched Copse, then the eastern caves.\n\nAldric has written 'do not wander; read the cave' in the margin.\n\nThe road sketch is lined with old stones, glass thorns, and a cave mouth drawn too carefully.",
+        options: [{ text: "Back to the board.", next_node_id: "node_1" }],
+      },
+      {
+        id: "node_return_verdict",
+        speaker: "Case Board",
+        text: "Return to Aldric. The vampire case can be filed; the Witness case cannot.\n\nDarro Keel handled Glass before death. Animal remains show counting behavior. Orin Vale is materially connected. Lazare's absence is corroborated.\n\nMara, Nessa, and the Witness are connected in red thread, with a pin left empty beside the gaol.",
+        options: [{ text: "Back to the board.", next_node_id: "node_1" }],
+      },
+      {
+        id: "node_nessa_hook",
+        speaker: "Case Board",
+        text: "Go to the Hall of Custody and speak to Nessa through the bars.\n\nThe vampire case proved how easily this town mistakes a category for a culprit.\n\nHer custody slip is pinned beside Mara's name, and the paper has been handled more than the ink admits.",
+        options: [{ text: "Back to the board.", next_node_id: "node_1" }],
+      },
+      {
+        id: "node_cellar_thread",
+        speaker: "Case Board",
+        text: "Follow Nessa's lead to the Counted Cup cellar and the sealed under-town route.\n\nAldric's note says: 'Old practice is not innocence, but neither is it guilt.'\n\nThe cellar sketch is drawn below the tavern like a second mouth under the first.",
+        options: [{ text: "Back to the board.", next_node_id: "node_1" }],
+      },
+      {
+        id: "node_side_board",
+        speaker: "Case Board",
+        text: "Optional pins strengthen the reading but do not hold the gate shut.\n\nAldric values corroboration because it makes frightened people argue with paper instead of each other.\n\nFive brass tacks sit in the lower margin: threshold, tally, glass, burial, candle.",
+        options: [
+          {
+            text: "Lazare threshold: recorded.",
+            condition: { switch: "side_lazare_threshold_evidence" },
+            next_node_id: "node_side_lazare_done",
+          },
+          {
+            text: "Lazare threshold: still open.",
+            condition: { not: { switch: "side_lazare_threshold_evidence" } },
+            next_node_id: "node_side_lazare_open",
+          },
+          {
+            text: "Tally animal clue: recorded.",
+            condition: { switch: "side_tally_animal_clue" },
+            next_node_id: "node_side_tally_done",
+          },
+          {
+            text: "Tally animal clue: still open.",
+            condition: { not: { switch: "side_tally_animal_clue" } },
+            next_node_id: "node_side_tally_open",
+          },
+          {
+            text: "Orin glass clue: recorded.",
+            condition: { switch: "side_orin_glassworks_clue" },
+            next_node_id: "node_side_orin_done",
+          },
+          {
+            text: "Orin glass clue: still open.",
+            condition: { not: { switch: "side_orin_glassworks_clue" } },
+            next_node_id: "node_side_orin_open",
+          },
+          {
+            text: "Marta burial clue: recorded.",
+            condition: { switch: "side_marta_burial_clue" },
+            next_node_id: "node_side_marta_done",
+          },
+          {
+            text: "Marta burial clue: still open.",
+            condition: { not: { switch: "side_marta_burial_clue" } },
+            next_node_id: "node_side_marta_open",
+          },
+          {
+            text: "Wayside Candle rule: recorded.",
+            condition: { switch: "side_wayside_candle_text" },
+            next_node_id: "node_side_candle_done",
+          },
+          {
+            text: "Wayside Candle rule: still open.",
+            condition: { not: { switch: "side_wayside_candle_text" } },
+            next_node_id: "node_side_candle_open",
+          },
+          { text: "Back to the board.", next_node_id: "node_1" },
+        ],
+      },
+      {
+        id: "node_side_lazare_done",
+        speaker: "Case Board",
+        text: "Threshold evidence is pinned: no night prints leaving south from Lazare's door.\n\nA convenient suspect became less convenient the moment someone looked at the floor.\n\nA pinch of salt is taped under the note, still grey from the doorstep.",
+        options: [{ text: "Back to optional pins.", next_node_id: "node_side_board" }],
+      },
+      {
+        id: "node_side_lazare_open",
+        speaker: "Case Board",
+        text: "Inspect Lazare's threshold at his east estate door if you want a physical check on the accusation.\n\nThe town prefers his locked door because it can imagine anything behind it.\n\nA blank sketch waits beside Holt's gate tally.",
+        options: [{ text: "Back to optional pins.", next_node_id: "node_side_board" }],
+      },
+      {
+        id: "node_side_tally_done",
+        speaker: "Case Board",
+        text: "The processional tally is pinned: animals failed before people named a vampire.\n\nFear chose Lazare because he was already filed as abnormal.\n\nThree small hoof marks are copied beside the old road sketch.",
+        options: [{ text: "Back to optional pins.", next_node_id: "node_side_board" }],
+      },
+      {
+        id: "node_side_tally_open",
+        speaker: "Case Board",
+        text: "Read the tally stone in Old Processional Wood on the way to the cave.\n\nIt is not required, but it widens the case beyond one accused man.\n\nThe old road has always counted more than parishioners.",
+        options: [{ text: "Back to optional pins.", next_node_id: "node_side_board" }],
+      },
+      {
+        id: "node_side_orin_done",
+        speaker: "Case Board",
+        text: "Orin's glass clue is pinned: pattern can store and transmit borrowed feeling, and Darro's shard came from a Glassworks hand.\n\nArtisans notice this before priests because artisans burn their fingers on the proof.\n\nA sliver of blue glass is wrapped in paper under his note.",
+        options: [{ text: "Back to optional pins.", next_node_id: "node_side_board" }],
+      },
+      {
+        id: "node_side_orin_open",
+        speaker: "Case Board",
+        text: "Ask Orin at the Glassworks what he gave Darro and what glass can store.\n\nThe answer helps separate Grid sickness from feeding, and negligence from murder.\n\nHis note is smudged with cullet dust and apprentice impatience.",
+        options: [{ text: "Back to optional pins.", next_node_id: "node_side_board" }],
+      },
+      {
+        id: "node_side_marta_done",
+        speaker: "Case Board",
+        text: "Marta's burial clue is pinned: burning-out leaves collapse, heat, and glass pressure.\n\nThe lower graves do not care which monster makes better gossip.\n\nA charcoal grave mark sits beside the cave victim's sketch.",
+        options: [{ text: "Back to optional pins.", next_node_id: "node_side_board" }],
+      },
+      {
+        id: "node_side_marta_open",
+        speaker: "Case Board",
+        text: "Ask Marta how the dead show feeding apart from burning-out.\n\nHer clue helps make the cave verdict plain without adding another branch.\n\nThe lower graves are marked on Aldric's map in a darker hand than the square.",
+        options: [{ text: "Back to optional pins.", next_node_id: "node_side_board" }],
+      },
+      {
+        id: "node_side_candle_done",
+        speaker: "Case Board",
+        text: "The candle rule is pinned: save and rest at wayside flames before hard routes.\n\nLicensed rest is still rest, even if the Church notarizes the mercy.\n\nA smear of wax holds the tack in place.",
+        options: [{ text: "Back to optional pins.", next_node_id: "node_side_board" }],
+      },
+      {
+        id: "node_side_candle_open",
+        speaker: "Case Board",
+        text: "Read a Wayside Candle before the cave if you need the town's save-and-rest rule in world.\n\nPride kills faster than doctrine on a bad road.\n\nThe candle icon on the board is drawn over an older flame mark.",
+        options: [{ text: "Back to optional pins.", next_node_id: "node_side_board" }],
+      },
+    ],
+  },
+  {
+    id: "dia_high_clerk",
+    display_name: "High Clerk",
+    nodes: [
+      {
+        id: "node_1",
+        speaker: "High Clerk",
+        text: "If you lose the case thread, read Aldric's board, then question the named witnesses before the cave road.\n\nConfusion is useful to a frightened parish; procedure is how we deny it that pleasure.\n\nMy ink is black because colored ink encourages drama.",
+        options: [
+          { text: "Where do I begin?", next_node_id: "node_begin" },
+          { text: "Why is Lazare named so quickly?", next_node_id: "node_lazare" },
+          { text: "Where does Orin fit?", next_node_id: "node_orin" },
+          {
+            text: "What do the cave logs change?",
+            condition: { any: [{ switch: "found_log_1" }, { switch: "found_log_2" }, { switch: "found_log_3" }, { switch: "found_log_4" }] },
+            next_node_id: "node_logs",
+          },
+          {
+            text: "Aldric cleared Lazare.",
+            condition: { switch: "vampire_cleared" },
+            next_node_id: "node_verdict",
+          },
+          {
+            text: "Nessa named Mara.",
+            condition: { switch: "met_nessa" },
+            next_node_id: "node_nessa",
+          },
+          { text: "Leave the clerk to the papers." },
+        ],
+      },
+      {
+        id: "node_begin",
+        speaker: "High Clerk",
+        text: "Begin with Aldric's briefing, then record Dimos, Marta, Holt, and Orin before speaking to Lazare and taking the south road.\n\nA case done out of order becomes a story, and stories are where mobs do their best work.\n\nThe witness slips are cut square so nobody can pretend the edges meant something.",
+        options: [{ text: "Go back.", next_node_id: "node_1" }],
+      },
+      {
+        id: "node_lazare",
+        speaker: "High Clerk",
+        text: "Lazare is accused because he is a category the town already knows how to fear.\n\nThat does not make him harmless; it makes him administratively convenient.\n\nHis license sits in the file beside a dried tea stain, which is nearly a parish seal here.",
+        options: [{ text: "Go back.", next_node_id: "node_1" }],
+      },
+      {
+        id: "node_orin",
+        speaker: "High Clerk",
+        text: "Orin belongs in the file because Darro handled Glassworks material and Orin has been loud enough to hide inside his own accusation.\n\nNegligence, panic, and murder are different boxes; my work is to keep them from breeding in the drawer.\n\nThe handling slip smells faintly of furnace oil and rainwater.",
+        options: [{ text: "Go back.", next_node_id: "node_1" }],
+      },
+      {
+        id: "node_logs",
+        speaker: "High Clerk",
+        text: "Bring the logs to Aldric when all four are read; they point toward Grid sickness and transmitted pattern, not feeding.\n\nPeople dislike evidence that makes the obvious answer smaller.\n\nCave charcoal flakes off on the docket like black snow.",
+        options: [{ text: "Go back.", next_node_id: "node_1" }],
+      },
+      {
+        id: "node_verdict",
+        speaker: "High Clerk",
+        text: "The finding clears Lazare of Darro's death and keeps Orin in disciplinary reach.\n\nA correct file is not a kind file, but it is harder to hang a man from.\n\nI have moved the vampire tab aside; the Nessa tab was waiting beneath it.",
+        options: [{ text: "Go back.", next_node_id: "node_1" }],
+      },
+      {
+        id: "node_nessa",
+        speaker: "High Clerk",
+        text: "If Nessa named Mara, follow the cellar thread before deciding what the Witness wanted seen.\n\nA living suspect can be questioned; a dead friend can only be misused or read carefully.\n\nThe custody page has thumb marks where Aldric keeps returning to the same sentence.",
+        options: [{ text: "Go back.", next_node_id: "node_1" }],
+      },
+    ],
+  },
+  {
+    id: "dia_orin_public_accusation",
+    display_name: "Orin's Public Accusation",
+    nodes: [
+      {
+        id: "node_1",
+        speaker: "Scene",
+        text: "Orin Vale stands on a crate near Dimos's stall, soot still black beneath his fingernails. Three townsfolk have stopped to listen. None of them stand close enough to be responsible for the listening.",
+        options: [{ text: "Listen.", next_node_id: "node_2" }],
+      },
+      {
+        id: "node_2",
+        speaker: "Orin",
+        text: "You all heard what they found. Animals opened. Darro burned through. Writs on the way before the body was cool.\n\nAnd still we are asked to pretend the shuttered vampire is a neighbor with bad manners.\n\nAsk yourselves who benefits when we doubt the thing our throats already know.",
+        options: [{ text: "A townsman speaks up.", next_node_id: "node_3" }],
+      },
+      {
+        id: "node_3",
+        speaker: "Townsperson",
+        text: "Lazare has a license.",
+        options: [{ text: "Orin answers.", next_node_id: "node_4" }],
+      },
+      {
+        id: "node_4",
+        speaker: "Orin",
+        text: "So does a furnace.\n\nYou do not put a child inside one because the Church stamped the door.\n\nNew Intercessor, ask the records, ask the shutters, ask the old road - but do not ask us to become stupid just because the monster keeps paperwork.",
+        options: [{ text: "The crowd breaks apart." }],
+      },
+    ],
+  },
+  {
+    id: "dia_orin_private_confrontation",
+    display_name: "Orin's Offcut",
+    nodes: [
+      {
+        id: "node_1",
+        speaker: "Scene",
+        text: "Orin hears the cave grit on your boots before you speak. His hands close around a rag that has already been wrung dry.",
+        options: [{ text: "The first log names you.", next_node_id: "node_2" }],
+      },
+      {
+        id: "node_2",
+        speaker: "Orin",
+        text: "It names an initial. It names a sentence. It does not name murder.\n\nI told Darro the offcut was spent because I believed it. Belief is cheaper than testing and I was young enough to buy it.\n\nThe furnace gives men confidence the way candles give shadows permission.",
+        options: [{ text: "You accused Lazare to move the heat.", next_node_id: "node_3" }],
+      },
+      {
+        id: "node_3",
+        speaker: "Orin",
+        text: "I accused Lazare because fear already knew his address.\n\nThat is not a defense. It is just the ugliest true thing I have.\n\nThe shard came back warm in my dreams before anyone told me Darro was dead.",
+        options: [{ text: "Aldric records the distinction.", next_node_id: "node_4" }],
+      },
+      {
+        id: "node_4",
+        speaker: "Brother Aldric",
+        text: "This is material connection, concealment, and panic. It is not yet killing.\n\nStay available, Orin. The Church is often wrong, but it is rarely brief.\n\nIntercessor, mark the offcut and continue to the deeper logs.",
+        options: [{ text: "Mark Orin's connection." }],
+      },
+    ],
+  },
+  {
+    id: "dia_orin_after_verdict",
+    display_name: "Orin After the Finding",
+    nodes: [
+      {
+        id: "node_1",
+        speaker: "Orin",
+        text: "They took my furnace key. Handling breach. Failure to report. Unlicensed transfer.\n\nNot murder. The distinction should comfort me.\n\nIt does not.",
+        options: [{ text: "What will you do?", next_node_id: "node_2" }],
+      },
+      {
+        id: "node_2",
+        speaker: "Orin",
+        text: "I will stand where they put me and answer when called.\n\nLazare was easier than my own hand; that is the part I cannot polish out.\n\nThe cold furnaces tick all afternoon like teeth deciding whether to speak.",
+        options: [{ text: "Leave him with the cold glass." }],
+      },
+    ],
+  },
+  {
+    id: "dia_lazare_after_verdict",
+    display_name: "Lazare After the Finding",
+    nodes: [
+      {
+        id: "node_1",
+        speaker: "Lazare",
+        text: "My shutters are open. People keep pretending not to see.\n\nCleared is a Church word. It means the ink has moved on.\n\nThe town cleared me with its teeth clenched; I prefer hatred when it is honest about the jaw.",
+        options: [{ text: "Does that change anything?", next_node_id: "node_2" }],
+      },
+      {
+        id: "node_2",
+        speaker: "Lazare",
+        text: "It changes your case, not my nature.\n\nRemember that when the next simple category presents itself with cleaner hands than mine.\n\nTonight the mirrors show bars instead of roads, which means the girl has become the room's new answer.",
+        options: [{ text: "Step back from the threshold." }],
+      },
+    ],
+  },
+  {
+    id: "dia_processional_wood_sign",
+    display_name: "Old Processional Sign",
+    nodes: [
+      {
+        id: "node_1",
+        speaker: "Road Sign",
+        text: "Follow the stones south: old wood, glass copse, eastern caves.\n\nThe Church narrowed the road but did not move it, which is an old kind of surrender.\n\nEach marker has seven shallow cuts beneath the newer parish paint.",
+        options: [{ text: "Keep to the road." }],
+      },
+    ],
+  },
+  {
+    id: "dia_tally_animal_clue",
+    display_name: "Animal Tally Stone",
+    nodes: [
+      {
+        id: "node_1",
+        speaker: "Tally Stone",
+        text: "Copy this clue: animals sickened on the old road before anyone named Lazare.\n\nFear picked the easy category because it was already waiting in the ledger.\n\nHoof marks, candle marks, and one child's scratched cross share the same weathered face.",
+        options: [{ text: "Record the tally clue.", set_switch: "side_tally_animal_clue" }],
+      },
+    ],
+  },
+  {
+    id: "dia_glass_copse_trace",
+    display_name: "Glass-Touched Trace",
+    nodes: [
+      {
+        id: "node_1",
+        speaker: "Glass Trace",
+        text: "The shard is small enough to hide in a glove. It gives off no heat your skin understands.\n\nFor one breath you feel calm enough to do something unforgivable neatly.\n\nThis is what Orin meant: Glass can hold a pattern without having a will.",
+        options: [{ text: "Mark the warm shard.", set_switch: "found_orin_shard_link" }],
+      },
+    ],
+  },
+  {
+    id: "dia_glass_copse_exit",
+    display_name: "Cave-Mouth Arch",
+    nodes: [
+      {
+        id: "node_1",
+        speaker: "Old Arch",
+        text: "The cave lies just south; enter only when you are ready to read the logs and fight through.\n\nThe route behind you is short by design, because the case needs proof more than wandering.\n\nGlass roots climb the arch like frost remembering a window.",
+        options: [{ text: "Go on." }],
+      },
+    ],
+  },
+  {
+    id: "dia_act1_end",
+    display_name: "Act I: The Witness Opens",
+    nodes: [
+      {
+        id: "node_1",
+        speaker: "Case Note",
+        text: "Act I finding: Darro Keel died from Grid sickness after Glass exposure, not vampire feeding. Lazare is dangerous, but not the cave killer.\n\nAldric has reopened Nessa's case because Darro's logs, Mara's name, and the Witness refuse to stay in separate files.\n\nThe next thread runs under the Counted Cup, where old prayers keep their own records.",
+        options: [{ text: "Continue the investigation." }],
       },
     ],
   },
@@ -1549,12 +2725,12 @@ export const FD_CUTSCENES: CutsceneData[] = [
     actions: [
       { type: "play_music", music_url: "/music/roll away.ogg" },
       { type: "screen_fade", fade: "out", duration: 0 },
-      { type: "move_entity", entity_id: "ent_aldric", cell: [1, -144], facing: [0, 1] },
+      { type: "move_entity", entity_id: "ent_aldric", cell: [1, -12], facing: [0, 1] },
       { type: "screen_fade", fade: "in", duration: 1500 },
-      // The procession in one shot: Mouthstone, exile road, bleeding Witness.
-      { type: "camera_pan", cell: [0, -138], duration: 1300 },
-      { type: "camera_pan", cell: [0, -84], duration: 1300 },
-      { type: "camera_pan", cell: [0, -10], duration: 1800 },
+      // The opening atlas shot: exile-road gate, scriptorium, temple road.
+      { type: "camera_pan", cell: [0, -18], duration: 1300 },
+      { type: "camera_pan", cell: [15, -14], duration: 1300 },
+      { type: "camera_pan", cell: [18, 0], duration: 1800 },
       { type: "wait", duration: 700 },
       { type: "camera_pan", duration: 1800 },
       { type: "show_dialogue", dialogue_id: "dia_opening_ceremony" },
@@ -1591,7 +2767,7 @@ export const FD_CUTSCENES: CutsceneData[] = [
       { type: "set_switch", switch_id: "office_briefed", switch_value: true },
       // The writ is the key that unseals the cellar trapdoor (Scene 4).
       { type: "set_switch", switch_id: "act1_assigned", switch_value: true },
-      { type: "camera_pan", cell: [54, -76], duration: 900 },
+      { type: "camera_pan", cell: [15, -14], duration: 900 },
       { type: "read_document", document_id: "doc_writ" },
       { type: "show_dialogue", dialogue_id: "dia_office_briefing" },
       { type: "read_document", document_id: "doc_field_note" },
@@ -1604,7 +2780,7 @@ export const FD_CUTSCENES: CutsceneData[] = [
     is_blocking: true,
     actions: [
       { type: "set_switch", switch_id: "gaol_entered", switch_value: true },
-      { type: "camera_pan", cell: [76, -54], duration: 900 },
+      { type: "camera_pan", cell: [24, 22], duration: 900 },
       { type: "show_dialogue", dialogue_id: "dia_gaol_entry_scene" },
       { type: "camera_pan", duration: 700 },
     ],
@@ -1624,7 +2800,7 @@ export const FD_CUTSCENES: CutsceneData[] = [
     is_blocking: true,
     actions: [
       { type: "set_switch", switch_id: "seen_cordon", switch_value: true },
-      { type: "camera_pan", cell: [0, -10], duration: 1600 },
+      { type: "camera_pan", cell: [0, 0], duration: 1600 },
       { type: "show_dialogue", dialogue_id: "dia_first_sight" },
       { type: "camera_pan", duration: 1400 },
     ],
@@ -1635,7 +2811,7 @@ export const FD_CUTSCENES: CutsceneData[] = [
     is_blocking: true,
     actions: [
       { type: "set_switch", switch_id: "seen_funeral", switch_value: true },
-      { type: "camera_pan", cell: [26, 18], duration: 900 },
+      { type: "camera_pan", cell: [-20, 26], duration: 900 },
       { type: "show_dialogue", dialogue_id: "dia_funeral" },
       { type: "camera_pan", duration: 700 },
     ],
@@ -1646,7 +2822,7 @@ export const FD_CUTSCENES: CutsceneData[] = [
     is_blocking: true,
     actions: [
       { type: "set_switch", switch_id: "seen_cellar", switch_value: true },
-      { type: "camera_pan", cell: [-62, 20], duration: 900 },
+      { type: "camera_pan", cell: [-12, 13], duration: 900 },
       { type: "show_dialogue", dialogue_id: "dia_cellar" },
       { type: "camera_pan", duration: 700 },
     ],
@@ -1681,6 +2857,58 @@ export const FD_CUTSCENES: CutsceneData[] = [
     ],
   },
   {
+    id: "cut_record_dimos",
+    display_name: "Dimos's Testimony",
+    is_blocking: false,
+    actions: [
+      { type: "set_switch", switch_id: "testimony_dimos", switch_value: true },
+      { type: "branch", condition: { all: [{ switch: "testimony_orin" }, { switch: "testimony_marta" }, { switch: "testimony_holt" }] }, target_label: "lbl_all_testimony" },
+      { type: "branch", target_label: "lbl_done" },
+      { type: "label", label: "lbl_all_testimony" },
+      { type: "set_switch", switch_id: "testimonies_gathered", switch_value: true },
+      { type: "label", label: "lbl_done" },
+    ],
+  },
+  {
+    id: "cut_record_orin",
+    display_name: "Orin's Testimony",
+    is_blocking: false,
+    actions: [
+      { type: "set_switch", switch_id: "testimony_orin", switch_value: true },
+      { type: "branch", condition: { all: [{ switch: "testimony_dimos" }, { switch: "testimony_marta" }, { switch: "testimony_holt" }] }, target_label: "lbl_all_testimony" },
+      { type: "branch", target_label: "lbl_done" },
+      { type: "label", label: "lbl_all_testimony" },
+      { type: "set_switch", switch_id: "testimonies_gathered", switch_value: true },
+      { type: "label", label: "lbl_done" },
+    ],
+  },
+  {
+    id: "cut_record_marta",
+    display_name: "Marta's Testimony",
+    is_blocking: false,
+    actions: [
+      { type: "set_switch", switch_id: "testimony_marta", switch_value: true },
+      { type: "branch", condition: { all: [{ switch: "testimony_dimos" }, { switch: "testimony_orin" }, { switch: "testimony_holt" }] }, target_label: "lbl_all_testimony" },
+      { type: "branch", target_label: "lbl_done" },
+      { type: "label", label: "lbl_all_testimony" },
+      { type: "set_switch", switch_id: "testimonies_gathered", switch_value: true },
+      { type: "label", label: "lbl_done" },
+    ],
+  },
+  {
+    id: "cut_record_holt",
+    display_name: "Holt's Gate Tally",
+    is_blocking: false,
+    actions: [
+      { type: "set_switch", switch_id: "testimony_holt", switch_value: true },
+      { type: "branch", condition: { all: [{ switch: "testimony_dimos" }, { switch: "testimony_orin" }, { switch: "testimony_marta" }] }, target_label: "lbl_all_testimony" },
+      { type: "branch", target_label: "lbl_done" },
+      { type: "label", label: "lbl_all_testimony" },
+      { type: "set_switch", switch_id: "testimonies_gathered", switch_value: true },
+      { type: "label", label: "lbl_done" },
+    ],
+  },
+  {
     id: "cut_read_family_rites",
     display_name: "Dusty Ledger",
     is_blocking: true,
@@ -1712,6 +2940,52 @@ export const FD_CUTSCENES: CutsceneData[] = [
     ],
   },
   {
+    id: "cut_orin_public_accusation",
+    display_name: "The Market Accusation",
+    is_blocking: true,
+    actions: [
+      { type: "set_switch", switch_id: "orin_public_accusation_seen", switch_value: true },
+      { type: "camera_pan", cell: [-4, 7], duration: 900 },
+      { type: "show_dialogue", dialogue_id: "dia_orin_public_accusation" },
+      { type: "camera_pan", duration: 700 },
+    ],
+  },
+  {
+    id: "cut_orin_private_confrontation",
+    display_name: "Orin's Offcut",
+    is_blocking: true,
+    actions: [
+      { type: "camera_pan", cell: [-8, 22], duration: 900 },
+      { type: "show_dialogue", dialogue_id: "dia_orin_private_confrontation" },
+      { type: "set_switch", switch_id: "orin_private_questioned", switch_value: true },
+      { type: "set_switch", switch_id: "orin_pressure_1", switch_value: true },
+      { type: "set_switch", switch_id: "found_orin_shard_link", switch_value: true },
+      { type: "camera_pan", duration: 700 },
+    ],
+  },
+  {
+    id: "cut_orin_after_verdict",
+    display_name: "Orin After the Finding",
+    is_blocking: true,
+    actions: [
+      { type: "set_switch", switch_id: "orin_after_verdict_seen", switch_value: true },
+      { type: "camera_pan", cell: [-8, 22], duration: 900 },
+      { type: "show_dialogue", dialogue_id: "dia_orin_after_verdict" },
+      { type: "camera_pan", duration: 700 },
+    ],
+  },
+  {
+    id: "cut_lazare_after_verdict",
+    display_name: "Lazare After the Finding",
+    is_blocking: true,
+    actions: [
+      { type: "set_switch", switch_id: "lazare_after_verdict_seen", switch_value: true },
+      { type: "camera_pan", cell: [0, -30], duration: 900 },
+      { type: "show_dialogue", dialogue_id: "dia_lazare_after_verdict" },
+      { type: "camera_pan", duration: 700 },
+    ],
+  },
+  {
     id: "cut_maras_basement",
     display_name: "The Rite Circle",
     is_blocking: true,
@@ -1729,9 +3003,22 @@ export const FD_CUTSCENES: CutsceneData[] = [
     is_blocking: true,
     actions: [
       { type: "set_switch", switch_id: "act1_complete", switch_value: true },
-      { type: "camera_pan", cell: [54, -76], duration: 900 },
+      { type: "set_switch", switch_id: "cyberghost_defeated", switch_value: true },
+      { type: "set_switch", switch_id: "vampire_cleared", switch_value: true },
+      { type: "set_switch", switch_id: "orin_disciplined", switch_value: true },
+      { type: "set_switch", switch_id: "nessa_thread_started", switch_value: true },
+      { type: "camera_pan", cell: [15, -14], duration: 900 },
       { type: "show_dialogue", dialogue_id: "dia_office_after" },
       { type: "camera_pan", duration: 700 },
+    ],
+  },
+  {
+    id: "cut_act1_end",
+    display_name: "Act I: The Witness Opens",
+    is_blocking: true,
+    actions: [
+      { type: "set_switch", switch_id: "act1_end_seen", switch_value: true },
+      { type: "show_dialogue", dialogue_id: "dia_act1_end" },
     ],
   },
   {
@@ -1758,13 +3045,21 @@ export const FD_CUTSCENES: CutsceneData[] = [
       { type: "play_music", music_url: "/music/roll away.ogg" },
     ],
   },
+  {
+    id: "cut_river_music",
+    display_name: "River Theme",
+    is_blocking: false,
+    actions: [
+      { type: "play_music", music_url: "/music/River.wav" },
+    ],
+  },
   // ── Scene 4: the trapdoor ──────────────────────────────────────────────────
   {
     id: "cut_trapdoor_locked",
     display_name: "The Sealed Cellar",
     is_blocking: true,
     actions: [
-      { type: "camera_pan", cell: [-62, 20], duration: 800 },
+      { type: "camera_pan", cell: [-12, 13], duration: 800 },
       { type: "show_dialogue", dialogue_id: "dia_trapdoor_sealed" },
       { type: "camera_pan", duration: 600 },
     ],
@@ -1813,7 +3108,7 @@ export const FD_CUTSCENES: CutsceneData[] = [
     ],
   },
   // ══════════════════════════════════════════════════════════════════════════
-  // ACT 1 OPEN WORLD: Gate blocks, cave transitions, boss, logs
+  // ACT 1 ATLAS: Gate blocks, cave transitions, boss, logs
   // ══════════════════════════════════════════════════════════════════════════
   {
     id: "cut_gate_blocked_briefing",
@@ -1829,6 +3124,7 @@ export const FD_CUTSCENES: CutsceneData[] = [
     is_blocking: true,
     actions: [
       { type: "show_dialogue", dialogue_id: "dia_gate_blocked_cave" },
+      { type: "teleport_player", map_id: "map_residential", cell: [0, 17], facing: [0, -1] },
     ],
   },
   {
@@ -1870,7 +3166,7 @@ export const FD_CUTSCENES: CutsceneData[] = [
     is_blocking: true,
     actions: [
       { type: "screen_fade", fade: "out", duration: 800 },
-      { type: "teleport_player", cell: [0, 116], facing: [0, 1] },
+      { type: "teleport_player", map_id: "map_cave_upper", cell: [0, -39], facing: [0, 1] },
       { type: "play_music", music_url: "/music/Pagan Network.wav" },
       { type: "screen_fade", fade: "in", duration: 1100 },
     ],
@@ -1881,7 +3177,7 @@ export const FD_CUTSCENES: CutsceneData[] = [
     is_blocking: true,
     actions: [
       { type: "screen_fade", fade: "out", duration: 800 },
-      { type: "teleport_player", cell: [138, 58], facing: [0, -1] },
+      { type: "teleport_player", map_id: "map_residential", cell: [0, 19], facing: [0, -1] },
       { type: "play_music", music_url: "/music/roll away.ogg" },
       { type: "screen_fade", fade: "in", duration: 1100 },
     ],
@@ -1892,8 +3188,9 @@ export const FD_CUTSCENES: CutsceneData[] = [
     display_name: "The Grid-Sick",
     is_blocking: true,
     actions: [
+      { type: "set_switch", switch_id: "boss_intro_seen", switch_value: true },
       { type: "screen_fade", fade: "out", duration: 600 },
-      { type: "camera_pan", cell: [0, 138], duration: 1200 },
+      { type: "camera_pan", cell: [0, 6], duration: 1200 },
       { type: "screen_fade", fade: "in", duration: 800 },
       { type: "show_dialogue", dialogue_id: "dia_boss_intro" },
       { type: "camera_pan", duration: 800 },
@@ -1907,6 +3204,8 @@ export const FD_CUTSCENES: CutsceneData[] = [
     actions: [
       { type: "read_document", document_id: "doc_grid_log_1" },
       { type: "set_switch", switch_id: "found_log_1", switch_value: true },
+      { type: "set_switch", switch_id: "found_orin_shard_link", switch_value: true },
+      { type: "set_switch", switch_id: "found_darro_name", switch_value: true },
     ],
   },
   {
@@ -1925,6 +3224,7 @@ export const FD_CUTSCENES: CutsceneData[] = [
     actions: [
       { type: "read_document", document_id: "doc_grid_log_3" },
       { type: "set_switch", switch_id: "found_log_3", switch_value: true },
+      { type: "set_switch", switch_id: "found_mara_name", switch_value: true },
     ],
   },
   {
@@ -1946,33 +3246,42 @@ FD_DIALOGUE.push({
     {
       id: "node_1",
       speaker: "Scene",
-      text: "Aldric shuts the scriptorium door with his heel. Witness lists on the table, cordon records, a gaol inventory — and one creased field note he sets apart from the rest, face down, like a card he is not ready to play.",
+      text: "Aldric shuts the scriptorium door with his heel. On the table: a cave report, Lazare's license, Holt's gate slate, a Glassworks handling slip, and a witness list weighted down with a reliquary.",
       options: [{ text: "Walk me through it.", next_node_id: "node_2" }],
     },
     {
       id: "node_2",
       speaker: "Brother Aldric",
-      text: "The night of the rite: four at the Witness. Tollen Rusk and Iria Fen — Glass where they stand, the cordon guard logged it. Mara Vey — no body, no Glass, no exit past the gate count. Gone in a direction we have no word for. And Nessa, alive, holding a rite the Church shelved a century ago, screaming loud enough to wake the terrace.",
+      text: "Victim: Darro Keel. Local laborer, occasional cellar-hand, not Church-taught but not unknown to Church records.\n\nFound in the eastern cave with Glass stress through the ribs and palms. Animals around him were not eaten. They were arranged.\n\nThat distinction is why we are still talking.",
       options: [
-        { text: "Why does the Church call it witch-work?", next_node_id: "node_3" },
+        { text: "Why is Lazare the suspect?", next_node_id: "node_3" },
+        { text: "Why is Orin in the file?", next_node_id: "node_orin" },
       ],
     },
     {
       id: "node_3",
       speaker: "Brother Aldric",
-      text: "Because the alternative is calling it an answer. If Nessa is a witch, the Witness was attacked and the world still makes sense. If Nessa is innocent — then the statue replied to a prayer, Intercessor, and bled while doing it, and nothing in doctrine survives that. A tidy monster, or a difficult miracle. The Church has chosen. I have not. That is the entire reason you are standing in my office.",
+      text: "Because Lazare is a vampire and the town's imagination is efficient.\n\nHe is licensed, shuttered, and watched. Holt says he has not crossed the tally in years. But fear does not need a door to enter a room.\n\nWe test him because he is dangerous; we do not convict him because danger is convenient.",
       options: [
-        { text: "Then I'll go hear her myself.", next_node_id: "node_4" },
+        { text: "Who do we question?", next_node_id: "node_4" },
+      ],
+    },
+    {
+      id: "node_orin",
+      speaker: "Brother Aldric",
+      text: "Orin Vale works the Glassworks edge. He knew Darro. He handled shard offcuts. He is also the loudest person accusing Lazare.\n\nA man may be correct loudly. He may also be hiding in the noise.\n\nThat is why he is witness and suspect both.",
+      options: [
+        { text: "Who do we question?", next_node_id: "node_4" },
       ],
     },
     {
       id: "node_4",
       speaker: "Brother Aldric",
-      text: "The Hall of Custody, straight across the procession. Warden Sefa will let you to the bars — read her ledger if she offers it, she sees more than her hall. And take the field note. I wrote it before any of this had a docket number. You should know what kind of friend is asking you for the truth.",
+      text: "Record Dimos at the market, Marta at the lower graves, Holt at the gate, and Orin wherever his conscience has staged itself. Then speak to Lazare.\n\nThe cave comes after the living contradict each other.\n\nI have pinned the order on the Case Board because fright makes people forget sequence.",
       options: [
         {
-          text: "Take the note, and the case.",
-          trigger_quest: "quest_investigate",
+          text: "Take the cave writ.",
+          trigger_quest: "quest_vampire",
           trigger_quest_state: "briefed",
         },
       ],
@@ -1982,52 +3291,67 @@ FD_DIALOGUE.push({
 
 FD_DIALOGUE.push({
   id: "dia_office_after",
-  display_name: "The Doctrine Re-Examined",
+  display_name: "The Cave Finding",
   nodes: [
     {
       id: "node_1",
       speaker: "Scene",
-      text: "Aldric lays the torn ledger page flat on his desk. He lines up the torn edge with the straight grain of the wood, smoothing it down over and over, as if the right amount of pressure could make the words on it mean something else.",
-      options: [{ text: "It's the under-rite.", next_node_id: "node_2" }],
+      text: "Aldric clears the table with one arm. 'Put the logs down. All of them. In order.' Darro Keel's wall-scraps, Holt's slate copy, Orin's handling note, and Lazare's untouched gate record become one file.",
+      options: [{ text: "Read the finding.", next_node_id: "node_2" }],
     },
     {
       id: "node_2",
       speaker: "Brother Aldric",
-      text: "It is. Written in Mara's hand, reciting older forms. Three generations of under-rites, performed in the dark, hedging bets against the Church's light. The town has been praying to the Witness all along.",
+      text: "Darro Keel handled a Glassworks offcut supplied by Orin Vale. Darro used it repeatedly in the eastern cave under old rite conditions.\n\nHis behavior became compulsive, patterned, and self-recording. The animal deaths were not feeding.\n\nLazare Behind the Shutters did not kill him.",
       options: [
-        { 
-          text: "Nessa said the statue looked at her.", 
-          condition: { switch: "nessa_saw_stone" },
-          next_node_id: "node_saw" 
+        {
+          text: "So Lazare is innocent.",
+          next_node_id: "node_lazare_clear"
         },
-        { 
-          text: "The doctrine doesn't survive this.", 
-          condition: { not: { switch: "nessa_saw_stone" } },
-          next_node_id: "node_doctrine" 
+        {
+          text: "Orin killed him.",
+          next_node_id: "node_orin_clear"
+        },
+        {
+          text: "The logs mention Mara and the Witness.",
+          condition: { any: [{ switch: "found_log_3" }, { switch: "found_log_4" }] },
+          next_node_id: "node_nessa_hook"
         },
       ],
     },
     {
-      id: "node_saw",
+      id: "node_lazare_clear",
       speaker: "Brother Aldric",
-      text: "And now we know why it knew how to look back. It has been fed on the town's grief and secrets for a hundred years. The rite didn't wake it. The rite just finally gave it a voice. We must petition the capital.",
+      text: "Of murder in this case. Say only what the finding can bear.\n\nLazare remains dangerous. He is not responsible for Darro Keel's death.\n\nThe distinction is narrow enough to cut anyone who handles it carelessly.",
+      options: [{ text: "Continue the finding.", next_node_id: "node_nessa_hook" }],
+    },
+    {
+      id: "node_orin_clear",
+      speaker: "Brother Aldric",
+      text: "No. Orin supplied danger, concealed it, and tried to survive the consequence by naming another.\n\nThat is negligence, cowardice, and breach of handling. It is not murder.\n\nThe Church can discipline Orin. It cannot pretend discipline is the same thing as truth.",
+      options: [{ text: "Continue the finding.", next_node_id: "node_nessa_hook" }],
+    },
+    {
+      id: "node_nessa_hook",
+      speaker: "Brother Aldric",
+      text: "I will clear Lazare. I will mark Orin for Glassworks discipline and Church handling. I will enter Darro as Grid-sick deceased, unresolved remnant dispersed.\n\nMara Vey is named in the cave. Mara Vey is also named in Nessa's docket.\n\nThe vampire case is closed. The Witness case is not.",
       options: [
         {
-          text: "The first act concludes.",
-          trigger_quest: "quest_investigate",
-          trigger_quest_state: "act_one_closed",
+          text: "Open the Nessa thread.",
+          trigger_quest: "quest_vampire",
+          trigger_quest_state: "cleared",
         },
       ],
     },
     {
-      id: "node_doctrine",
+      id: "node_clear_only",
       speaker: "Brother Aldric",
-      text: "No, it does not. The doctrine is built on the premise that the light is given, not demanded. If the dark can be negotiated with... the Church will burn this town to the bedrock before they let that be known. We must petition the capital.",
+      text: "The record clears Lazare and disciplines Orin, but the wider pattern remains.\n\nBecause the town was wrong loudly, it may be wrong quietly elsewhere.\n\nI have another file I wanted clean; it is not clean, and the name on it is Nessa.",
       options: [
         {
-          text: "The first act concludes.",
-          trigger_quest: "quest_investigate",
-          trigger_quest_state: "act_one_closed",
+          text: "Open the Nessa thread.",
+          trigger_quest: "quest_vampire",
+          trigger_quest_state: "cleared",
         },
       ],
     },
@@ -2050,14 +3374,14 @@ export const FD_QUESTS: QuestData[] = [
   },
   {
     id: "quest_vampire",
-    display_name: "The Lonely Vampire",
+    display_name: "The Shuttered Hunger",
     description:
-      "A body in the eastern caves. The town says vampire. The Church says investigate.",
+      "Darro Keel is dead in the eastern caves. The town says vampire. Orin says it loudly. The Church says investigate.",
     objectives: [
       { id: "obj_briefing", description: "Report to Aldric at the Scriptorium", type: "talk", target_id: "ent_aldric", count: 1 },
-      { id: "obj_testimony", description: "Gather testimony from townspeople (2 of 3)", type: "talk", target_id: "ent_merchant", count: 2 },
+      { id: "obj_testimony", description: "Gather testimony from Dimos, Marta, Holt, and Orin", type: "talk", target_id: "ent_merchant", count: 4 },
       { id: "obj_lazare", description: "Visit Lazare Behind the Shutters", type: "talk", target_id: "ent_lazare_vampire", count: 1 },
-      { id: "obj_cave", description: "Investigate the eastern caves", type: "explore", target_id: "cave", count: 1 },
+      { id: "obj_cave", description: "Follow the Old Processional Wood and Glass-Touched Copse to the eastern caves", type: "explore", target_id: "cave", count: 1 },
       { id: "obj_boss", description: "Confront what remains in the deep", type: "explore", target_id: "deep_cave", count: 1 },
       { id: "obj_verdict", description: "Present evidence to Aldric", type: "talk", target_id: "ent_aldric", count: 1 },
     ],
@@ -2069,13 +3393,13 @@ export const FD_DOCUMENTS: DocumentData[] = [
     id: "doc_writ",
     display_name: "Writ of Procedural Mercy",
     content:
-      "By the Intercession, under the dark lights, witnessed and counted:\n\nThe sworn Intercessor shall inquire into the events of the Witching Hour rite at the Witness of the Dark Lights. All doors of the town shall answer; all citizens shall render truthful account; the accused shall be heard through bars and paper.\n\nThe inquiry precedes the sentence. The sentence does not wait on the inquiry's comfort.\n\nCuriosity is not a defense.",
+      "WRIT OF LOCAL INQUIRY\n\nSubject: Death of Darro Keel.\n\nSuspected categories:\n- predatory irregularity,\n- unauthorized Glass exposure,\n- under-rite consequence,\n- unlawful concealment.\n\nAssigned:\nBrother Aldric.\nNewly sworn Intercessor.\n\nInstruction:\nrecord before judgment.\ncontain before proclamation.\n\nSuspicion is not proof.",
   },
   {
     id: "doc_field_note",
     display_name: "Aldric's Field Note",
     content:
-      "Private hand, before the docket:\n\nI asked that the new Intercessor be assigned because I trust them. We studied border cases together before either of us had a title worth envying. If this must be done inside the Church's procedure, I would rather stand beside an old friend than another clerk with clean gloves.\n\nAnd if my student is what they say she is, I want someone beside me who will make me believe it properly — not merely sign it.",
+      "Private hand, before the docket:\n\nI asked that the new Intercessor be assigned because I trust them. We studied border cases together before either of us had a title worth envying. If this must be done inside the Church's procedure, I would rather stand beside an old friend than another clerk with clean gloves.\n\nLazare is dangerous, but danger is not guilt. I need the town reminded of that before I ask it to look at a harder prisoner.",
   },
   {
     id: "doc_gaol_ledger",
@@ -2120,27 +3444,27 @@ export const FD_DOCUMENTS: DocumentData[] = [
   // ── Grid Sickness Logs (cave evidence chain) ──
   {
     id: "doc_grid_log_1",
-    display_name: "Scratched Wall — First Entry",
+    display_name: "Darro's Wall — Log One",
     content:
-      "The fatigue won't lift. Three weeks since the last basement rite. My hands shake when I hold the candles. The Church physician says rest. Rest from what? I can feel the Grid in my teeth.",
+      "LOG ONE\n\nOrin said it was spent.\n\nHe put it in cloth and told me not to bleed on it.\n\nI did not bleed.\n\nI only held it until the cave became familiar.",
   },
   {
     id: "doc_grid_log_2",
-    display_name: "Scratched Wall — Second Entry",
+    display_name: "Darro's Wall — Log Two",
     content:
-      "I killed the goat last night. I don't remember deciding to. My hands knew what to do before I did. The blood looked like light. I wrote the old words on the barn wall. I don't know those words.",
+      "LOG TWO\n\nThe animals move wrong.\n\nThey cross the floor without order.\n\nI marked seven and slept.\n\nI marked seven more and the room became quiet enough to hear.",
   },
   {
     id: "doc_grid_log_3",
-    display_name: "Scratched Wall — Third Entry",
+    display_name: "Darro's Wall — Log Three",
     content:
-      "The candles help. The old prayers help. Nothing from the Church helps. Mara says she found something better. Not the basement. The Witness itself. She says Nessa gave her the words. We go tonight.",
+      "LOG THREE\n\nNot teeth.\n\nNot hunger.\n\nHunger is too simple.\n\nThis is a door learning the shape of a hand.\n\nMara said old prayers have hinges.\n\nI laughed when she said it.",
   },
   {
     id: "doc_grid_log_4",
-    display_name: "Scratched Wall — Final Entry",
+    display_name: "Darro's Wall — Log Four",
     content:
-      "I can't go. My body won't move right anymore. Mara went without me. Tollen and Iria too. I heard screaming from the hill. I crawled here. The dark is the only thing that doesn't hurt.",
+      "LOG FOUR\n\nI did not open the statue.\n\nThe statue was not first.\n\nThe prayer under the prayer opened.\n\nIt was never the statue that opened.",
   },
 ];
 
@@ -2286,7 +3610,7 @@ FD_DIALOGUE.push(
       {
         id: "node_1",
         speaker: "Brother Aldric",
-        text: "We're not walking into those caves blind. Talk to the townspeople. Talk to Lazare. Then we go.",
+        text: "Not yet: record Dimos, Marta, Holt, and Orin, then speak to Lazare before using this south road.\n\nThe cave will answer better if the town has already contradicted itself.\n\nI pinned the same order on the Case Board in my office because fear is bad at errands.",
         options: [{ text: "(Turn back.)" }],
       },
     ],
@@ -2346,19 +3670,19 @@ FD_DIALOGUE.push(
       {
         id: "node_1",
         speaker: "Scene",
-        text: "Something stands in the deepest chamber. It crackles with half-formed Glass, a body twisted by grid sickness into something that no longer remembers what it was. Its mouth moves. Words scrape out like stone on stone.",
+        text: "Something stands in the deepest chamber wearing Darro Keel's outline badly. Glass has grown through the ribs and palms until the body looks less eaten than tuned.",
         options: [{ text: "Listen.", next_node_id: "node_2" }],
       },
       {
         id: "node_2",
-        speaker: "The Grid-Sick",
-        text: "The candles... Mara said the candles would... fix... She said the Witness would see us... It saw me... it saw me...",
+        speaker: "Darro's Remnant",
+        text: "O said spent. O said safe. I held it like a little moon and it remembered my hand.\n\nThe animals counted first. Then I counted with them. Seven, seven, seven until the cave learned my teeth.\n\nMara opened no statue. Mara opened the hinge under it.",
         options: [{ text: "End this.", next_node_id: "node_3" }],
       },
       {
         id: "node_3",
         speaker: "Brother Aldric",
-        text: "Grid sickness this far gone — there's nothing left to save. Be merciful. Be quick.",
+        text: "This is Grid sickness past recall. Hear what remains, then end the suffering.\n\nDo not call this feeding. Do not call it witchcraft because the word is easier.\n\nThe chamber is answering in Darro's voice because Glass keeps what it wounds.",
         options: [{ text: "(Prepare for battle.)" }],
       },
     ],

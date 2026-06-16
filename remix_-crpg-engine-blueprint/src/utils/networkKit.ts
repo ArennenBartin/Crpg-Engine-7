@@ -967,6 +967,7 @@ const candleCluster = () =>
     category: "prop",
     tags: ["prop", "light", "shrine"],
     materialKeys: ["blackSoil", "wax", "flame", "flameCore"],
+    profile: "none",
     build: (m, rng) => {
       blob(m, "soil_mound", nmat("blackSoil"), [0, 0.09, 0], [0.78, 0.2, 0.7], rng, 8, 3, 0.06);
 

@@ -39,6 +39,9 @@ export interface PlaySave {
     speed: number;
     energy: number;
   };
+  level?: number;
+  experience?: number;
+  pending_level_ups?: number;
   known_skills: string[];
   flags: Record<string, any>;
   quests: Record<string, any>;
@@ -61,4 +64,5 @@ export interface PlaySave {
   in_combat?: boolean;
   combat_queue?: string[];
   active_turn_id?: string | null;
+  combat_xp_pool?: number;
 }

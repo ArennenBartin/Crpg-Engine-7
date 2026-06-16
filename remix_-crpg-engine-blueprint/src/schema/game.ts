@@ -4,7 +4,6 @@ import { generateTownCells, TOWN_W, TOWN_H } from "./town_gen";
 import { generateParishCells, PARISH_W, PARISH_H } from "./parish_gen";
 import { generateNetworkCells } from "./network_gen";
 import { generateNetworkDepthsCells } from "./network_depths_gen";
-import { generateOpenWorldCells, OPENWORLD_W, OPENWORLD_H } from "./openworld_gen";
 import { generateResidentialBlockCells, BLOCK_W, BLOCK_H } from "./residential_block_gen";
 import { generateTownSquareCells, SQUARE_W, SQUARE_H } from "./town_square_gen";
 import { generateTempleCordonCells, TEMPLE_W, TEMPLE_H } from "./temple_cordon_gen";
@@ -15,6 +14,8 @@ import { generateLazareHouseCells, LAZARE_W, LAZARE_H } from "./lazare_house_gen
 import { generateMouthstoneFieldCells, MOUTHSTONE_W, MOUTHSTONE_H } from "./mouthstone_field_gen";
 import { generateGlassworksCells, GLASS_W, GLASS_H } from "./glassworks_gen";
 import { generateCaveGrottoCells, GROTTO_W, GROTTO_H } from "./cave_grotto_gen";
+import { generateOldProcessionalWoodCells, OLD_WOOD_W, OLD_WOOD_H } from "./old_processional_wood_gen";
+import { generateGlassTouchedCopseCells, GLASS_COPSE_W, GLASS_COPSE_H } from "./glass_touched_copse_gen";
 import {
   FD_CUTSCENES,
   FD_DIALOGUE,
@@ -156,6 +157,7 @@ export const EntitySchema = z.object({
   attack: z.number().default(2),
   defense: z.number().default(1),
   speed: z.number().default(10),
+  xp_reward: z.number().optional(),
   // Ability ids this entity can use. Party members cast these on their
   // combat turns (the player picks the target).
   skills: z.array(z.string()).optional(),
@@ -673,7 +675,6 @@ export const createEmptyGamePackage = (): GamePackage => {
   const parish = generateParishCells();
   const network = generateNetworkCells();
   const depths = generateNetworkDepthsCells();
-  const openworld = generateOpenWorldCells();
   const residentialBlock = generateResidentialBlockCells();
   const townSquare = generateTownSquareCells();
   const templeCordon = generateTempleCordonCells();
@@ -684,6 +685,8 @@ export const createEmptyGamePackage = (): GamePackage => {
   const mouthstoneField = generateMouthstoneFieldCells();
   const glassworks = generateGlassworksCells();
   const caveGrotto = generateCaveGrottoCells();
+  const oldProcessionalWood = generateOldProcessionalWoodCells();
+  const glassTouchedCopse = generateGlassTouchedCopseCells();
   return {
     schema: "familiar_dark_game_package_v1",
     metadata: {
@@ -709,14 +712,15 @@ export const createEmptyGamePackage = (): GamePackage => {
         map_town_square: "town",
         map_residential: "town",
         map_temple_cordon: "town",
+        map_old_processional_wood: "town",
+        map_glass_touched_copse: "network",
         map_cave_upper: "network",
         map_cave_deep: "network",
-        map_river_path: "town",
+        map_river_path: "river",
         map_lazare_house: "town",
         map_mouthstone_field: "town",
         map_glassworks: "network",
         map_cave_grotto: "network",
-        map_open_world: "town",
         map_parish: "town",
         map_town: "town",
         map_network_upper: "network",
@@ -725,7 +729,7 @@ export const createEmptyGamePackage = (): GamePackage => {
     },
     maps: [
       // ════════════════════════════════════════════════════════════════════
-      // ACT 1: Multi-map architecture (10 maps, hub-and-spoke)
+      // ACT 1: Multi-map architecture (12 maps, hub-and-spoke)
       // ════════════════════════════════════════════════════════════════════
       {
         id: "map_town_square",
@@ -757,7 +761,7 @@ export const createEmptyGamePackage = (): GamePackage => {
           ...([-3, -2, -1, 0, 1, 2, 3] as number[]).map(z => ({
             cell: [20, z] as [number, number],
             target_map_id: "map_temple_cordon",
-            target_spawn_id: "spawn_from_west",
+            target_spawn_id: "spawn_from_town_square_west",
             facing: [1, 0] as [number, number],
           })),
           // North edge → Mouthstone Field
@@ -779,7 +783,7 @@ export const createEmptyGamePackage = (): GamePackage => {
           { id: "spawn_from_east", cell: [19, 0], facing: [-1, 0] },
           { id: "spawn_from_south", cell: [0, 19], facing: [0, -1] },
           { id: "spawn_from_west", cell: [-19, 0], facing: [1, 0] },
-          { id: "spawn_from_lazare", cell: [-14, 12], facing: [0, -1] },
+          { id: "spawn_from_lazare", cell: [-10, 19], facing: [0, -1] },
         ],
         cells: residentialBlock.cells,
         props: [],
@@ -788,10 +792,14 @@ export const createEmptyGamePackage = (): GamePackage => {
         container_placements: residentialBlock.container_placements,
         entity_placements: [
           ...residentialBlock.entity_placements,
-          // Add innkeep to this map (Lazare moved to his own house map)
-          { entity_id: "ent_innkeep", cell: [14, -14] },
-          { entity_id: "ent_mother", cell: [-12, 8] },
-          { entity_id: "ent_ferryman", cell: [-18, 0] },
+          // Townsfolk who hang around the residential streets.
+          // (ent_ferryman lives at the river path; ent_merchant and
+          // ent_innkeep live in the town square social/market hub.)
+          { entity_id: "ent_mother", cell: [-12, 7], schedule: [
+            { hour: 8, cell: [-12, 7] },
+            { hour: 18, cell: [-6, 4] },
+            { hour: 22, cell: [-14, 12] },
+          ] },   // outside the pilgrim's shrine
         ],
         triggers: [
           ...residentialBlock.triggers,
@@ -807,6 +815,15 @@ export const createEmptyGamePackage = (): GamePackage => {
             cutscene_id: "cut_gate_blocked_cave",
             once: false,
           })),
+          ...([- 3, -2, -1, 0, 1, 2, 3] as number[]).map((x, i) => ({
+            id: `trg_gate_cave_exit_${i}`,
+            cell: [x, 20] as [number, number],
+            type: "step" as const,
+            conditions: [] as any[],
+            condition: { not: { all: [{ switch: "lazare_talked" }, { switch: "testimonies_gathered" }] } },
+            cutscene_id: "cut_gate_blocked_cave",
+            once: false,
+          })),
         ],
         exits: [
           // North edge → Town Square
@@ -816,19 +833,20 @@ export const createEmptyGamePackage = (): GamePackage => {
             target_spawn_id: "spawn_from_south",
             facing: [0, -1] as [number, number],
           })),
-          // East edge → Temple/Cordon
+          // East edge → Lazare's Estate
           ...([-3, -2, -1, 0, 1, 2, 3] as number[]).map(z => ({
             cell: [20, z] as [number, number],
-            target_map_id: "map_temple_cordon",
+            target_map_id: "map_lazare_house",
             target_spawn_id: "spawn_from_west",
             facing: [1, 0] as [number, number],
           })),
-          // South edge → Cave Upper (only works when gate conditions met)
+          // South edge → Old Processional Wood (only works when gate conditions met)
           ...([-3, -2, -1, 0, 1, 2, 3] as number[]).map(x => ({
             cell: [x, 20] as [number, number],
-            target_map_id: "map_cave_upper",
+            target_map_id: "map_old_processional_wood",
             target_spawn_id: "spawn_from_north",
             facing: [0, 1] as [number, number],
+            condition: { all: [{ switch: "lazare_talked" }, { switch: "testimonies_gathered" }] },
           })),
           // West edge → River Path
           ...([-3, -2, -1, 0, 1, 2, 3] as number[]).map(z => ({
@@ -837,8 +855,6 @@ export const createEmptyGamePackage = (): GamePackage => {
             target_spawn_id: "spawn_from_east",
             facing: [-1, 0] as [number, number],
           })),
-          // Lazare's House (portal from southwest house area)
-          { cell: [-14, 14] as [number, number], target_map_id: "map_lazare_house", target_spawn_id: "spawn_from_south", facing: [0, 1] as [number, number] },
         ],
       },
       {
@@ -847,8 +863,8 @@ export const createEmptyGamePackage = (): GamePackage => {
         width: TEMPLE_W,
         height: TEMPLE_H,
         spawns: [
-          { id: "spawn_from_west", cell: [-19, 0], facing: [1, 0] },
-          { id: "spawn_from_east", cell: [19, 0], facing: [-1, 0] },
+          { id: "spawn_from_town_square_west", cell: [-39, -20], facing: [1, 0] },
+          { id: "spawn_from_east", cell: [39, 0], facing: [-1, 0] },
         ],
         cells: templeCordon.cells,
         props: [],
@@ -858,19 +874,85 @@ export const createEmptyGamePackage = (): GamePackage => {
         entity_placements: templeCordon.entity_placements,
         triggers: templeCordon.triggers,
         exits: [
-          // West edge → Residential
+          // West edge (Upper) → Town Square
           ...([-3, -2, -1, 0, 1, 2, 3] as number[]).map(z => ({
-            cell: [-20, z] as [number, number],
-            target_map_id: "map_residential",
+            cell: [-40, -20 + z] as [number, number],
+            target_map_id: "map_town_square",
             target_spawn_id: "spawn_from_east",
             facing: [-1, 0] as [number, number],
           })),
           // East edge → Glassworks
           ...([-3, -2, -1, 0, 1, 2, 3] as number[]).map(z => ({
-            cell: [20, z] as [number, number],
+            cell: [40, z] as [number, number],
             target_map_id: "map_glassworks",
             target_spawn_id: "spawn_from_west",
             facing: [1, 0] as [number, number],
+          })),
+        ],
+      },
+      {
+        id: "map_old_processional_wood",
+        display_name: "Old Processional Wood",
+        width: OLD_WOOD_W,
+        height: OLD_WOOD_H,
+        spawns: [
+          { id: "spawn_from_north", cell: [0, -19], facing: [0, 1] },
+          { id: "spawn_from_south", cell: [0, 19], facing: [0, -1] },
+        ],
+        cells: oldProcessionalWood.cells,
+        props: [],
+        custom_object_placements: oldProcessionalWood.custom_object_placements,
+        item_placements: oldProcessionalWood.item_placements,
+        container_placements: oldProcessionalWood.container_placements,
+        entity_placements: oldProcessionalWood.entity_placements,
+        triggers: oldProcessionalWood.triggers,
+        exits: [
+          // North edge → Residential Quarter
+          ...([-3, -2, -1, 0, 1, 2, 3] as number[]).map(x => ({
+            cell: [x, -20] as [number, number],
+            target_map_id: "map_residential",
+            target_spawn_id: "spawn_from_south",
+            facing: [0, -1] as [number, number],
+          })),
+          // South edge → Glass-Touched Copse
+          ...([-3, -2, -1, 0, 1, 2, 3] as number[]).map(x => ({
+            cell: [x, 20] as [number, number],
+            target_map_id: "map_glass_touched_copse",
+            target_spawn_id: "spawn_from_north",
+            facing: [0, 1] as [number, number],
+          })),
+        ],
+      },
+      {
+        id: "map_glass_touched_copse",
+        display_name: "Glass-Touched Copse",
+        width: GLASS_COPSE_W,
+        height: GLASS_COPSE_H,
+        spawns: [
+          { id: "spawn_from_north", cell: [0, -19], facing: [0, 1] },
+          { id: "spawn_from_south", cell: [7, 19], facing: [0, -1] },
+        ],
+        cells: glassTouchedCopse.cells,
+        props: [],
+        custom_object_placements: glassTouchedCopse.custom_object_placements,
+        item_placements: glassTouchedCopse.item_placements,
+        container_placements: glassTouchedCopse.container_placements,
+        entity_placements: glassTouchedCopse.entity_placements,
+        triggers: glassTouchedCopse.triggers,
+        exits: [
+          // North edge → Old Processional Wood
+          ...([-3, -2, -1, 0, 1, 2, 3] as number[]).map(x => ({
+            cell: [x, -20] as [number, number],
+            target_map_id: "map_old_processional_wood",
+            target_spawn_id: "spawn_from_south",
+            facing: [0, -1] as [number, number],
+          })),
+          // South edge → Eastern Caves
+          ...([4, 5, 6, 7, 8, 9, 10] as number[]).map(x => ({
+            cell: [x, 20] as [number, number],
+            target_map_id: "map_cave_upper",
+            target_spawn_id: "spawn_from_north",
+            facing: [0, 1] as [number, number],
           })),
         ],
       },
@@ -880,9 +962,9 @@ export const createEmptyGamePackage = (): GamePackage => {
         width: CAVE_UPPER_W,
         height: CAVE_UPPER_H,
         spawns: [
-          { id: "spawn_from_north", cell: [0, -19], facing: [0, 1] },
-          { id: "spawn_from_south", cell: [0, 19], facing: [0, -1] },
-          { id: "spawn_from_east", cell: [19, 0], facing: [-1, 0] },
+          { id: "spawn_from_north", cell: [0, -39], facing: [0, 1] },
+          { id: "spawn_from_south", cell: [0, 39], facing: [0, -1] },
+          { id: "spawn_from_east", cell: [39, -12], facing: [-1, 0] },
         ],
         cells: caveUpper.cells,
         props: [],
@@ -892,23 +974,23 @@ export const createEmptyGamePackage = (): GamePackage => {
         entity_placements: caveUpper.entity_placements,
         triggers: caveUpper.triggers,
         exits: [
-          // North edge → Residential (surface return)
+          // North edge → Glass-Touched Copse (surface return)
           ...([-2, -1, 0, 1, 2] as number[]).map(x => ({
-            cell: [x, -20] as [number, number],
-            target_map_id: "map_residential",
+            cell: [x, -40] as [number, number],
+            target_map_id: "map_glass_touched_copse",
             target_spawn_id: "spawn_from_south",
             facing: [0, -1] as [number, number],
           })),
           // South edge → Cave Deep
           ...([-2, -1, 0, 1, 2] as number[]).map(x => ({
-            cell: [x, 20] as [number, number],
+            cell: [x, 40] as [number, number],
             target_map_id: "map_cave_deep",
             target_spawn_id: "spawn_from_north",
             facing: [0, 1] as [number, number],
           })),
           // East edge → Cave Grotto
-          ...([-2, -1, 0, 1, 2] as number[]).map(z => ({
-            cell: [20, z] as [number, number],
+          ...([-14, -13, -12, -11, -10] as number[]).map(z => ({
+            cell: [40, z] as [number, number],
             target_map_id: "map_cave_grotto",
             target_spawn_id: "spawn_from_west",
             facing: [1, 0] as [number, number],
@@ -921,7 +1003,7 @@ export const createEmptyGamePackage = (): GamePackage => {
         width: CAVE_DEEP_W,
         height: CAVE_DEEP_H,
         spawns: [
-          { id: "spawn_from_north", cell: [0, -19], facing: [0, 1] },
+          { id: "spawn_from_north", cell: [0, -39], facing: [0, 1] },
         ],
         cells: caveDeep.cells,
         props: [],
@@ -933,7 +1015,7 @@ export const createEmptyGamePackage = (): GamePackage => {
         exits: [
           // North edge → Cave Upper (return)
           ...([-2, -1, 0, 1, 2] as number[]).map(x => ({
-            cell: [x, -20] as [number, number],
+            cell: [x, -40] as [number, number],
             target_map_id: "map_cave_upper",
             target_spawn_id: "spawn_from_south",
             facing: [0, -1] as [number, number],
@@ -972,7 +1054,7 @@ export const createEmptyGamePackage = (): GamePackage => {
         width: LAZARE_W,
         height: LAZARE_H,
         spawns: [
-          { id: "spawn_from_south", cell: [0, 19], facing: [0, -1] },
+          { id: "spawn_from_west", cell: [-39, 10], facing: [1, 0] },
         ],
         cells: lazareHouse.cells,
         props: [],
@@ -982,12 +1064,12 @@ export const createEmptyGamePackage = (): GamePackage => {
         entity_placements: lazareHouse.entity_placements,
         triggers: lazareHouse.triggers,
         exits: [
-          // South edge → Residential (only exit)
-          ...([-2, -1, 0, 1, 2] as number[]).map(x => ({
-            cell: [x, 20] as [number, number],
+          // West edge → Residential (only exit)
+          ...([-2, -1, 0, 1, 2] as number[]).map(z => ({
+            cell: [-40, 10 + z] as [number, number],
             target_map_id: "map_residential",
-            target_spawn_id: "spawn_from_lazare",
-            facing: [0, 1] as [number, number],
+            target_spawn_id: "spawn_from_east",
+            facing: [-1, 0] as [number, number],
           })),
         ],
       },
@@ -1022,7 +1104,7 @@ export const createEmptyGamePackage = (): GamePackage => {
         width: GLASS_W,
         height: GLASS_H,
         spawns: [
-          { id: "spawn_from_west", cell: [-19, 0], facing: [1, 0] },
+          { id: "spawn_from_west", cell: [-39, 0], facing: [1, 0] },
         ],
         cells: glassworks.cells,
         props: [],
@@ -1034,7 +1116,7 @@ export const createEmptyGamePackage = (): GamePackage => {
         exits: [
           // West edge → Temple Cordon (only exit)
           ...([-3, -2, -1, 0, 1, 2, 3] as number[]).map(z => ({
-            cell: [-20, z] as [number, number],
+            cell: [-40, z] as [number, number],
             target_map_id: "map_temple_cordon",
             target_spawn_id: "spawn_from_east",
             facing: [-1, 0] as [number, number],
@@ -1047,7 +1129,7 @@ export const createEmptyGamePackage = (): GamePackage => {
         width: GROTTO_W,
         height: GROTTO_H,
         spawns: [
-          { id: "spawn_from_west", cell: [-19, 0], facing: [1, 0] },
+          { id: "spawn_from_west", cell: [-39, 0], facing: [1, 0] },
         ],
         cells: caveGrotto.cells,
         props: [],
@@ -1059,7 +1141,7 @@ export const createEmptyGamePackage = (): GamePackage => {
         exits: [
           // West edge → Cave Upper (only exit)
           ...([-2, -1, 0, 1, 2] as number[]).map(z => ({
-            cell: [-20, z] as [number, number],
+            cell: [-40, z] as [number, number],
             target_map_id: "map_cave_upper",
             target_spawn_id: "spawn_from_east",
             facing: [-1, 0] as [number, number],

@@ -1,6 +1,13 @@
 import { create } from "zustand";
 import { ContainerSaveState, MapDelta, PlaySave } from "../schema/save";
 import { persist } from "zustand/middleware";
+import {
+  applyLevelUpChoiceToSave,
+  getCombatXpPool,
+  grantExperienceToSave,
+  normalizeProgression,
+} from "../utils/leveling";
+import type { ExperienceGrantResult, LevelUpStat } from "../utils/leveling";
 
 interface PlayState {
   saveData: PlaySave | null;
@@ -24,9 +31,10 @@ interface PlayState {
   advanceTurn: () => void;
   // Leave combat; party members go back to follower mode (their combat cell
   // is dropped, downed members stand back up at 1 HP).
-  endCombat: (partyIds: string[]) => void;
+  endCombat: (partyIds: string[]) => ExperienceGrantResult | null;
   // Late arrivals join the back of the initiative order.
   extendCombatQueue: (ids: string[]) => void;
+  queueCombatExperience: (amount: number) => void;
   updatePlayer: (cell: [number, number], facing: [number, number]) => void;
   movePlayer: (
     cell: [number, number],
@@ -78,6 +86,8 @@ interface PlayState {
   // Class/progression: apply additive stat deltas (raising max_hp/max_mp
   // also raises the current value so growth never feels like a wound).
   modifyPlayerStats: (deltas: Record<string, number>) => void;
+  grantExperience: (amount: number) => ExperienceGrantResult | null;
+  chooseLevelUpStat: (stat: LevelUpStat) => boolean;
   learnSkill: (skillId: string) => void;
   markDocumentRead: (documentId: string) => void;
   // Save slots: returns false when there is no active run to save.
@@ -175,6 +185,9 @@ export const usePlayStore = create<PlayState>()(
             current_map_id,
             player: { cell, facing, sprite_id: "spr_hero" },
             playerStats,
+            level: 1,
+            experience: 0,
+            pending_level_ups: 0,
             known_skills: [],
             flags: {},
             quests: {},
@@ -190,6 +203,7 @@ export const usePlayStore = create<PlayState>()(
             in_combat: false,
             combat_queue: [],
             active_turn_id: "player",
+            combat_xp_pool: 0,
           },
           logMessages: [`Entered map: ${current_map_id}`],
           activeDialogueId: null,
@@ -397,6 +411,7 @@ export const usePlayStore = create<PlayState>()(
               in_combat: true,
               combat_queue: queue,
               active_turn_id: queue[0],
+              combat_xp_pool: 0,
             },
           };
         }),
@@ -424,12 +439,16 @@ export const usePlayStore = create<PlayState>()(
           }
           return { saveData: { ...save, active_turn_id: "player" } };
         }),
-      endCombat: (partyIds) =>
-        set((state) => {
-          const save = state.saveData;
-          if (!save) return state;
+      endCombat: (partyIds) => {
+        const state = get();
+        const save = state.saveData;
+        if (!save) return null;
+        let result: ExperienceGrantResult | null = null;
+        set((currentState) => {
+          const currentSave = currentState.saveData;
+          if (!currentSave) return currentState;
           // Party members shed their combat position and stand back up.
-          const entityStates = { ...(save.entity_states || {}) };
+          const entityStates = { ...(currentSave.entity_states || {}) };
           partyIds.forEach((id) => {
             const est = entityStates[id];
             if (!est) return;
@@ -440,16 +459,26 @@ export const usePlayStore = create<PlayState>()(
               hp: Math.max(1, est.hp ?? 1),
             };
           });
-          return {
-            saveData: {
-              ...save,
-              in_combat: false,
-              combat_queue: [],
-              active_turn_id: "player",
-              entity_states: entityStates,
-            },
+          const xpPool = getCombatXpPool(currentSave);
+          let nextSave: PlaySave = {
+            ...currentSave,
+            in_combat: false,
+            combat_queue: [],
+            active_turn_id: "player",
+            entity_states: entityStates,
+            combat_xp_pool: 0,
           };
-        }),
+          if (xpPool > 0) {
+            const granted = grantExperienceToSave(nextSave, xpPool);
+            nextSave = { ...granted.save, combat_xp_pool: 0 };
+            result = granted.result;
+          }
+          return {
+            saveData: nextSave,
+          };
+        });
+        return result;
+      },
       extendCombatQueue: (ids) =>
         set((state) => {
           const save = state.saveData;
@@ -459,6 +488,17 @@ export const usePlayStore = create<PlayState>()(
           if (newcomers.length === 0) return state;
           return {
             saveData: { ...save, combat_queue: [...queue, ...newcomers] },
+          };
+        }),
+      queueCombatExperience: (amount) =>
+        set((state) => {
+          if (!state.saveData || amount <= 0) return state;
+          return {
+            saveData: {
+              ...state.saveData,
+              combat_xp_pool:
+                getCombatXpPool(state.saveData) + Math.max(0, Math.floor(amount)),
+            },
           };
         }),
       loadMap: (mapId, cell, facing) =>
@@ -614,6 +654,21 @@ export const usePlayStore = create<PlayState>()(
             },
           };
         }),
+      grantExperience: (amount) => {
+        const save = get().saveData;
+        if (!save || amount <= 0) return null;
+        const granted = grantExperienceToSave(save, amount);
+        set({ saveData: granted.save });
+        return granted.result;
+      },
+      chooseLevelUpStat: (stat) => {
+        const save = get().saveData;
+        if (!save) return false;
+        const applied = applyLevelUpChoiceToSave(save, stat);
+        if (!applied.applied) return false;
+        set({ saveData: applied.save });
+        return true;
+      },
       learnSkill: (skillId) =>
         set((state) => {
           if (!state.saveData) return state;
@@ -653,7 +708,7 @@ export const usePlayStore = create<PlayState>()(
           return "That memory belongs to an older build of the world.";
         }
         set({
-          saveData: data.saveData,
+          saveData: normalizeProgression(data.saveData),
           activeDialogueId: null,
           activeDialogueNodeId: null,
           activeShopId: null,
@@ -665,6 +720,16 @@ export const usePlayStore = create<PlayState>()(
     }),
     {
       name: "crpg-run-save",
+      merge: (persisted, current) => {
+        const saved = persisted as Partial<PlayState> | undefined;
+        return {
+          ...current,
+          ...(saved || {}),
+          saveData: saved?.saveData
+            ? normalizeProgression(saved.saveData)
+            : (saved?.saveData ?? current.saveData),
+        };
+      },
     },
   ),
 );

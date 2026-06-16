@@ -29,8 +29,8 @@ const WATER = "obj_water";
 const WALL_MARBLE = "obj_wall_stone";
 const WALL_CLAY = "obj_wall_brick";
 
-const ROOF_PLANE_Y = 3;
-const ROOF_CONNECTOR_Y = 2;
+const ROOF_PLANE_Y = 2.1;
+const ROOF_CONNECTOR_Y = 2.1;
 const ROOF_TILE = "obj_roof_tile";
 const ROOF_N = "obj_p_roof_clay_n";
 const ROOF_S = "obj_p_roof_clay_s";
@@ -174,8 +174,8 @@ export const generateResidentialBlockCells = (): {
       if (edgeS && edgeW) return ROOF_SW;
       if (edgeN) return ROOF_N;
       if (edgeS) return ROOF_S;
-      if (edgeE) return ROOF_W;
-      if (edgeW) return ROOF_E;
+      if (edgeE) return ROOF_E;
+      if (edgeW) return ROOF_W;
       return ROOF_TILE;
     };
 
@@ -234,12 +234,23 @@ export const generateResidentialBlockCells = (): {
   // Visual connections to the rest of the town at map edges.
   paveRect(-4, MIN_Z, 4, MAX_Z, MARBLE); // North-South street
   paveRect(MIN_X, -4, MAX_X, 4, MARBLE); // East-West street
+
+  // East-edge estate lane — visual cue that the east road now leads to
+  // Lazare's estate (the temple cordon is reached via the town square).
+  place("obj_lantern_post", 17, -3, [1, 0]); // flanking lanterns at the east gate
+  place("obj_lantern_post", 17, 3, [1, 0]);
+  place("obj_notice_board", 18, -5, [-1, 0], { dialogue: "dia_notice_board" }); // "ESTATE" sign at the east gate
+  placeIfClear("obj_p_iron_fence", 15, -6, [0, 1]);
+  placeIfClear("obj_p_iron_fence", 16, -6, [0, 1]);
+  placeIfClear("obj_p_iron_fence", 15, 6, [0, 1]);
+  placeIfClear("obj_p_iron_fence", 16, 6, [0, 1]);
+  placeIfClear("obj_p_placard", 13, 5, [-1, 0], { block: false });
   
   // Plazaway details
   place("obj_well", 0, 0, [0, 1]);
   place("obj_lantern_post", -4, -4, [1, 1]);
   place("obj_lantern_post", 4, 4, [-1, -1]);
-  place("obj_notice_board", 2, 4, [0, -1]);
+  place("obj_notice_board", 2, 4, [0, -1], { dialogue: "dia_notice_board" });
 
   // ── Northwest House (Merchant) ───────────────────────────────────────────
   buildHouse(-18, -18, -8, -8, WALL_CLAY, WOOD, { x: -8, z: -13 });
@@ -249,13 +260,13 @@ export const generateResidentialBlockCells = (): {
   place("obj_table", -13, -13, [0, 1]);
   place("obj_pallet_bed", -16, -16, [0, 1]);
   placeContainer("cnt_merchant_stash", -16, -10, { name: "Merchant's Stash" });
-  place("obj_market_stall", -10, -16, [0, -1]);
-  place("obj_barrel", -10, -14, [0, -1]);
+  place("obj_p_crate", -10, -16, [0, -1]);
+  place("obj_p_candles", -10, -14, [0, -1]);
   place("obj_amphora", -12, -16, [0, -1]);
 
   // Merchant yard & street frontage
   paveRect(-18, -7, -8, -5, WOOD);
-  place("obj_pithos", -18, -6, [0, 1]);
+  place("obj_amphora", -18, -6, [0, 1]);
   place("obj_barrel", -16, -6, [0, 1]);
   place("obj_barrel", -15, -6, [0, 1]);
   placeMany("obj_flower_bush", [[-18, -19], [-16, -19], [-14, -19]], [0, 1]);
@@ -269,13 +280,13 @@ export const generateResidentialBlockCells = (): {
   place("obj_pallet_bed", 16, -16, [0, 1]);
   place("obj_chest", 16, -12, [0, 1]);
   place("obj_pew", 13, -14, [0, -1]);
-  place("obj_p_furnace", 10, -16, [0, -1]);
-  place("obj_p_smokestack", 12, -16, [0, 1]);
+  place("obj_p_desk", 10, -16, [0, -1]);
+  place("obj_p_shelf", 12, -16, [0, 1]);
   place("obj_column_broken", 10, -12, [0, 1]);
 
   // Mason work yard
   paveRect(8, -9, 18, -5, GROUND);
-  place("obj_p_railcart", 12, -7, [1, 0]);
+  place("obj_p_cart", 12, -7, [1, 0]);
   place("obj_column_broken", 14, -7, [0, 1]);
   place("obj_column", 10, -9, [0, 1]);
   place("obj_column", 16, -9, [0, 1]);
@@ -290,7 +301,7 @@ export const generateResidentialBlockCells = (): {
   place("obj_pallet_bed", -16, 16, [0, 1]);
   place("obj_pallet_bed", -16, 10, [0, 1]);
   place("obj_barrel", -10, 16, [0, 1]);
-  place("obj_p_shrine_stone", -10, 10, [0, -1]);
+  place("obj_p_shrine_stone", -10, 10, [0, -1], { dialogue: "dia_old_rite_shrine" });
   place("obj_statue_votary", -12, 10, [0, -1]);
   place("obj_lantern_post", -10, 12, [0, -1]);
 
@@ -304,23 +315,33 @@ export const generateResidentialBlockCells = (): {
 
   // ── Southeast Park / Grove ───────────────────────────────────────────────
   paveRect(8, 8, 18, 18, GROUND);
-  place("obj_fountain", 13, 13, [0, 1]);
-  place("obj_stele", 13, 16, [0, -1]);
+  place("obj_well", 13, 13, [0, 1]); // park fountain (well stand-in)
+  place("obj_notice_board", 13, 16, [0, -1], { dialogue: "dia_notice_board" }); // park stele / notice board
   place("obj_pew", 10, 13, [1, 0]);
   place("obj_pew", 16, 13, [-1, 0]);
+  placeIfClear("obj_p_shrine_stone", 13, 10, [0, 1], { dialogue: "dia_old_rite_shrine" });
+  placeIfClear("obj_p_candles", 13, 11, [0, 1], { block: false });
   
   placeMany("obj_pine_large", [[10, 10], [16, 10], [10, 16], [16, 16]], [0, 1]);
   placeMany("obj_flower_bush", [[9, 13], [17, 13], [13, 10]], [0, 1]);
   placeMany("obj_grass_tuft", [[8, 8], [12, 8], [18, 8], [18, 18], [8, 18]], [0, 1], { block: false });
 
   // ── The Cast ─────────────────────────────────────────────────────────────
+  // (ent_merchant lives at the town square; we don't duplicate him here.)
   const entity_placements: EntityPlacementData[] = [
-    // Merchant inside their house
-    { entity_id: "ent_merchant", cell: [-14, -13] },
     // Mason inside their house
-    { entity_id: "ent_mason", cell: [11, -14] },
+    { entity_id: "ent_mason", cell: [11, -14], schedule: [
+      { hour: 6, cell: [11, -14] },
+      { hour: 12, cell: [11, -7] },
+      { hour: 20, cell: [4, -4] },
+      { hour: 23, cell: [15, -13] },
+    ] },
     // Pilgrim inside near the shrine
-    { entity_id: "ent_pilgrim", cell: [-12, 13] },
+    { entity_id: "ent_pilgrim", cell: [-12, 13], schedule: [
+      { hour: 7, cell: [-12, 13] },
+      { hour: 16, cell: [-2, 4] },
+      { hour: 22, cell: [-11, 12] },
+    ] },
   ];
 
   return {

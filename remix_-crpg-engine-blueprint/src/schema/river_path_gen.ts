@@ -137,6 +137,13 @@ export const generateRiverPathCells = (): {
     }
   }
 
+  // Muddy bank between lawful road and older river.
+  for (let x = -7; x <= -4; x++) {
+    for (let z = MIN_Z; z <= MAX_Z; z++) {
+      setTile(x, z, "obj_p_mud");
+    }
+  }
+
   // ── Road: only east (from bridge to east edge exit) ─────────────────────
   // Road runs from x = -7 (bridge landing) to x = 20 (east edge exit)
   paveRect(-7, -3, MAX_X, 3);
@@ -153,6 +160,7 @@ export const generateRiverPathCells = (): {
   paveRect(-16, -1, -13, 1, WOOD);
   place("obj_barrel", -16, -1, [0, 1]);
   place("obj_barrel", -16, 1, [0, 1]);
+  place("obj_p_dock", -15, 0, [1, 0], { block: false, dialogue: "dia_ferryman" });
 
   // ── East bank embellishments ────────────────────────────────────────────
   // Willows and reeds along the riverbank
@@ -162,12 +170,18 @@ export const generateRiverPathCells = (): {
   placeIfClear("obj_cypress", -5, 16, [0, 1]);
   placeIfClear("obj_flower_bush", -7, -6, [0, 1]);
   placeIfClear("obj_flower_bush", -7, 6, [0, 1]);
+  for (const z of [-14, -10, -6, 6, 10, 14]) {
+    placeIfClear("obj_p_reeds", -8, z, [0, 1], { block: false });
+    placeIfClear("obj_p_votive_token", -6, z + 1, [0, 1], { block: false });
+  }
 
   // Small clearing (south of road) with a resting spot
   paveRect(4, 8, 12, 14, GROUND);
   placeIfClear("obj_pew", 6, 10, [0, -1]);
   placeIfClear("obj_pew", 10, 10, [0, -1]);
   placeIfClear("obj_lantern_post", 4, 8, [1, 1]);
+  placeIfClear("obj_p_shrine_stone", 12, 12, [0, -1], { dialogue: "dia_old_rite_shrine" });
+  placeIfClear("obj_p_candles", 12, 10, [0, -1], { block: false });
 
   // North meadow dressing
   placeIfClear("obj_grass_tuft", 6, -8, [0, 1]);
@@ -186,7 +200,12 @@ export const generateRiverPathCells = (): {
 
   // ── Entity Placements ───────────────────────────────────────────────────
   const entity_placements: EntityPlacementData[] = [
-    { entity_id: "ent_ferryman", cell: [-14, 0] }, // on the dock
+    { entity_id: "ent_ferryman", cell: [-14, 0], schedule: [
+      { hour: 5, cell: [-14, 0] },
+      { hour: 12, cell: [-15, 0] },
+      { hour: 18, cell: [-8, 0] },
+      { hour: 23, cell: [-14, 0] },
+    ] }, // on the dock
     { entity_id: "ent_save", cell: [2, 0] }, // save candle near bridge
   ];
 
@@ -196,7 +215,7 @@ export const generateRiverPathCells = (): {
       id: "trg_river_music",
       type: "on_load",
       conditions: [],
-      cutscene_id: "cut_town_music",
+      cutscene_id: "cut_river_music",
       once: false,
     },
   ];

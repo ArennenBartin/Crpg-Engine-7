@@ -43,6 +43,9 @@ const spriteTextureCache = new Map<
 
 const ILLUSTRATED_CHARACTER_HEIGHT = 1.9;
 const DEFAULT_CHARACTER_HEIGHT = 1;
+const SPRITE_WORLD_HEIGHT_OVERRIDES: Record<string, number> = {
+  spr_bound_remnant: 2.75,
+};
 
 const isIllustrationSpriteDef = (sprite: any) =>
   !!sprite?.data_url &&
@@ -55,9 +58,11 @@ const getCharacterSpriteRenderSize = (sprite: any) => {
   }
 
   const maxDim = Math.max(sprite.width, sprite.height);
-  const worldHeight = isIllustrationSpriteDef(sprite)
-    ? ILLUSTRATED_CHARACTER_HEIGHT
-    : DEFAULT_CHARACTER_HEIGHT;
+  const worldHeight =
+    SPRITE_WORLD_HEIGHT_OVERRIDES[sprite.id] ??
+    (isIllustrationSpriteDef(sprite)
+      ? ILLUSTRATED_CHARACTER_HEIGHT
+      : DEFAULT_CHARACTER_HEIGHT);
 
   return {
     renderWidth: (sprite.width / maxDim) * worldHeight,

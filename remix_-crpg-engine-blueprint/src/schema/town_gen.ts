@@ -42,8 +42,8 @@ const WATER = "obj_water";
 const WALL_MARBLE = "obj_wall_stone";
 const WALL_CLAY = "obj_wall_brick";
 
-const ROOF_PLANE_Y = 3;
-const ROOF_CONNECTOR_Y = 2;
+const ROOF_PLANE_Y = 2.1;
+const ROOF_CONNECTOR_Y = 2.1;
 const ROOF_TILE = "obj_roof_tile";
 const ROOF_N = "obj_p_roof_clay_n";
 const ROOF_S = "obj_p_roof_clay_s";
@@ -202,16 +202,14 @@ export const generateTownCells = (): {
       const edgeW = !hasRoof(x - 1, z);
       const edgeE = !hasRoof(x + 1, z);
 
-      // The straight E/W slope meshes are named opposite their visual eave
-      // direction; the hip corner meshes are already named by visual corner.
       if (edgeN && edgeW) return ROOF_NW;
       if (edgeN && edgeE) return ROOF_NE;
       if (edgeS && edgeE) return ROOF_SE;
       if (edgeS && edgeW) return ROOF_SW;
       if (edgeN) return ROOF_N;
       if (edgeS) return ROOF_S;
-      if (edgeE) return ROOF_W;
-      if (edgeW) return ROOF_E;
+      if (edgeE) return ROOF_E;
+      if (edgeW) return ROOF_W;
       return ROOF_TILE;
     };
 

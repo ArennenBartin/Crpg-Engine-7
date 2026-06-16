@@ -6,32 +6,21 @@ import {
   TriggerData,
   WorldItemPlacementData,
 } from "./game";
+import { addHippedRoof } from "../utils/cellRoofHelper";
 
-// ── Glassworks Map ──────────────────────────────────────────────────────
+// ── Glassworks Map (Expanded) ───────────────────────────────────────────
 // An abandoned glassworks/workshop east of the Temple Cordon. Furnaces,
 // molten glass vats, shattered windows, and old workbenches. Rumored to
 // be where the Grid's physical manifestations were first observed.
 //
 // Dead-end map: only exit is west (→ temple cordon).
-// No paths drawn to north, south, or east edges.
-//
-//   ┌────────────────────────────────────┐
-//   │                                    │
-//   │  [Furnace Hall]  [Storage]         │
-//   │       │               │            │
-//   │  ─── [Central Workshop] ───        │
-//   │       │                            │
-//   │  [Display Room]  [Office]          │
-//   │       │                            │
-//   │  ← exit west (to temple cordon)    │
-//   └────────────────────────────────────┘
 
 type Vec2 = [number, number];
 
-const MIN_X = -20;
-const MAX_X = 20;
-const MIN_Z = -20;
-const MAX_Z = 20;
+const MIN_X = -40;
+const MAX_X = 40;
+const MIN_Z = -40;
+const MAX_Z = 40;
 
 export const GLASS_W = MAX_X - MIN_X + 1;
 export const GLASS_H = MAX_Z - MIN_Z + 1;
@@ -159,65 +148,100 @@ export const generateGlassworksCells = (): {
   }
 
   // ── Road: only west (from west edge exit to workshop entrance) ──────────
-  // Path runs from west edge (x=-20) to workshop courtyard. No paths to
-  // north, south, or east edges.
-  paveRect(MIN_X, -3, 0, 3); // west road to workshop
+  paveRect(MIN_X, -3, -12, 3, MARBLE);
 
-  // ── Central Workshop Courtyard (x = -4 to 12, z = -6 to 6) ─────────────
-  paveRect(-4, -6, 12, 6);
+  // ── Central Cooling Yard (x = -24 to 24, z = -16 to 12) ─────────────────
+  paveRect(-24, -16, 24, 12, GROUND);
+  place("obj_well", 0, 0, [0, 1]);
+  place("obj_c_glass_dome", 0, -8, [0, 1], { block: false });
+  placeIfClear("obj_lantern_post", -12, -12, [0, 1]);
+  placeIfClear("obj_lantern_post", 12, -12, [0, 1]);
+  placeIfClear("obj_lantern_post", -12, 8, [0, 1]);
+  placeIfClear("obj_lantern_post", 12, 8, [0, 1]);
 
-  // ── Furnace Hall (north, x = -4 to 12, z = -18 to -8) ──────────────────
-  buildHall(-4, -18, 12, -8, WALL_CLAY, MARBLE, { x: 4, z: -8 });
-  // Furnaces
-  place("obj_p_furnace", -2, -14, [0, 1]);
-  place("obj_p_furnace", 2, -14, [0, 1]);
-  place("obj_p_furnace", 6, -14, [0, 1]);
-  place("obj_p_smokestack", -2, -16, [0, 1]);
-  place("obj_p_smokestack", 2, -16, [0, 1]);
-  place("obj_p_smokestack", 6, -16, [0, 1]);
-  // Workbench
-  place("obj_table", 10, -12, [0, 1]);
-  placeItem("wi_glass_shard_1", "itm_glass_shard", 10, -14);
-  placeIfClear("obj_barrel", 10, -16, [0, 1]);
+  // Industrial litter
+  placeIfClear("obj_p_railcart", 4, 2, [1, 0]);
+  placeIfClear("obj_p_railcart", 6, 2, [1, 0]);
+  placeIfClear("obj_p_railcart", -12, -4, [1, 0]);
+  placeIfClear("obj_amphora", -16, 8, [0, 1]);
+  placeIfClear("obj_amphora", -15, 8, [0, 1]);
+  placeIfClear("obj_barrel", -16, 6, [0, 1]);
+  placeIfClear("obj_column_broken", 0, -8, [0, 1]);
+  placeIfClear("obj_column_broken", -2, -9, [0, 1]);
 
-  // ── Storage Room (east of furnace hall, x = 14 to 18, z = -16 to -10) ──
-  buildHall(14, -16, 18, -10, WALL_MARBLE, WOOD, { x: 14, z: -13 });
-  placeContainer("cnt_glass_storage", 16, -14, {
-    name: "Glass Ingots",
-    items: [{ item_id: "itm_glass_shard", count: 3 }],
+  // ── Furnace Hall (North, x = -24 to 24, z = -38 to -16) ────────────────
+  buildHall(-24, -38, 24, -16, WALL_CLAY, MARBLE, { x: 0, z: -16 });
+  addHippedRoof(cells, -24, -38, 24, -16, "slate");
+
+  // Massive line of furnaces
+  for (let x = -20; x <= 20; x += 4) {
+    place("obj_p_furnace", x, -34, [0, 1]);
+    place("obj_p_smokestack", x, -36, [0, 1]);
+    place("obj_table", x, -30, [0, 1]);
+    placeIfClear("obj_p_pipes", x, -32, [0, 1], { block: false });
+    placeIfClear("obj_barrel", x - 1, -30, [0, 1]);
+  }
+  placeItem("wi_glass_shard_1", "itm_glass_shard", 4, -28);
+  placeItem("wi_glass_shard_2", "itm_glass_shard", -16, -28);
+  place("obj_net_arch_sigil", 22, -20, [-1, 0], { dialogue: "dia_gate_blocked_shrine" });
+  placeIfClear("obj_net_glass_growth", 20, -28, [0, 1], { block: false });
+  placeIfClear("obj_p_placard", 18, -18, [0, 1], { block: false, dialogue: "dia_gate_blocked_shrine" });
+
+  // ── Storage Wing (East, x = 24 to 38, z = -16 to 36) ───────────────────
+  buildHall(24, -16, 38, 36, WALL_MARBLE, WOOD, { x: 24, z: 0 });
+  addHippedRoof(cells, 24, -16, 38, 36, "clay");
+
+  // Storage aisles — deterministic (no Math.random in gens).
+  const storeRng = (() => { let s = 0x5701; return () => { s = (s * 1664525 + 1013904223) & 0x7fffffff; return s / 0x7fffffff; }; })();
+  for (let x = 28; x <= 34; x += 4) {
+    for (let z = -12; z <= 32; z += 4) {
+      if (storeRng() > 0.3) {
+        place("obj_chest", x, z, [0, 1]);
+      } else {
+        place("obj_amphora", x, z, [0, 1]);
+      }
+    }
+  }
+  placeContainer("cnt_glass_storage", 36, 0, {
+    name: "Massive Ingot Crate",
+    items: [{ item_id: "itm_glass_shard", count: 5 }],
   });
-  placeIfClear("obj_barrel", 16, -12, [0, 1]);
 
-  // ── Display Room (south, x = -4 to 6, z = 8 to 16) ─────────────────────
-  buildHall(-4, 8, 6, 16, WALL_MARBLE, MARBLE, { x: 1, z: 8 });
+  // ── Admin/Display Wing (South/West, x = -24 to 12, z = 12 to 38) ────────────
+  buildHall(-24, 12, 12, 38, WALL_MARBLE, MARBLE, { x: 0, z: 12 });
+  addHippedRoof(cells, -24, 12, 12, 38, "clay");
+
   // Display pedestals
-  place("obj_column", -2, 12, [0, 1]);
-  place("obj_column", 4, 12, [0, 1]);
-  placeIfClear("obj_stele", 1, 14, [0, -1]);
-  placeItem("wi_glass_display", "itm_glass_shard", -2, 14);
+  place("obj_column", -16, 24, [0, 1]);
+  place("obj_column", -8, 24, [0, 1]);
+  place("obj_column", 0, 24, [0, 1]);
+  place("obj_column", 8, 24, [0, 1]);
+  placeIfClear("obj_notice_board", -4, 28, [0, -1]); // display stele → notice board
+  placeItem("wi_glass_display", "itm_glass_shard", -16, 22);
+  placeItem("wi_glass_display_2", "itm_glass_shard", 8, 22);
 
-  // ── Office (southeast, x = 8 to 16, z = 8 to 14) ──────────────────────
-  buildHall(8, 8, 16, 14, WALL_CLAY, WOOD, { x: 8, z: 11 });
-  place("obj_table", 12, 10, [0, 1]);
-  place("obj_pew", 10, 12, [0, 1]);
-  placeContainer("cnt_glass_office", 14, 12, {
+  // Office space
+  place("obj_table", -20, 34, [0, 1]);
+  place("obj_table", -16, 34, [0, 1]);
+  place("obj_pew", -20, 36, [0, 1]);
+  placeContainer("cnt_glass_office", -12, 34, {
     name: "Foreman's Ledger",
     items: [{ item_id: "itm_votive" }],
   });
 
-  // ── Courtyard details ───────────────────────────────────────────────────
-  place("obj_well", 4, 0, [0, 1]);
-  placeIfClear("obj_lantern_post", -4, -6, [0, 1]);
-  placeIfClear("obj_lantern_post", 12, -6, [0, 1]);
-  placeIfClear("obj_lantern_post", -4, 6, [0, 1]);
-  placeIfClear("obj_p_railcart", 8, 2, [1, 0]);
-  placeIfClear("obj_column_broken", 0, -6, [0, 1]);
-
   // ── Entity Placements ───────────────────────────────────────────────────
+  // Enemy ids are unique across maps so state (death, hidden) isn't shared.
   const entity_placements: EntityPlacementData[] = [
-    { entity_id: "ent_save", cell: [-2, 0] }, // save candle in courtyard
-    { entity_id: "ent_candle_eaten_1", cell: [6, -12] }, // enemy in furnace hall
-    { entity_id: "ent_rite_remnant_1", cell: [1, 13] }, // enemy in display room
+    { entity_id: "ent_save", cell: [-4, 0] }, // save candle in courtyard
+    { entity_id: "ent_glass_apprentice", cell: [-8, 22], schedule: [
+      { hour: 7, cell: [-8, 22] },
+      { hour: 14, cell: [0, 14] },
+      { hour: 20, cell: [-18, 32] },
+      { hour: 23, cell: [-8, 22] },
+    ] }, // Orin in the admin wing
+    { entity_id: "ent_candle_eaten_4", cell: [0, -20] }, // was _1
+    { entity_id: "ent_rite_remnant_3", cell: [0, 28] }, // was _1
+    { entity_id: "ent_partial_conversion_3", cell: [20, 0] }, // was _1
   ];
 
   // ── Triggers ────────────────────────────────────────────────────────────
@@ -228,6 +252,35 @@ export const generateGlassworksCells = (): {
       conditions: [],
       cutscene_id: "cut_network_upper_enter",
       once: false,
+    },
+    {
+      id: "trg_orin_private_confrontation",
+      cell: [-8, 20],
+      type: "step",
+      conditions: [],
+      condition: {
+        all: [
+          { switch: "found_log_1" },
+          { not: { switch: "orin_private_questioned" } },
+          { not: { switch: "vampire_cleared" } },
+        ],
+      },
+      cutscene_id: "cut_orin_private_confrontation",
+      once: true,
+    },
+    {
+      id: "trg_orin_after_verdict",
+      cell: [-8, 20],
+      type: "step",
+      conditions: [],
+      condition: {
+        all: [
+          { switch: "vampire_cleared" },
+          { not: { switch: "orin_after_verdict_seen" } },
+        ],
+      },
+      cutscene_id: "cut_orin_after_verdict",
+      once: true,
     },
   ];
 

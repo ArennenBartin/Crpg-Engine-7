@@ -6,32 +6,21 @@ import {
   TriggerData,
   WorldItemPlacementData,
 } from "./game";
+import { addHippedRoof } from "../utils/cellRoofHelper";
 
 // ── Lazare's House (Interior/Estate) ────────────────────────────────────
 // A standalone map representing Lazare the vampire's shuttered estate.
-// The grounds are overgrown, the house interior is dark and cluttered
-// with personal effects that hint at his true nature.
+// The grounds are heavily overgrown, functioning like a hedge maze.
+// The house interior is sprawling and cluttered with personal effects.
 //
 // Dead-end map: only exit is south (→ residential, back to the street).
-// No paths drawn to north, east, or west edges.
-//
-//   ┌────────────────────────────────────┐
-//   │  [Overgrown Garden — north]        │
-//   │       │                            │
-//   │  [House Interior]                  │
-//   │  (bedroom, study, cellar hatch)    │
-//   │       │                            │
-//   │  [Front Yard / Gate]               │
-//   │       │                            │
-//   │    exit south → residential        │
-//   └────────────────────────────────────┘
 
 type Vec2 = [number, number];
 
-const MIN_X = -20;
-const MAX_X = 20;
-const MIN_Z = -20;
-const MAX_Z = 20;
+const MIN_X = -40;
+const MAX_X = 40;
+const MIN_Z = -40;
+const MAX_Z = 40;
 
 export const LAZARE_W = MAX_X - MIN_X + 1;
 export const LAZARE_H = MAX_Z - MIN_Z + 1;
@@ -124,13 +113,18 @@ export const generateLazareHouseCells = (): {
     if (c) { c.walkable = false; c.blocks_los = false; }
   };
 
-  const buildHouse = (
+  const placeItem = (id: string, itemId: string, x: number, z: number, count = 1) => {
+    item_placements.push({ id, item_id: itemId, cell: [x, z], count });
+    reserve(x, z);
+  };
+
+  const buildRoom = (
     x0: number, z0: number, x1: number, z1: number,
-    wall: string, floor: string, door: { x: number; z: number },
+    wall: string, floor: string, doors: { x: number; z: number }[],
   ) => {
     for (let x = x0; x <= x1; x++) {
       for (let z = z0; z <= z1; z++) {
-        const isDoor = x === door.x && z === door.z;
+        const isDoor = doors.some(d => d.x === x && d.z === z);
         const isPerimeter = x === x0 || x === x1 || z === z0 || z === z1;
         if (isDoor) { pave(x, z, floor); reserve(x, z); }
         else if (isPerimeter) { wallCell(x, z, wall); }
@@ -139,7 +133,7 @@ export const generateLazareHouseCells = (): {
     }
   };
 
-  // ── Base terrain (grass) ────────────────────────────────────────────────
+  // ── Base terrain ────────────────────────────────────────────────────────
   for (let x = MIN_X; x <= MAX_X; x++) {
     for (let z = MIN_Z; z <= MAX_Z; z++) {
       const cell: CellData = {
@@ -153,88 +147,127 @@ export const generateLazareHouseCells = (): {
     }
   }
 
-  // ── Path: south exit to front door only ─────────────────────────────────
-  // Short path from south edge (exit) to the house entrance — no path to
-  // north/east/west edges since those have no exits.
-  paveRect(-2, 8, 2, MAX_Z); // path from house door to south edge
+  // ── West Entrance Road & Outer Walls ────────────────────────────────────
+  // Path from the West edge into the overgrown courtyard
+  paveRect(MIN_X, 8, -4, 12, GROUND);
 
-  // ── Front Yard (south section, z = 10 to 18) ───────────────────────────
-  // Estate fence along the perimeter (not reaching any exit-less edge)
-  for (let x = -10; x <= 10; x++) {
-    place("obj_fence_stone", x, 8, [0, -1]);
+  // Solid South Wall
+  for (let x = -20; x <= 20; x++) {
+    wallCell(x, 30, WALL_MARBLE);
   }
-  // Gate opening in fence
-  const fenceGate = get(0, 8);
-  if (fenceGate) { fenceGate.walkable = true; }
-  // Remove the fence at gate position — re-mark as clear
-  place("obj_lantern_post", -2, 8, [0, 1]);
-  place("obj_lantern_post", 2, 8, [0, 1]);
 
-  // ── Main House (center, z = -8 to 6) ───────────────────────────────────
-  buildHouse(-8, -8, 8, 6, WALL_CLAY, WOOD, { x: 0, z: 6 });
+  // ── Sprawling Overgrown Garden (x = -36 to 36, z = 0 to 28) ─────────────
+  // A dense thicket of dead trees and large pines to obscure the house.
+  // Deterministic RNG so the garden lays out the same way each load.
+  const gardenRng = (() => { let s = 0x6aa1; return () => { s = (s * 1664525 + 1013904223) & 0x7fffffff; return s / 0x7fffffff; }; })();
+  for (let x = -36; x <= 36; x += 4) {
+    for (let z = 0; z <= 28; z += 4) {
+      const protectedCourtyard = Math.abs(x) <= 6 && z >= 4 && z <= 16;
+      if (!protectedCourtyard && gardenRng() > 0.4 && (x < -6 || x > 6 || z < 10)) {
+        const treeType = gardenRng() > 0.5 ? "obj_dead_tree" : "obj_pine_large";
+        placeIfClear(treeType, x + Math.floor(gardenRng() * 2), z + Math.floor(gardenRng() * 2), [0, 1]);
+      }
+    }
+  }
 
-  // Interior: Study (north half)
-  paveRect(-7, -7, 7, -2, WOOD);
-  place("obj_table", -4, -5, [0, 1]); // writing desk
-  place("obj_podium", -2, -7, [0, 1]); // book stand
-  placeIfClear("obj_pew", 0, -5, [0, -1]);
-  place("obj_lantern_post", 6, -7, [0, 1]);
+  // Winding path from the West entrance to the fountain
+  for (let x = -36; x <= -4; x += 2) {
+    paveRect(x, 8, x + 1, 12, GROUND);
+    placeIfClear("obj_flower_bush", x, 7, [0, 1]);
+    placeIfClear("obj_flower_bush", x, 13, [0, 1]);
+  }
 
-  // Interior: Bedroom (south half)
-  place("obj_pallet_bed", 4, 2, [0, 1]);
-  place("obj_pallet_bed", 4, 4, [0, 1]);
-  place("obj_amphora", -6, 4, [0, 1]);
-  place("obj_barrel", -6, 2, [0, 1]);
+  // Fountain in garden (well stand-in)
+  place("obj_well", 0, 10, [0, 1]);
+  placeIfClear("obj_pew", -4, 10, [1, 0]);
+  placeIfClear("obj_pew", 4, 10, [-1, 0]);
+  placeIfClear("obj_p_iron_fence", -6, 14, [0, 1]);
+  placeIfClear("obj_p_iron_fence", -2, 14, [0, 1]);
+  placeIfClear("obj_p_iron_fence", 2, 14, [0, 1]);
+  placeIfClear("obj_p_iron_fence", 6, 14, [0, 1]);
+  placeIfClear("obj_p_candles", 0, 14, [0, 1], { block: false });
 
-  // Cellar hatch hint (a suspicious trapdoor)
-  place("obj_p_shrine_stone", -4, 0, [0, 1], { dialogue: "dia_lazare_cellar" });
+  // ── Mansion Structure ───────────────────────────────────────────────────
+  // Foyer & Main Hall (x = -12 to 12, z = -16 to -2)
+  buildRoom(-12, -16, 12, -2, WALL_MARBLE, MARBLE, [{ x: 0, z: -2 }, { x: -12, z: -8 }, { x: 12, z: -8 }, { x: 0, z: -16 }]);
+  addHippedRoof(cells, -12, -16, 12, -2, "slate");
+  place("obj_column", -6, -6, [0, 1]);
+  place("obj_column", 6, -6, [0, 1]);
+  place("obj_column", -6, -12, [0, 1]);
+  place("obj_column", 6, -12, [0, 1]);
+  place("obj_statue_votary", -2, -8, [0, -1]); // foyer votary statue
+  place("obj_statue_votary", 2, -8, [0, -1]);
 
-  // Lazare's personal effects
-  placeContainer("cnt_lazare_study", -6, -5, {
-    name: "Lazare's Desk Drawer",
+  // Dining Hall Wing (West, x = -36 to -12, z = -28 to -4)
+  buildRoom(-36, -28, -12, -4, WALL_MARBLE, WOOD, [{ x: -12, z: -8 }]);
+  addHippedRoof(cells, -36, -28, -12, -4, "slate");
+  // Massive long dining table
+  for (let x = -32; x <= -16; x += 2) {
+    place("obj_table", x, -16, [0, 1]);
+  }
+  // Pews along both sides
+  for (let x = -32; x <= -16; x += 4) {
+    place("obj_pew", x, -18, [0, -1]);
+    place("obj_pew", x, -14, [0, 1]);
+  }
+  placeItem("wi_lazare_votive_1", "itm_votive", -24, -15);
+  placeItem("wi_lazare_votive_2", "itm_votive", -20, -17);
+  place("obj_lantern_post", -34, -26, [0, 1]);
+  place("obj_lantern_post", -34, -6, [0, 1]);
+  place("obj_lantern_post", -14, -26, [0, 1]);
+
+  // Library Wing (East, x = 12 to 36, z = -28 to -4)
+  buildRoom(12, -28, 36, -4, WALL_MARBLE, WOOD, [{ x: 12, z: -8 }]);
+  addHippedRoof(cells, 12, -28, 36, -4, "slate");
+  for (let x = 16; x <= 32; x += 4) {
+    place("obj_table", x, -22, [0, 1]);
+    place("obj_table", x, -10, [0, 1]);
+    place("obj_chest", x, -16, [0, 1]);
+    place("obj_pew", x, -20, [0, 1]);
+    place("obj_pew", x, -12, [0, -1]);
+  }
+  placeItem("wi_lazare_diary", "itm_votive", 34, -16); // placeholder until doc_lazare_diary exists
+  place("obj_statue_votary", 34, -26, [0, -1]);
+  place("obj_statue_votary", 34, -6, [0, 1]);
+
+  // Lazare's Sanctum (North, x = -12 to 12, z = -38 to -16)
+  buildRoom(-12, -38, 12, -16, WALL_CLAY, MARBLE, [{ x: 0, z: -16 }]);
+  addHippedRoof(cells, -12, -38, 12, -16, "slate");
+  place("obj_pallet_bed", 0, -32, [0, 1]); // sanctum couches (kline → pallet_bed)
+  place("obj_pallet_bed", -4, -32, [0, 1]);
+  place("obj_pallet_bed", 4, -32, [0, 1]);
+  place("obj_altar", -6, -34, [0, 1]);
+  place("obj_altar", 6, -34, [0, 1]);
+  place("obj_lantern_post", -8, -20, [0, 1]);
+  place("obj_lantern_post", 8, -20, [0, 1]);
+  placeContainer("cnt_lazare_stash", 0, -36, {
+    name: "Lazare's Locked Chest",
     locked: true,
-    key: "itm_lazare_key",
-    items: [{ item_id: "itm_carried_stone" }, { item_id: "itm_glass_shard" }],
+    key: "itm_iron_key",
+    items: [{ item_id: "itm_votive", count: 10 }],
   });
-
-  placeContainer("cnt_lazare_wardrobe", 6, -3, {
-    name: "Old Wardrobe",
-    items: [{ item_id: "itm_votive", count: 3 }],
-  });
-
-  // ── Overgrown Garden (north, z = -20 to -10) ───────────────────────────
-  // No path to north edge (dead end). Wild trees and bushes.
-  placeIfClear("obj_pine_large", -12, -16, [0, 1]);
-  placeIfClear("obj_pine_large", 12, -16, [0, 1]);
-  placeIfClear("obj_cypress", -8, -14, [0, 1]);
-  placeIfClear("obj_cypress", 8, -14, [0, 1]);
-  placeIfClear("obj_flower_bush", -4, -12, [0, 1]);
-  placeIfClear("obj_flower_bush", 4, -12, [0, 1]);
-  placeIfClear("obj_flower_bush", 0, -16, [0, 1]);
-  placeIfClear("obj_grass_tuft", -10, -18, [0, 1]);
-  placeIfClear("obj_grass_tuft", 10, -18, [0, 1]);
-  placeIfClear("obj_column_broken", 0, -14, [0, 1]); // ruined garden ornament
-
-  // Side yards (east/west between house and map edge — no paths)
-  placeIfClear("obj_pine", -14, 0, [0, 1]);
-  placeIfClear("obj_pine", 14, 0, [0, 1]);
-  placeIfClear("obj_barrel", 12, 4, [0, 1]);
-  placeIfClear("obj_pithos", -12, 4, [0, 1]);
 
   // ── Entity Placements ───────────────────────────────────────────────────
   const entity_placements: EntityPlacementData[] = [
-    { entity_id: "ent_lazare_vampire", cell: [-2, -4] }, // in his study
-    { entity_id: "ent_save", cell: [0, 12] }, // save candle in front yard
+    { entity_id: "ent_save", cell: [0, 8] }, // save candle near fountain
+    { entity_id: "ent_lazare_vampire", cell: [0, -30] }, // Lazare in his sanctum
   ];
 
   // ── Triggers ────────────────────────────────────────────────────────────
   const triggers: TriggerData[] = [
     {
-      id: "trg_lazare_house_music",
-      type: "on_load",
+      id: "trg_lazare_after_verdict",
+      cell: [0, -28],
+      type: "step",
       conditions: [],
-      cutscene_id: "cut_town_music",
-      once: false,
+      condition: {
+        all: [
+          { switch: "vampire_cleared" },
+          { not: { switch: "lazare_after_verdict_seen" } },
+        ],
+      },
+      cutscene_id: "cut_lazare_after_verdict",
+      once: true,
     },
   ];
 

@@ -10,6 +10,7 @@ const statFields: { key: keyof EntityData; label: string; fallback: number }[] =
   { key: "attack", label: "Attack", fallback: 2 },
   { key: "defense", label: "Defense", fallback: 1 },
   { key: "speed", label: "Speed", fallback: 10 },
+  { key: "xp_reward", label: "XP", fallback: 0 },
 ];
 
 export function EntityEditor() {
@@ -216,7 +217,7 @@ export function EntityEditor() {
                   Used by hostiles and by party members when a cutscene adds this entity to the party.
                 </p>
               </div>
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+              <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
                 {statFields.map((field) => (
                   <Field key={String(field.key)} label={field.label}>
                     <input
@@ -296,6 +297,7 @@ export function EntityEditor() {
                 attack: { type: "NUMBER" },
                 defense: { type: "NUMBER" },
                 speed: { type: "NUMBER" },
+                xp_reward: { type: "NUMBER" },
                 skills: { type: "ARRAY", items: { type: "STRING" } },
               },
               required: ["id", "display_name", "is_npc"],

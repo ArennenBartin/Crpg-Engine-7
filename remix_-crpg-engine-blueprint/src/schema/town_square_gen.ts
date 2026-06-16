@@ -6,12 +6,15 @@ import {
   TriggerData,
   WorldItemPlacementData,
 } from "./game";
+import { addHippedRoof } from "../utils/cellRoofHelper";
 
 // ── Town Square Map ───────────────────────────────────────────────────────
 // The civic heart of Alderamontico. The ceremony starts here. Aldric's
-// scriptorium is the northeast building. Market stalls line the south side.
-// The Mouthstone gate blocks the north edge. Roads exit south (→ residential),
-// east (→ temple/cordon).
+// scriptorium is the northeast building. Market stalls line the south side,
+// with the Counted Cup on the southwest corner. The north road climbs toward
+// the Mouthstone Field, but the true Mouthstone setpiece lives only there.
+// Roads exit south (→ residential), east (→ temple/cordon), north
+// (→ Mouthstone Field).
 //
 //   ┌────────────────────────────────────┐
 //   │  [Mouthstone Gate — locked north]  │
@@ -166,18 +169,21 @@ export const generateTownSquareCells = (): {
   paveRect(-12, -3, MAX_X, 3); // East-West road (only to east edge)
   paveRect(-12, -12, 12, 12); // central plaza floor
 
-  // ── Mouthstone Gate (north edge, z = -18 to -16) ──────────────────────
-  place("obj_mouthstone_gate", 0, -18, [0, 1]);
+  // ── Old Exile Road Gate (north edge) ──────────────────────────────────
+  // The actual Mouthstone appears only in map_mouthstone_field. This gate
+  // visually announces the road without duplicating the hero setpiece.
+  place("obj_p_lych_gate", 0, -18, [0, 1]);
   for (let x = -5; x <= -2; x++) place("obj_fence_stone", x, -18, [0, 1]);
   for (let x = 2; x <= 5; x++) place("obj_fence_stone", x, -18, [0, 1]);
   place("obj_lantern_post", -4, -16, [0, 1]);
   place("obj_lantern_post", 4, -16, [0, 1]);
   place("obj_statue_votary", -6, -19, [0, 1]);
   place("obj_statue_votary", 6, -19, [0, 1]);
+  place("obj_p_placard", 0, -15, [0, 1], { block: false, dialogue: "dia_gate_blocked_mouthstone" });
 
   // ── Plaza features ─────────────────────────────────────────────────────
   place("obj_well", -4, 0, [0, 1]);
-  place("obj_notice_board", 5, -4, [0, 1]);
+  place("obj_notice_board", 5, -4, [0, 1], { dialogue: "dia_notice_board" });
   placeIfClear("obj_lantern_post", -10, -10, [0, 1]);
   placeIfClear("obj_lantern_post", 10, -10, [0, 1]);
   placeIfClear("obj_lantern_post", -10, 10, [0, 1]);
@@ -196,10 +202,25 @@ export const generateTownSquareCells = (): {
   place("obj_p_stall", 4, 8, [0, -1]); // secondary stall
   place("obj_barrel", 6, 8, [0, 1]);
 
+  // ── Counted Cup Inn (southwest social anchor) ─────────────────────────
+  buildHall(-20, 10, -8, 20, WALL_CLAY, WOOD, { x: -8, z: 14 });
+  addHippedRoof(cells, -20, 10, -8, 20, "clay");
+  pave(-7, 14, WOOD);
+  pave(-6, 14, MARBLE);
+  place("obj_p_inn_sign", -7, 13, [-1, 0], { block: false, dialogue: "dia_innkeep" });
+  place("obj_table", -15, 14, [0, 1]);
+  place("obj_table", -12, 16, [0, 1]);
+  place("obj_pew", -15, 12, [0, 1]);
+  place("obj_pew", -12, 18, [0, -1]);
+  place("obj_barrel", -18, 18, [0, 1]);
+  place("obj_p_trapdoor", -12, 13, [0, 1], { block: false, dialogue: "dia_cellar" });
+
   // ── Scriptorium (northeast, Aldric's office) ───────────────────────────
   buildHall(12, -18, 20, -10, WALL_CLAY, WOOD, { x: 12, z: -14 });
+  addHippedRoof(cells, 12, -18, 20, -10, "clay");
   place("obj_table", 16, -14, [0, 1]);
   place("obj_podium", 18, -14, [0, 1]);
+  place("obj_notice_board", 13, -16, [0, 1], { block: false, dialogue: "dia_case_board" });
   place("obj_pew", 14, -12, [0, 1]);
   placeContainer("cnt_aldric_archive", 18, -16, {
     name: "Archive Chest",
@@ -211,23 +232,49 @@ export const generateTownSquareCells = (): {
     name: "Office Supply Chest",
     items: [{ item_id: "itm_health_potion", count: 2 }],
   });
-  placeItem("wi_archive_key", "itm_archive_key", 14, -12);
+  placeItem("wi_archive_key", "itm_archive_key", 14, -13);
 
   // ── Entity Placements ──────────────────────────────────────────────────
   const entity_placements: EntityPlacementData[] = [
     { entity_id: "ent_aldric", cell: [15, -14], schedule: [
       { hour: 7, cell: [15, -14] },
-      { hour: 20, cell: [0, 0] },
+      { hour: 18, cell: [2, -2] },
+      { hour: 22, cell: [16, -13] },
     ]},
     { entity_id: "ent_merchant", cell: [-6, 7], schedule: [
       { hour: 7, cell: [-6, 7] },
-      { hour: 20, cell: [-6, 7] }, // stays at stall (inn is on another map)
+      { hour: 18, cell: [-4, 6] },
+      { hour: 22, cell: [-8, 7] },
     ]},
-    { entity_id: "ent_guard_gate", cell: [0, -16] },
-    { entity_id: "ent_gate_anchorite", cell: [-3, -17] },
+    { entity_id: "ent_glass_apprentice", cell: [4, 7], schedule: [
+      { hour: 7, cell: [-2, 7] },
+      { hour: 18, cell: [4, 7] },
+      { hour: 22, cell: [2, 9] },
+    ]},
+    { entity_id: "ent_innkeep", cell: [-14, 14], schedule: [
+      { hour: 7, cell: [-14, 14] },
+      { hour: 18, cell: [-11, 14] },
+      { hour: 23, cell: [-16, 18] },
+    ]},
+    { entity_id: "ent_guard_gate", cell: [0, -16], schedule: [
+      { hour: 6, cell: [0, -16] },
+      { hour: 18, cell: [2, -16] },
+      { hour: 22, cell: [-2, -16] },
+    ]},
+    { entity_id: "ent_gate_anchorite", cell: [-3, -17], schedule: [
+      { hour: 5, cell: [-3, -17] },
+      { hour: 14, cell: [-5, -12] },
+      { hour: 22, cell: [3, -17] },
+    ]},
+    { entity_id: "ent_high_clerk", cell: [7, -5], schedule: [
+      { hour: 7, cell: [7, -5] },
+      { hour: 14, cell: [13, -14] },
+      { hour: 21, cell: [7, -3] },
+    ]},
     { entity_id: "ent_elder", cell: [-3, -5], schedule: [
       { hour: 8, cell: [-3, -5] },
-      { hour: 18, cell: [-3, -5] },
+      { hour: 18, cell: [-6, 0] },
+      { hour: 23, cell: [-2, -10] },
     ]},
     { entity_id: "ent_save", cell: [8, 0] }, // wayside candle
   ];
@@ -269,6 +316,53 @@ export const generateTownSquareCells = (): {
       cutscene_id: "cut_office_briefing",
       once: true,
     },
+    {
+      id: "trg_office_after_0",
+      cell: [12, -14],
+      type: "step",
+      conditions: [],
+      condition: {
+        all: [
+          { switch: "lazare_talked" },
+          { switch: "testimonies_gathered" },
+          { switch: "found_log_4" },
+          { not: { switch: "vampire_cleared" } },
+        ],
+      },
+      cutscene_id: "cut_office_after",
+      once: true,
+    },
+    {
+      id: "trg_office_after_1",
+      cell: [13, -14],
+      type: "step",
+      conditions: [],
+      condition: {
+        all: [
+          { switch: "lazare_talked" },
+          { switch: "testimonies_gathered" },
+          { switch: "found_log_4" },
+          { not: { switch: "vampire_cleared" } },
+        ],
+      },
+      cutscene_id: "cut_office_after",
+      once: true,
+    },
+    {
+      id: "trg_orin_public_accusation",
+      cell: [-4, 6],
+      type: "step",
+      conditions: [],
+      condition: {
+        all: [
+          { switch: "office_briefed" },
+          { not: { switch: "orin_public_accusation_seen" } },
+          { not: { switch: "testimonies_gathered" } },
+        ],
+      },
+      cutscene_id: "cut_orin_public_accusation",
+      once: true,
+    },
     // Mouthstone gate (always locked in Act 1)
     {
       id: "trg_mouthstone_locked",
@@ -276,6 +370,33 @@ export const generateTownSquareCells = (): {
       type: "step",
       conditions: [],
       cutscene_id: "cut_gate_blocked_mouthstone",
+      once: false,
+    },
+    {
+      id: "trg_cellar_town_seen",
+      cell: [-12, 13],
+      type: "interact",
+      conditions: [],
+      condition: { all: [{ not: { switch: "seen_cellar" } }, { switch: "met_nessa" }] },
+      cutscene_id: "cut_cellar_seal",
+      once: false,
+    },
+    {
+      id: "trg_trapdoor_town_locked",
+      cell: [-12, 13],
+      type: "interact",
+      conditions: [],
+      condition: { any: [{ not: { switch: "act1_assigned" } }, { not: { switch: "met_nessa" } }] },
+      cutscene_id: "cut_trapdoor_locked",
+      once: false,
+    },
+    {
+      id: "trg_trapdoor_town_enter",
+      cell: [-12, 13],
+      type: "interact",
+      conditions: [],
+      condition: { all: [{ switch: "act1_assigned" }, { switch: "met_nessa" }] },
+      cutscene_id: "cut_trapdoor_enter",
       once: false,
     },
   ];

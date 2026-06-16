@@ -7,34 +7,15 @@ import {
   WorldItemPlacementData,
 } from "./game";
 
-// ── Cave Deep Map ─────────────────────────────────────────────────────────
-// The deepest level. Contains the log chamber (grid sickness evidence),
-// the boss arena (the Grid-Sick / Bound Remnant), and the ossuary passage
-// leading to a locked shrine door (Act 2 tease).
-//
-// Exits: north (→ cave upper, return)
-//
-//   ┌────────────────────────────────────┐
-//   │      exit north (→ cave upper)     │
-//   │              │                     │
-//   │       [Entry Corridor]             │
-//   │              │                     │
-//   │  [Log Chamber] ── [Main Corridor]  │
-//   │  (writings)          │             │
-//   │                      │             │
-//   │              [Boss Arena]          │
-//   │              (Grid-Sick)           │
-//   │                      │             │
-//   │       [Ossuary] ── [Shrine Door]   │
-//   │                    (locked, Act 2) │
-//   └────────────────────────────────────┘
+// ── Cave Deep Map (Expanded) ─────────────────────────────────────────────
+// The massive lower depths where pagan remnants and strange rituals took place.
 
 type Vec2 = [number, number];
 
-const MIN_X = -20;
-const MAX_X = 20;
-const MIN_Z = -20;
-const MAX_Z = 20;
+const MIN_X = -40;
+const MAX_X = 40;
+const MIN_Z = -40;
+const MAX_Z = 40;
 
 export const CAVE_DEEP_W = MAX_X - MIN_X + 1;
 export const CAVE_DEEP_H = MAX_Z - MIN_Z + 1;
@@ -62,6 +43,22 @@ export const generateCaveDeepCells = (): {
   const get = (x: number, z: number) => grid.get(key(x, z));
   const reserve = (x: number, z: number) => reserved.add(key(x, z));
 
+  const setTile = (
+    x: number, z: number, objectId: string,
+    opts: { walkable?: boolean; blocksLos?: boolean; visualHeight?: number } = {},
+  ) => {
+    const c = get(x, z);
+    if (!c) return;
+    c.object_id = objectId;
+    c.walkable = opts.walkable ?? true;
+    c.blocks_los = opts.blocksLos ?? objectId.startsWith("obj_wall");
+    c.visual_height = opts.visualHeight ?? (objectId.startsWith("obj_wall") ? 4 : 0);
+    c.terrain = objectId === GROUND ? "grass" : "stone";
+    c.surface_tag = "none";
+  };
+
+  const pave = (x: number, z: number, floor = GROUND) => setTile(x, z, floor);
+
   const place = (
     objectId: string, x: number, z: number, facing: Vec2 = [0, 1],
     opts: { block?: boolean; dialogue?: string } = {},
@@ -86,170 +83,100 @@ export const generateCaveDeepCells = (): {
     return true;
   };
 
-  const placeContainer = (
-    id: string, x: number, z: number,
-    opts: { name?: string; locked?: boolean; key?: string; items?: { item_id: string; count?: number }[] } = {},
-  ) => {
-    container_placements.push({
-      id, object_id: "obj_chest", cell: [x, z], facing: [0, 1],
-      display_name: opts.name, locked: opts.locked ?? false,
-      key_item_id: opts.key, consume_key: false,
-      items: (opts.items || []).map(e => ({ item_id: e.item_id, count: e.count ?? 1 })),
-    });
-    reserve(x, z);
-    const c = get(x, z);
-    if (c) { c.walkable = false; c.blocks_los = false; }
-  };
-
-  const placeItem = (id: string, itemId: string, x: number, z: number, count = 1) => {
-    item_placements.push({ id, item_id: itemId, cell: [x, z], count });
-    reserve(x, z);
-  };
-
-  // Void by default, carve walkable areas
+  // ── Base void ────────────────────────────────────────────────────────
   for (let x = MIN_X; x <= MAX_X; x++) {
     for (let z = MIN_Z; z <= MAX_Z; z++) {
       const cell: CellData = {
         x, y: 0, z,
-        active: true, walkable: false, blocks_los: true,
-        height: 0, visual_height: 2,
-        terrain: "stone", surface_tag: "none", object_id: MARBLE,
+        active: false, walkable: false, blocks_los: true,
+        height: 0, visual_height: 4,
+        terrain: "grass", surface_tag: "none",
       };
       grid.set(key(x, z), cell);
       cells.push(cell);
     }
   }
 
-  const carve = (x: number, z: number) => {
-    const c = get(x, z);
-    if (c) {
-      c.walkable = true;
-      c.blocks_los = false;
-      c.visual_height = 0;
-      c.object_id = GROUND;
-      c.terrain = "grass";
+  const carveRoom = (x0: number, z0: number, x1: number, z1: number, floor = GROUND) => {
+    for (let x = x0; x <= x1; x++) {
+      for (let z = z0; z <= z1; z++) {
+        const c = get(x, z);
+        if (c) {
+          c.active = true; c.walkable = true; c.blocks_los = false; c.visual_height = 0; c.object_id = floor;
+        }
+      }
     }
   };
-  const carveRect = (x0: number, z0: number, x1: number, z1: number) => {
-    for (let x = x0; x <= x1; x++) for (let z = z0; z <= z1; z++) carve(x, z);
-  };
 
-  // ── Entry Corridor (north, z = -20 to -12) ────────────────────────────
-  carveRect(-2, -20, 2, -12); // from north exit
+  // Entry tunnel from North (x=-2 to 2, z=-40 to -28)
+  carveRoom(-2, -40, 2, -28);
 
-  // ── Log Chamber (west branch, x = -14 to -4, z = -12 to -6) ───────────
-  carveRect(-14, -12, -3, -6);
-  // Scratched walls — interact triggers for the grid sickness writings
-  placeIfClear("obj_column_broken", -12, -10, [0, 1]);
-  placeIfClear("obj_column_broken", -6, -10, [0, 1]);
-  placeIfClear("obj_column_broken", -10, -7, [0, 1]);
-  placeItem("wi_deep_shard", "itm_glass_shard", -8, -8);
+  // Massive Central Cavern (x=-30 to 30, z=-28 to 30)
+  // We'll carve an uneven, organic shape.
+  for (let x = -30; x <= 30; x++) {
+    for (let z = -28; z <= 30; z++) {
+      const dist = Math.sqrt(x*x + z*z);
+      if (dist < 28 + Math.sin(x*0.5)*5 + Math.cos(z*0.5)*5) {
+        pave(x, z, GROUND);
+        const c = get(x, z);
+        if (c) { c.active = true; c.walkable = true; c.blocks_los = false; c.visual_height = 0; }
+      }
+    }
+  }
 
-  // ── Main Corridor (z = -12 to -2) ─────────────────────────────────────
-  carveRect(-2, -12, 2, -2);
+  // A ruined pagan rite circle in the center — broken columns + bone piles.
+  carveRoom(-8, -8, 8, 8, MARBLE);
+  for (let x = -8; x <= 8; x += 4) {
+    placeIfClear("obj_net_column_root", x, -8, [0, 1]);
+    placeIfClear("obj_net_column_root", x, 8, [0, 1]);
+    placeIfClear("obj_net_bone_pile", -8, x, [0, 1]);
+    placeIfClear("obj_net_bone_pile", 8, x, [0, 1]);
+  }
+  place("obj_net_rite_circle", 0, -2, [0, 1]);
+  place("obj_net_glass_kneeler", -2, -2, [0, -1]);
+  place("obj_net_glass_kneeler", 2, -2, [0, -1]);
+  place("obj_net_brazier_cold", -4, 4, [0, 1]);
+  place("obj_net_brazier_cold", 4, 4, [0, 1]);
 
-  // ── Boss Arena (z = -2 to 12, wider) ───────────────────────────────────
-  carveRect(-8, -2, 8, 12);
-  // Arena pillars
-  placeIfClear("obj_column_broken", -6, 0, [0, 1]);
-  placeIfClear("obj_column_broken", 6, 0, [0, 1]);
-  placeIfClear("obj_column_broken", -6, 10, [0, 1]);
-  placeIfClear("obj_column_broken", 6, 10, [0, 1]);
+  // Rubble piles strewn around the cavern edges (deterministic seed).
+  const rng = (() => { let s = 0xdee1; return () => { s = (s * 1664525 + 1013904223) & 0x7fffffff; return s / 0x7fffffff; }; })();
+  for (let x = -28; x <= 28; x += 4) {
+    for (let z = -26; z <= 28; z += 4) {
+      const dist = Math.sqrt(x*x + z*z);
+      if (dist > 16 && dist < 26 && rng() > 0.5) {
+        placeIfClear("obj_net_rubble", x + Math.floor(rng()*2), z + Math.floor(rng()*2), [0, 1]);
+      }
+    }
+  }
 
-  // ── Ossuary Passage (south of arena, z = 12 to 18) ────────────────────
-  carveRect(-2, 12, 2, 18);
-  // West branch to shrine door
-  carveRect(-10, 15, -3, 19);
-  // Shrine door (blocked — Act 2 tease)
-  placeIfClear("obj_p_arch", -8, 19, [0, 1]);
-  // Make the arch cell non-walkable (locked door)
-  const shrineCell = get(-8, 19);
-  if (shrineCell) shrineCell.walkable = false;
-
-  placeContainer("cnt_ossuary_cache", -6, 17, {
-    name: "Bone Niche",
-    items: [{ item_id: "itm_votive", count: 2 }],
-  });
-
-  // ── Entity Placements ──────────────────────────────────────────────────
+  // Enemies — each entity id appears in exactly one map (state is per-id).
   const entity_placements: EntityPlacementData[] = [
-    // Enemies guarding log chamber / approach
-    { entity_id: "ent_partial_conversion_2", cell: [-6, -9] },
-    { entity_id: "ent_partial_conversion_3", cell: [0, -8] },
-    // Boss: Bound Remnant / The Grid-Sick (center of arena)
-    { entity_id: "ent_bound_remnant", cell: [0, 5] },
+    { entity_id: "ent_save", cell: [0, -20] },
+    { entity_id: "ent_candle_eaten_3", cell: [-12, -12] }, // was _1 (dupe with cave_upper)
+    { entity_id: "ent_candle_eaten_2", cell: [12, -12] },
+    { entity_id: "ent_bound_remnant", cell: [0, 6] },
   ];
 
-  // ── Triggers ───────────────────────────────────────────────────────────
   const triggers: TriggerData[] = [
-    // Deep cave music
     {
-      id: "trg_deep_music",
-      type: "on_load",
-      conditions: [],
-      cutscene_id: "cut_depths_enter",
-      once: false,
-    },
-    // Boss intro
-    {
-      id: "trg_boss_activate",
-      cell: [0, 0],
+      id: "trg_boss_intro",
+      cell: [0, -12],
       type: "step",
       conditions: [],
-      condition: { not: { switch: "cyberghost_defeated" } },
+      condition: { not: { switch: "boss_intro_seen" } },
       cutscene_id: "cut_boss_intro",
       once: true,
     },
-    // Grid sickness log triggers (interact on log chamber walls)
     {
-      id: "trg_log_1",
-      cell: [-12, -10],
+      id: "trg_read_log_3",
+      cell: [0, -2],
       type: "interact",
       conditions: [],
-      cutscene_id: "cut_read_log_1",
-      once: true,
-    },
-    {
-      id: "trg_log_2",
-      cell: [-6, -10],
-      type: "interact",
-      conditions: [],
-      cutscene_id: "cut_read_log_2",
-      once: true,
-    },
-    {
-      id: "trg_log_3",
-      cell: [-10, -7],
-      type: "interact",
-      conditions: [],
+      condition: { not: { switch: "found_log_3" } },
       cutscene_id: "cut_read_log_3",
       once: true,
     },
-    {
-      id: "trg_log_4",
-      cell: [-8, -8],
-      type: "interact",
-      conditions: [],
-      cutscene_id: "cut_read_log_4",
-      once: true,
-    },
-    // Ossuary shrine door (locked for Act 1)
-    {
-      id: "trg_shrine_locked",
-      cell: [-8, 18],
-      type: "interact",
-      conditions: [],
-      cutscene_id: "cut_gate_blocked_shrine",
-      once: false,
-    },
   ];
 
-  return {
-    cells,
-    custom_object_placements,
-    item_placements,
-    container_placements,
-    entity_placements,
-    triggers,
-  };
+  return { cells, custom_object_placements, item_placements, container_placements, entity_placements, triggers };
 };

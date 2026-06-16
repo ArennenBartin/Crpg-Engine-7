@@ -1032,7 +1032,7 @@ const roofSlopeE = () =>
     category: "structure",
     tags: ["roof"],
     materialKeys: ["slate"],
-    build: (m) => buildSlope(m, mat("slate"), 1),
+    build: (m) => buildSlope(m, mat("slate"), 3),
   });
 const roofSlopeW = () =>
   sculpt({
@@ -1041,7 +1041,7 @@ const roofSlopeW = () =>
     category: "structure",
     tags: ["roof"],
     materialKeys: ["slate"],
-    build: (m) => buildSlope(m, mat("slate"), 3),
+    build: (m) => buildSlope(m, mat("slate"), 1),
   });
 
 // Clay-tile variants (warmer roofs for the lower-town cottages).
@@ -1082,7 +1082,7 @@ const roofClaySlopeE = () =>
     category: "structure",
     tags: ["roof"],
     materialKeys: ["roofTileClay"],
-    build: (m) => buildSlope(m, mat("roofTileClay"), 1),
+    build: (m) => buildSlope(m, mat("roofTileClay"), 3),
   });
 const roofClaySlopeW = () =>
   sculpt({
@@ -1091,7 +1091,7 @@ const roofClaySlopeW = () =>
     category: "structure",
     tags: ["roof"],
     materialKeys: ["roofTileClay"],
-    build: (m) => buildSlope(m, mat("roofTileClay"), 3),
+    build: (m) => buildSlope(m, mat("roofTileClay"), 1),
   });
 const roofClayFlat = () =>
   sculpt({
@@ -1655,6 +1655,7 @@ const innSign = () =>
     category: "props",
     tags: ["prop"],
     materialKeys: ["iron", "darkOak", "canvas"],
+    profile: "none",
     build: (m) => {
       box(m, "post", mat("darkOak"), [-0.06, 0, -0.06], [0.06, 2.0, 0.06], "post");
       box(m, "arm", mat("iron"), [0.0, 1.85, -0.02], [0.7, 1.93, 0.02], "arm");
@@ -1909,6 +1910,7 @@ const prayerCandles = () =>
     category: "props",
     tags: ["prop", "light", "shrine"],
     materialKeys: ["darkStone", "waxRed", "candle", "brass"],
+    profile: "none",
     build: (m, rng) => {
       box(m, "shelf", mat("darkStone"), [-0.4, 0, -0.2], [0.4, 0.16, 0.2], "shelf");
       const candle = (x: number, z: number, h: number) => {
@@ -1937,6 +1939,7 @@ const placard = () =>
     category: "props",
     tags: ["prop", "interactable"],
     materialKeys: ["darkOak", "parchment", "waxRed", "iron"],
+    profile: "none",
     build: (m) => {
       box(m, "stake", mat("darkOak"), [-0.05, 0, -0.05], [0.05, 1.1, 0.05], "stake");
       box(m, "board", mat("darkOak"), [-0.32, 0.7, -0.04], [0.32, 1.18, 0.04], "board");

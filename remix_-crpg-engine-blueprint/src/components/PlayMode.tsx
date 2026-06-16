@@ -15,6 +15,7 @@ import {
   ContainerPlacementData,
   ScheduleEntryData,
   TriggerData,
+  GamePackage,
 } from "../schema/game";
 import { MapDelta, PlaySave } from "../schema/save";
 import {
@@ -37,6 +38,16 @@ import {
   rollSkillDamage,
 } from "../utils/combat";
 import {
+  LEVEL_UP_CHOICES,
+  getEnemyXpReward,
+  getPendingLevelUps,
+  getSaveExperience,
+  getSaveLevel,
+  getXpRemainingForNextLevel,
+  getXpRequiredForLevel,
+} from "../utils/leveling";
+import type { ExperienceGrantResult, LevelUpStat } from "../utils/leveling";
+import {
   getPlacementFootprint,
   placementOccupiesCell,
 } from "../utils/objectFootprint";
@@ -44,13 +55,17 @@ import { entityStateKey } from "../utils/entityState";
 import {
   Briefcase,
   BookOpen,
+  CheckCircle2,
   X,
   ChevronUp,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  Circle,
   Clock,
   Hand,
+  ListChecks,
+  LockKeyhole,
   MessageCircle,
   Sparkles,
   Save,
@@ -151,6 +166,16 @@ const SPEAKER_PORTRAITS: Record<string, Omit<DialoguePortraitConfig, "side" | "a
     src: "/portraits/npcs/father-imre.png",
     alt: "Father Imre",
   },
+  "sister vela": {
+    id: "sister-vela",
+    src: "/portraits/npcs/sister-vela-mouthstone.png",
+    alt: "Sister Vela of the Mouthstone",
+  },
+  "sister vela of the mouthstone": {
+    id: "sister-vela",
+    src: "/portraits/npcs/sister-vela-mouthstone.png",
+    alt: "Sister Vela of the Mouthstone",
+  },
   maro: {
     id: "maro-counted-cup",
     src: "/portraits/npcs/maro-counted-cup.png",
@@ -181,10 +206,30 @@ const SPEAKER_PORTRAITS: Record<string, Omit<DialoguePortraitConfig, "side" | "a
     src: "/portraits/npcs/petra-stonecutter.png",
     alt: "Petra the Stonecutter",
   },
+  orin: {
+    id: "orin-glassworks-hand",
+    src: "/portraits/npcs/orin-glassworks-hand.png",
+    alt: "Orin, Glassworks Hand",
+  },
+  "orin, glassworks hand": {
+    id: "orin-glassworks-hand",
+    src: "/portraits/npcs/orin-glassworks-hand.png",
+    alt: "Orin, Glassworks Hand",
+  },
   liss: {
     id: "liss",
     src: "/portraits/npcs/liss.png",
     alt: "Liss",
+  },
+  marta: {
+    id: "marta-lower-graves",
+    src: "/portraits/npcs/marta-lower-graves.png",
+    alt: "Marta of the Lower Graves",
+  },
+  "marta of the lower graves": {
+    id: "marta-lower-graves",
+    src: "/portraits/npcs/marta-lower-graves.png",
+    alt: "Marta of the Lower Graves",
   },
   cosmas: {
     id: "cosmas-pilgrim",
@@ -215,6 +260,21 @@ const SPEAKER_PORTRAITS: Record<string, Omit<DialoguePortraitConfig, "side" | "a
     id: "cyberghost",
     src: "/portraits/npcs/cyberghost.png",
     alt: "Cyberghost",
+  },
+  "the grid-sick": {
+    id: "bound-remnant",
+    src: "/portraits/enemies/bound-remnant.png",
+    alt: "The Grid-Sick / Bound Remnant",
+  },
+  "the grid sick": {
+    id: "bound-remnant",
+    src: "/portraits/enemies/bound-remnant.png",
+    alt: "The Grid-Sick / Bound Remnant",
+  },
+  "bound remnant": {
+    id: "bound-remnant",
+    src: "/portraits/enemies/bound-remnant.png",
+    alt: "The Grid-Sick / Bound Remnant",
   },
   "wayside candle": {
     id: "wayside-candle",
@@ -825,20 +885,20 @@ function DialoguePortraitStage({ speaker }: { speaker: string }) {
         return (
           <div
             key={`${portrait.id}_${portrait.side}`}
-            className={`absolute bottom-[-2.5rem] ${
+            className={`absolute bottom-0 sm:bottom-[-2.5rem] ${
               leftSide
-                ? "left-[-0.5rem] sm:left-4"
-                : "right-[-0.5rem] sm:right-4"
+                ? "left-[-1.5rem] sm:left-4"
+                : "right-[-1.5rem] sm:right-4"
             }`}
             style={{
-              transform: leftSide ? "translateX(-9%)" : "translateX(9%)",
+              transform: leftSide ? "translateX(-5%)" : "translateX(5%)",
             }}
           >
             <img
               src={portrait.src}
               alt=""
               aria-hidden="true"
-              className={`h-[24rem] sm:h-[32rem] md:h-[36rem] max-w-[56vw] sm:max-w-[42vw] object-contain object-bottom select-none drop-shadow-[0_0_26px_rgba(0,0,0,0.9)] ${
+              className={`h-[28rem] sm:h-[32rem] md:h-[36rem] max-w-none object-contain object-bottom select-none drop-shadow-[0_0_26px_rgba(0,0,0,0.9)] ${
                 portrait.id === "player" ? "opacity-100" : (portrait.active ? "opacity-100" : "opacity-[0.58]")
               }`}
               style={{
@@ -896,6 +956,238 @@ const createTestMap = (): MapData => {
   };
 };
 
+type QuestStepStatus = "done" | "current" | "locked";
+
+interface QuestJournalStep {
+  id: string;
+  text: string;
+  status: QuestStepStatus;
+}
+
+interface QuestJournalEntry {
+  id: string;
+  title: string;
+  state: string;
+  description: string;
+  steps: QuestJournalStep[];
+}
+
+const stateLabel = (state: string) =>
+  state
+    .split("_")
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+
+const hasDeadEntity = (save: PlaySave, mapId: string, entityId: string) =>
+  Object.entries(save.entity_states || {}).some(
+    ([key, value]) =>
+      key.includes(`_${mapId}_${entityId}_`) && Boolean((value as any)?.dead),
+  );
+
+const firstCurrentStep = (steps: QuestJournalStep[]) =>
+  steps.find((step) => step.status === "current") ||
+  steps.find((step) => step.status === "locked") ||
+  steps[steps.length - 1];
+
+const buildQuestJournal = (
+  save: PlaySave,
+  gamePackage: GamePackage,
+): { entries: QuestJournalEntry[]; activeStep: QuestJournalStep | null } => {
+  const flags = save.flags || {};
+  const quests = save.quests || {};
+  const questById = new Map(gamePackage.quests.map((quest) => [quest.id, quest]));
+  const caveRemnantDefeated = hasDeadEntity(save, "map_cave_deep", "ent_bound_remnant");
+  const readAnyCaveLog =
+    flags.found_log_1 || flags.found_log_2 || flags.found_log_3 || flags.found_log_4;
+  const allTestimony =
+    flags.testimonies_gathered ||
+    (flags.testimony_dimos && flags.testimony_orin && flags.testimony_marta && flags.testimony_holt);
+  const vampireActive =
+    quests.quest_vampire ||
+    flags.opening_ceremony_complete ||
+    flags.act1_assigned ||
+    flags.lazare_talked ||
+    readAnyCaveLog ||
+    flags.vampire_cleared;
+  const nessaActive =
+    quests.quest_investigate ||
+    flags.nessa_thread_started ||
+    flags.met_nessa ||
+    flags.seen_cellar ||
+    flags.first_descent_done ||
+    flags.act1_rite_text;
+
+  const entries: QuestJournalEntry[] = [];
+
+  if (vampireActive) {
+    const quest = questById.get("quest_vampire");
+    const state = String(quests.quest_vampire || (flags.vampire_cleared ? "cleared" : "sworn"));
+    const readyForCaves = flags.lazare_talked && allTestimony;
+    const steps: QuestJournalStep[] = [
+      {
+        id: "briefing",
+        text: "Report to Aldric at the scriptorium.",
+        status: flags.act1_assigned || flags.office_briefed || state !== "sworn" ? "done" : "current",
+      },
+      {
+        id: "dimos",
+        text: "Record Dimos's market testimony.",
+        status: flags.testimony_dimos ? "done" : flags.act1_assigned ? "current" : "locked",
+      },
+      {
+        id: "orin",
+        text: "Record Orin's Glassworks testimony.",
+        status: flags.testimony_orin ? "done" : flags.act1_assigned ? "current" : "locked",
+      },
+      {
+        id: "holt",
+        text: "Record Holt's gate tally.",
+        status: flags.testimony_holt ? "done" : flags.act1_assigned ? "current" : "locked",
+      },
+      {
+        id: "marta",
+        text: "Record Marta's lower-graves testimony.",
+        status: flags.testimony_marta ? "done" : flags.act1_assigned ? "current" : "locked",
+      },
+      {
+        id: "lazare",
+        text: "Visit Lazare behind the shutters.",
+        status: flags.lazare_talked ? "done" : allTestimony ? "current" : "locked",
+      },
+      {
+        id: "caves",
+        text: "Enter the eastern caves.",
+        status: readAnyCaveLog || caveRemnantDefeated ? "done" : readyForCaves ? "current" : "locked",
+      },
+      {
+        id: "logs",
+        text: "Find the cave logs, including the grotto record.",
+        status: flags.found_log_4 ? "done" : readAnyCaveLog || readyForCaves ? "current" : "locked",
+      },
+      {
+        id: "remnant",
+        text: "Confront the Grid-sick remnant in the depths.",
+        status: caveRemnantDefeated || flags.vampire_cleared ? "done" : flags.found_log_3 || flags.found_log_4 ? "current" : "locked",
+      },
+      {
+        id: "verdict",
+        text: "Return to Aldric with the cave evidence.",
+        status: flags.vampire_cleared ? "done" : flags.found_log_4 || caveRemnantDefeated ? "current" : "locked",
+      },
+    ];
+    entries.push({
+      id: "quest_vampire",
+      title: quest?.display_name || "The Lonely Vampire",
+      state,
+      description: quest?.description || "",
+      steps,
+    });
+  }
+
+  if (nessaActive) {
+    const quest = questById.get("quest_investigate");
+    const state = String(quests.quest_investigate || "opened");
+    const steps: QuestJournalStep[] = [
+      {
+        id: "clear_lazare",
+        text: "Clear the vampire case enough to open the Hall of Custody.",
+        status: flags.vampire_cleared ? "done" : "current",
+      },
+      {
+        id: "nessa",
+        text: "Speak with Nessa through the bars.",
+        status: flags.met_nessa ? "done" : flags.vampire_cleared ? "current" : "locked",
+      },
+      {
+        id: "cellar",
+        text: "Inspect the Counted Cup cellar seal.",
+        status: flags.seen_cellar ? "done" : flags.met_nessa ? "current" : "locked",
+      },
+      {
+        id: "under",
+        text: "Descend beneath the town from the sealed trapdoor.",
+        status: flags.first_descent_done ? "done" : flags.seen_cellar && flags.act1_assigned ? "current" : "locked",
+      },
+      {
+        id: "rite_text",
+        text: "Find where Mara learned the under-rite.",
+        status: flags.act1_rite_text ? "done" : flags.first_descent_done ? "current" : "locked",
+      },
+      {
+        id: "second_leaf",
+        text: "Look for the second leaf in the ossuary route.",
+        status: flags.found_second_leaf ? "done" : flags.act1_rite_text ? "current" : "locked",
+      },
+    ];
+    entries.push({
+      id: "quest_investigate",
+      title: quest?.display_name || "The Witness Investigation",
+      state,
+      description: quest?.description || "",
+      steps,
+    });
+  }
+
+  const activeEntry =
+    entries.find((entry) => entry.steps.some((step) => step.status === "current")) ||
+    entries[0];
+  return {
+    entries,
+    activeStep: activeEntry ? firstCurrentStep(activeEntry.steps) : null,
+  };
+};
+
+function LevelUpOverlay({
+  level,
+  pending,
+  onChoose,
+}: {
+  level: number;
+  pending: number;
+  onChoose: (stat: LevelUpStat) => void;
+}) {
+  return (
+    <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/65 p-4">
+      <div className="w-full max-w-md border-2 border-[var(--color-sacred-gold)] bg-sacred-stone px-5 py-5 shadow-[0_0_35px_rgba(0,0,0,0.9)]">
+        <div className="flex items-center justify-between gap-4 border-b border-[var(--color-sacred-gold-dark)]/60 pb-3">
+          <div>
+            <div className="font-[family-name:var(--font-display)] text-[11px] font-bold uppercase tracking-widest text-[var(--color-sacred-gold)]">
+              Level {level}
+            </div>
+            <h2 className="mt-1 font-serif text-2xl font-bold text-[var(--color-sacred-ink)]">
+              Choose a stat
+            </h2>
+          </div>
+          {pending > 1 && (
+            <div className="rounded-sm border border-[var(--color-sacred-gold-dark)] bg-black/25 px-2 py-1 font-serif text-xs font-bold text-[var(--color-sacred-gold)]">
+              {pending} choices
+            </div>
+          )}
+        </div>
+
+        <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
+          {LEVEL_UP_CHOICES.map((choice) => (
+            <button
+              key={choice.id}
+              type="button"
+              onClick={() => onChoose(choice.id)}
+              className="min-h-16 border border-[var(--color-sacred-gold-dark)] bg-black/20 px-3 py-3 text-left transition-colors hover:bg-[var(--color-sacred-gold-dark)]/25 active:scale-[0.99]"
+            >
+              <span className="block font-[family-name:var(--font-display)] text-xs font-bold uppercase tracking-widest text-[var(--color-sacred-gold)]">
+                {choice.label}
+              </span>
+              <span className="mt-1 block font-serif text-sm font-bold text-[var(--color-sacred-ink)]">
+                {choice.effectLabel}
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function PlayEngine() {
   const { gamePackage } = useEngineStore();
   const {
@@ -918,6 +1210,7 @@ export function PlayEngine() {
     updateMoney,
     activeContainerId,
     closeContainer,
+    chooseLevelUpStat,
   } = usePlayStore();
   const [activeMap, setActiveMap] = useState<MapData | null>(null);
 
@@ -1040,6 +1333,44 @@ export function PlayEngine() {
   const handleMoveRef = useRef<((dx: number, dz: number) => void) | null>(null);
   const handleActRef = useRef<(() => void) | null>(null);
   const waitRef = useRef<(() => void) | null>(null);
+  const pendingLevelUps = getPendingLevelUps(saveData);
+  const levelUpOpen = pendingLevelUps > 0;
+  const levelUpOpenRef = useRef(false);
+
+  const logExperienceGrant = useCallback(
+    (result: ExperienceGrantResult | null) => {
+      if (!result || result.awarded <= 0) return;
+      addLog(`Gained ${result.awarded} XP.`);
+      if (result.levelUps > 0) {
+        addLog(`Level ${result.level} reached. Choose a stat.`);
+      }
+    },
+    [addLog],
+  );
+
+  const handleEnemyDefeatedExperience = useCallback(
+    (entityData: GamePackage["entities"][number] | undefined | null) => {
+      const xp = getEnemyXpReward(entityData);
+      if (xp <= 0) return;
+      const store = usePlayStore.getState();
+      if (store.saveData?.in_combat) {
+        store.queueCombatExperience(xp);
+        return;
+      }
+      logExperienceGrant(store.grantExperience(xp));
+    },
+    [logExperienceGrant],
+  );
+
+  const handleLevelUpChoice = useCallback(
+    (stat: LevelUpStat) => {
+      const choice = LEVEL_UP_CHOICES.find((candidate) => candidate.id === stat);
+      if (chooseLevelUpStat(stat)) {
+        addLog(`${choice?.label || "Stat"} increased.`);
+      }
+    },
+    [addLog, chooseLevelUpStat],
+  );
 
   const computeTargetPattern = useCallback(
     (targetX?: number, targetZ?: number) => {
@@ -1124,6 +1455,7 @@ export function PlayEngine() {
   const handleCellClick = useCallback(
     (x: number, z: number) => {
       if (!targetingSkillId || !saveData || !activeMap) return;
+      if (levelUpOpenRef.current) return;
       const skill = gamePackage.abilities.find(
         (s) => s.id === targetingSkillId,
       );
@@ -1255,6 +1587,7 @@ export function PlayEngine() {
               curHp = 0;
               fx.addPopup(cellTuple, "✕", "#f87171");
               addLog(`${eData?.display_name} is defeated!`);
+              handleEnemyDefeatedExperience(eData);
             }
             est.hp = curHp;
             nextSavedEntities[key] = est;
@@ -1364,6 +1697,7 @@ export function PlayEngine() {
       hoveredCell,
       addLog,
       getActiveCell,
+      handleEnemyDefeatedExperience,
     ],
   );
 
@@ -1379,6 +1713,7 @@ export function PlayEngine() {
     (skillId: string) => {
       const save = usePlayStore.getState().saveData;
       if (!save || save.playerStats.hp <= 0) return;
+      if (getPendingLevelUps(save) > 0) return;
       const actor = getControlledActor(save, gamePackage);
       if (!actor) return; // an enemy is acting
       const skill = gamePackage.abilities.find((s) => s.id === skillId);
@@ -1442,8 +1777,10 @@ export function PlayEngine() {
   }, [cameraAzimuth]);
 
   useEffect(() => {
+    levelUpOpenRef.current = levelUpOpen;
     inputBlockedRef.current = Boolean(
       activeCutscene?.is_blocking ||
+        levelUpOpen ||
         showInventory ||
         showSkills ||
         showSaveMenu ||
@@ -1455,8 +1792,10 @@ export function PlayEngine() {
         activeContainerId,
     );
     if (inputBlockedRef.current) repeatStateRef.current.active = false;
+    if (levelUpOpen) keysDownRef.current.clear();
   }, [
     activeCutscene,
+    levelUpOpen,
     showInventory,
     showSkills,
     showSaveMenu,
@@ -1666,8 +2005,9 @@ export function PlayEngine() {
     // Already fighting: end it, or fold in latecomers.
     const inRange = getNearbyHostiles(saveData, activeMap, gp, CHASE_RADIUS);
     if (inRange.length === 0) {
-      store.endCombat(partyIds);
+      const xpResult = store.endCombat(partyIds);
       store.addLog("The dark settles. You regroup.");
+      logExperienceGrant(xpResult);
       return;
     }
     const queue = saveData.combat_queue || [];
@@ -1678,7 +2018,7 @@ export function PlayEngine() {
       store.extendCombatQueue(newcomers);
       store.addLog("Something else has noticed you.");
     }
-  }, [saveData, activeMap, activeCutscene]);
+  }, [saveData, activeMap, activeCutscene, logExperienceGrant]);
 
   // ── Enemy turns ───────────────────────────────────────────────────────────
   // Resolved automatically after a short beat so the order stays readable:
@@ -2218,6 +2558,11 @@ export function PlayEngine() {
       }
       const key = e.key.toLowerCase();
 
+      if (levelUpOpenRef.current) {
+        e.preventDefault();
+        return;
+      }
+
       if (key === "q" || key === "e") {
         if (e.target === document.body) e.preventDefault();
       } else {
@@ -2691,6 +3036,7 @@ export function PlayEngine() {
   const performWait = useCallback(() => {
     const save = usePlayStore.getState().saveData;
     if (!save) return;
+    if (getPendingLevelUps(save) > 0) return;
     // In combat, Wait passes the controlled actor's turn — a real tactical
     // choice (let the enemy come to you), not a rest.
     if (save.in_combat) {
@@ -2803,11 +3149,12 @@ export function PlayEngine() {
         hp = 0;
         fx.addPopup(targetCell, "✕", "#f87171");
         addLog(`${entityData.display_name} is defeated!`);
+        handleEnemyDefeatedExperience(entityData);
       }
       est.hp = hp;
       usePlayStore.getState().updateEntityState(targetKey, est);
     },
-    [addLog],
+    [addLog, handleEnemyDefeatedExperience],
   );
 
   const handleMove = useCallback(
@@ -2815,6 +3162,7 @@ export function PlayEngine() {
       const currentSave = usePlayStore.getState().saveData;
       if (!activeMap || !currentSave) return;
       if (currentSave.playerStats.hp <= 0) return;
+      if (getPendingLevelUps(currentSave) > 0) return;
       
       // If targeting mode is active, directional bumps move the target cursor instead
       if (targetingSkillIdRef.current) {
@@ -2993,9 +3341,10 @@ export function PlayEngine() {
               );
               if (targetMap) {
                 if (inCombat) {
-                  usePlayStore
+                  const xpResult = usePlayStore
                     .getState()
                     .endCombat(currentSave.party_members || []);
+                  logExperienceGrant(xpResult);
                   addLog("You flee through the passage!");
                 }
                 const spawn =
@@ -3065,6 +3414,7 @@ export function PlayEngine() {
       getActiveCell,
       getContainerAtCell,
       isBlockedByPlacement,
+      logExperienceGrant,
     ],
   );
 
@@ -3075,6 +3425,7 @@ export function PlayEngine() {
   const handleAct = () => {
     if (!activeMap || !saveData) return;
     if (saveData.playerStats.hp <= 0) return;
+    if (getPendingLevelUps(saveData) > 0) return;
     if (activeCutscene && activeCutscene.is_blocking) return;
     
     const gp = useEngineStore.getState().gamePackage;
@@ -3509,7 +3860,19 @@ export function PlayEngine() {
   const clockHour = Math.floor(clockTotalMinutes / 60) % 24;
   const clockMinute = clockTotalMinutes % 60;
   const clockPhase = CLOCK_PHASE_LABELS[getClockPhaseId(clockHour)];
+  const playerLevel = getSaveLevel(saveData);
+  const playerExperience = getSaveExperience(saveData);
+  const currentLevelXp = getXpRequiredForLevel(playerLevel);
+  const nextLevelXp = getXpRequiredForLevel(playerLevel + 1);
+  const xpSpan = Math.max(1, nextLevelXp - currentLevelXp);
+  const xpProgress = Math.max(
+    0,
+    Math.min(100, ((playerExperience - currentLevelXp) / xpSpan) * 100),
+  );
+  const xpRemaining = getXpRemainingForNextLevel(saveData);
   const shopConditionCtx = buildConditionContext(saveData);
+  const questJournal = buildQuestJournal(saveData, gamePackage);
+  const activeQuestStep = questJournal.activeStep;
   const partyMemberIds = saveData.party_members || [];
   // Skills of whoever is being commanded — the tactics bar and the 1-6
   // hotkeys index into this same list. On Aldric's turn it becomes his kit.
@@ -3519,7 +3882,11 @@ export function PlayEngine() {
         .slice(0, 6)
     : [];
   const overlayOpen = Boolean(
-    activeShopId || activeDialogueId || activeDocumentId || activeContainerId,
+    activeShopId ||
+      activeDialogueId ||
+      activeDocumentId ||
+      activeContainerId ||
+      levelUpOpen,
   );
   const showPerfHud =
     typeof window !== "undefined" &&
@@ -3667,7 +4034,7 @@ export function PlayEngine() {
         )}
 
         {/* Virtual Joystick touch zone — covers the full game canvas */}
-        {!targetingSkillId && !activeShopId && !activeDialogueId && !activeDocumentId && !activeContainerId && (
+        {!levelUpOpen && !targetingSkillId && !activeShopId && !activeDialogueId && !activeDocumentId && !activeContainerId && (
           <div
             ref={joystickOverlayRef}
             className="absolute inset-0 z-10"
@@ -3715,7 +4082,7 @@ export function PlayEngine() {
         )}
 
         {/* Floating Act + Wait buttons — always reachable, bottom-right of canvas */}
-        {!targetingSkillId && !activeShopId && !activeDialogueId && !activeDocumentId && !activeContainerId && (
+        {!levelUpOpen && !targetingSkillId && !activeShopId && !activeDialogueId && !activeDocumentId && !activeContainerId && (
           <div className="absolute right-3 z-20 flex flex-col gap-2 pointer-events-auto" style={{ bottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}>
             <button
               className="w-12 h-12 sm:w-16 sm:h-16 bg-sacred-stone active:brightness-150 rounded-full flex flex-col items-center justify-center active:scale-90 transition-all select-none shadow-[0_0_15px_rgba(0,0,0,0.8)] border-sacred-gold text-[var(--color-sacred-gold)] touch-manipulation gap-0.5"
@@ -3743,7 +4110,7 @@ export function PlayEngine() {
         )}
 
         {/* Tactics bar — the commanded actor's skills, mirrored by hotkeys 1-6 */}
-        {hotbarSkills.length > 0 && !targetingSkillId && !overlayOpen && (
+        {hotbarSkills.length > 0 && !levelUpOpen && !targetingSkillId && !overlayOpen && (
           <div
             className={`absolute left-1/2 -translate-x-1/2 z-20 flex gap-1.5 pointer-events-auto ${
               commandingParty ? "drop-shadow-[0_0_10px_rgba(16,185,129,0.35)]" : ""
@@ -3904,6 +4271,23 @@ export function PlayEngine() {
               <span title="Defense" className="flex items-center gap-0.5"><span className="text-[var(--color-sacred-gold)]">🛡</span> {saveData.playerStats.defense}</span>
               <span title="Speed" className="flex items-center gap-0.5"><span className="text-[var(--color-sacred-gold)]">⚡</span> {saveData.playerStats.speed}</span>
             </div>
+            <div className="pt-1 border-t border-[var(--color-sacred-gold-dark)]/35">
+              <div className="flex items-center justify-between px-0.5">
+                <span className="text-[var(--color-sacred-gold)] text-[9px] sm:text-[10px] font-[family-name:var(--font-display)] font-bold tracking-widest uppercase">
+                  Level {playerLevel}
+                </span>
+                <span className="font-serif text-[8px] sm:text-[9px] font-bold text-[var(--color-sacred-ink)]">
+                  {xpRemaining} XP
+                  {pendingLevelUps > 0 ? ` +${pendingLevelUps}` : ""}
+                </span>
+              </div>
+              <div className="mt-1 h-1.5 w-full border border-[var(--color-sacred-gold-dark)] bg-black/75">
+                <div
+                  className="h-full bg-gradient-to-r from-[var(--color-sacred-gold-dark)] to-[var(--color-sacred-gold)] transition-all duration-300"
+                  style={{ width: `${xpProgress}%` }}
+                />
+              </div>
+            </div>
             <div className="pt-1 border-t border-[var(--color-sacred-gold-dark)]/50 flex justify-between items-center px-0.5">
               <span className="text-[var(--color-sacred-gold)] text-[9px] sm:text-[11px] font-[family-name:var(--font-display)] font-bold tracking-widest uppercase">
                 {clockPhase}
@@ -4056,6 +4440,33 @@ export function PlayEngine() {
               </button>
             )}
           </div>
+          {activeQuestStep &&
+            !targetingSkillId &&
+            !activeShopId &&
+            !activeDialogueId &&
+            !activeDocumentId &&
+            !activeContainerId &&
+            !showInventory &&
+            !showSkills &&
+            !showSaveMenu &&
+            !showCaseFile && (
+              <button
+                onClick={() => {
+                  clearInputState();
+                  setShowCaseFile(true);
+                }}
+                className="max-w-[15rem] sm:max-w-[18rem] rounded-sm border border-sky-800/80 bg-neutral-950/86 px-3 py-2 text-left shadow-lg transition-colors hover:bg-sky-950/90"
+                title="Open Case File"
+              >
+                <div className="flex items-center gap-2 text-[10px] font-[family-name:var(--font-display)] font-bold uppercase tracking-widest text-sky-300">
+                  <ListChecks className="h-3.5 w-3.5 shrink-0" />
+                  <span>Current Objective</span>
+                </div>
+                <div className="mt-1 line-clamp-2 text-xs font-serif leading-snug text-neutral-100">
+                  {activeQuestStep.text}
+                </div>
+              </button>
+            )}
           {targetingSkillId && (
             <div className="flex flex-col gap-2 items-end">
               <button
@@ -4126,6 +4537,14 @@ export function PlayEngine() {
           transition: `opacity ${screenFade.duration}ms ease`,
         }}
       />
+
+      {levelUpOpen && saveData.playerStats.hp > 0 && (
+        <LevelUpOverlay
+          level={playerLevel}
+          pending={pendingLevelUps}
+          onChoose={handleLevelUpChoice}
+        />
+      )}
 
       {/* Game Over Overlay */}
       {saveData &&
@@ -4202,19 +4621,57 @@ export function PlayEngine() {
 
               <section className="space-y-4">
                 <div className="space-y-2">
-                  <h3 className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Quest States</h3>
-                  {Object.keys(saveData.quests || {}).length > 0 ? (
-                    Object.entries(saveData.quests || {}).map(([questId, state]) => {
-                      const quest = gamePackage.quests.find((candidate) => candidate.id === questId);
-                      return (
-                        <div key={questId} className="rounded border border-neutral-800 bg-neutral-900 px-3 py-2">
-                          <div className="text-sm text-neutral-200">{quest?.display_name || questId}</div>
-                          <div className="text-xs uppercase tracking-wide text-sky-300">{String(state)}</div>
+                  <h3 className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Quest Log</h3>
+                  {questJournal.entries.length > 0 ? (
+                    <div className="space-y-3">
+                      {questJournal.entries.map((entry) => (
+                        <div key={entry.id} className="rounded border border-neutral-800 bg-neutral-900/95 px-3 py-3">
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <div className="text-sm font-medium text-neutral-100">{entry.title}</div>
+                              <div className="mt-0.5 text-[10px] font-semibold uppercase tracking-wide text-sky-300">
+                                {stateLabel(entry.state)}
+                              </div>
+                            </div>
+                          </div>
+                          {entry.description && (
+                            <p className="mt-2 text-xs leading-relaxed text-neutral-500">{entry.description}</p>
+                          )}
+                          <div className="mt-3 space-y-2">
+                            {entry.steps.map((step) => {
+                              const done = step.status === "done";
+                              const current = step.status === "current";
+                              const Icon = done ? CheckCircle2 : current ? Circle : LockKeyhole;
+                              return (
+                                <div
+                                  key={step.id}
+                                  className={`flex items-start gap-2 rounded px-2 py-1.5 ${
+                                    current
+                                      ? "bg-sky-950/45 text-neutral-100"
+                                      : done
+                                        ? "text-neutral-400"
+                                        : "text-neutral-600"
+                                  }`}
+                                >
+                                  <Icon
+                                    className={`mt-0.5 h-3.5 w-3.5 shrink-0 ${
+                                      done ? "text-emerald-400" : current ? "text-sky-300" : "text-neutral-700"
+                                    }`}
+                                  />
+                                  <span className={`text-xs leading-snug ${done ? "line-through decoration-neutral-600" : ""}`}>
+                                    {step.text}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
                         </div>
-                      );
-                    })
+                      ))}
+                    </div>
                   ) : (
-                    <p className="text-sm text-neutral-600">No quest state recorded.</p>
+                    <p className="rounded border border-dashed border-neutral-800 p-3 text-sm text-neutral-600">
+                      No active case has been recorded yet.
+                    </p>
                   )}
                 </div>
 
@@ -4594,7 +5051,7 @@ export function PlayEngine() {
 
       {/* Bottom Panel — only visible for dialogue / shop / document interactions */}
       <div
-        className={`shrink-0 transition-all duration-300 ${activeShopId || activeDocumentId || activeDialogueId || activeContainerId ? "h-[22rem] z-30 border-t-2 border-sacred-gold bg-sacred-parchment shadow-[0_-10px_30px_rgba(0,0,0,0.9)]" : "h-0 overflow-hidden"} flex flex-col justify-center items-center relative`}
+        className={`shrink-0 transition-all duration-300 ${activeShopId || activeDocumentId || activeDialogueId || activeContainerId ? "h-[18rem] sm:h-[22rem] z-30 border-t-2 border-sacred-gold bg-sacred-parchment shadow-[0_-10px_30px_rgba(0,0,0,0.9)]" : "h-0 overflow-hidden"} flex flex-col justify-center items-center relative`}
       >
         {activeShopId ? (
           (() => {

@@ -6,35 +6,22 @@ import {
   TriggerData,
   WorldItemPlacementData,
 } from "./game";
+import { addHippedRoof } from "../utils/cellRoofHelper";
 
-// ── Temple & Cordon Map ───────────────────────────────────────────────────
-// The sacred terrace. The bleeding Witness statue dominates the center,
-// cordoned off. The temple is behind it (north). The prison/Hall of Custody
-// is in the southeast. Father Imre tends the temple. Guard Bren minds the
-// cordon. Nessa is behind bars.
+// ── Temple & Cordon Map (Expanded) ─────────────────────────────────────────
+// The sacred terrace. The bleeding Witness statue dominates the massive
+// central paved plaza, cordoned off by a wide perimeter. The grand basilica
+// of the temple sits behind it (north). The sprawling cemetery and lower
+// graves run down the west slope. The imposing stone gaol sits southeast.
 //
 // Exits: west (→ residential), northwest (→ town square)
-//
-//   ┌────────────────────────────────────┐
-//   │        [Temple Interior]           │
-//   │             │                      │
-//   │   ─── [Witness Cordon] ───         │
-//   │   │   (bleeding statue)   │        │
-//   │   │        fenced         │        │
-//   │   ─────────────────────────        │
-//   │                                    │
-//   │   road west ──── road nw           │
-//   │                                    │
-//   │             [Lower Graves]         │
-//   │                    [Prison/Gaol]   │
-//   └────────────────────────────────────┘
 
 type Vec2 = [number, number];
 
-const MIN_X = -20;
-const MAX_X = 20;
-const MIN_Z = -20;
-const MAX_Z = 20;
+const MIN_X = -40;
+const MAX_X = 40;
+const MIN_Z = -40;
+const MAX_Z = 40;
 
 export const TEMPLE_W = MAX_X - MIN_X + 1;
 export const TEMPLE_H = MAX_Z - MIN_Z + 1;
@@ -127,13 +114,18 @@ export const generateTempleCordonCells = (): {
     if (c) { c.walkable = false; c.blocks_los = false; }
   };
 
-  const buildHall = (
+  const placeItem = (id: string, itemId: string, x: number, z: number, count = 1) => {
+    item_placements.push({ id, item_id: itemId, cell: [x, z], count });
+    reserve(x, z);
+  };
+
+  const buildBuilding = (
     x0: number, z0: number, x1: number, z1: number,
-    wall: string, floor: string, door: { x: number; z: number },
+    wall: string, floor: string, doors: { x: number; z: number }[],
   ) => {
     for (let x = x0; x <= x1; x++) {
       for (let z = z0; z <= z1; z++) {
-        const isDoor = x === door.x && z === door.z;
+        const isDoor = doors.some(d => d.x === x && d.z === z);
         const isPerimeter = x === x0 || x === x1 || z === z0 || z === z1;
         if (isDoor) { pave(x, z, floor); reserve(x, z); }
         else if (isPerimeter) { wallCell(x, z, wall); }
@@ -142,7 +134,7 @@ export const generateTempleCordonCells = (): {
     }
   };
 
-  // ── Base terrain ───────────────────────────────────────────────────────
+  // ── Base terrain ────────────────────────────────────────────────────────
   for (let x = MIN_X; x <= MAX_X; x++) {
     for (let z = MIN_Z; z <= MAX_Z; z++) {
       const cell: CellData = {
@@ -156,92 +148,142 @@ export const generateTempleCordonCells = (): {
     }
   }
 
-  // ── Roads ──────────────────────────────────────────────────────────────
-  // E-W: west exit (Residential) and east exit (Glassworks) both exist
-  paveRect(MIN_X, -3, MAX_X, 3); // East-West road (full width, both edges have exits)
-  // N-S: NO north or south exits — only runs interior (terrace to lower graves)
-  paveRect(-3, -18, 3, 16); // North-South approach (interior only, no path to edges)
+  // ── Main Roads & Exits ──────────────────────────────────────────────────
+  // Road heading NW (to Town Square) from plaza to map edge (-40, -20)
+  paveRect(-40, -22, -20, -18, GROUND);
+  paveRect(-40, -21, -20, -19, MARBLE); // Inner paved path
+  
+  // Grand Road heading East (to Glassworks) from plaza to map edge (40)
+  paveRect(20, -4, 40, 4, GROUND);
+  paveRect(20, -2, 40, 2, MARBLE); // Inner paved path
 
-  // Raised terrace for temple (upper half)
-  paveRect(-12, -18, 12, -6);
-  for (let x = -12; x <= 12; x++) {
-    for (let z = -18; z <= -6; z++) {
-      const c = get(x, z);
-      if (c) c.visual_height = 1;
-    }
-  }
+  // ── Central Plaza & The Witness Cordon ──────────────────────────────────
+  paveRect(-20, -12, 20, 16, MARBLE);
 
-  // ── Witness Cordon (center, z = -2 to -8) ─────────────────────────────
-  paveRect(-8, -8, 8, -1);
-  // The Bleeding Witness statue (nine_tile: 3x3 footprint)
-  place("obj_bleeding_witness", 0, -5, [0, 1], { dialogue: "dia_first_sight" });
-  // Block the full 3x3 footprint around the statue
-  for (let dx = -1; dx <= 1; dx++) {
-    for (let dz = -1; dz <= 1; dz++) {
-      if (dx === 0 && dz === 0) continue; // already blocked by place()
-      const c = get(dx, -5 + dz);
-      if (c) { c.walkable = false; c.blocks_los = false; }
-      reserve(dx, -5 + dz);
-    }
+  // The Witness Statue (cordoned in the center)
+  // 6x6 cordon fence
+  for (let x = -3; x <= 3; x++) {
+    place("obj_p_cordon_post", x, -3, [0, 1]);
+    place("obj_p_cordon_post", x, 3, [0, 1]);
   }
-  // Cordon fencing
-  for (let x = -8; x <= 8; x++) {
-    if (Math.abs(x) > 1) place("obj_fence_stone", x, -8, [0, 1]);
-    if (Math.abs(x) > 1) place("obj_fence_stone", x, -1, [0, 1]);
+  for (let z = -2; z <= 2; z++) {
+    place("obj_p_cordon_post", -3, z, [0, 1]);
+    place("obj_p_cordon_post", 3, z, [0, 1]);
   }
-  for (let z = -7; z <= -2; z++) {
-    place("obj_fence_stone", -8, z, [1, 0]);
-    place("obj_fence_stone", 8, z, [-1, 0]);
-  }
-  placeIfClear("obj_lantern_post", -9, -5, [1, 0]);
-  placeIfClear("obj_lantern_post", 9, -5, [-1, 0]);
+  place("obj_bleeding_witness", 0, 0, [0, 1]); // The main event
+  placeItem("wi_blood_shard", "itm_glass_shard", 1, -5);
+  place("obj_p_placard", 0, -6, [0, 1], { block: false, dialogue: "dia_cordon" });
+  place("obj_p_placard", 0, -4, [0, 1], { block: false, dialogue: "dia_statue" });
+  place("obj_p_placard", 0, 4, [0, -1], { block: false, dialogue: "dia_statue" });
+  place("obj_p_placard", -4, 0, [1, 0], { block: false, dialogue: "dia_statue" });
+  place("obj_p_placard", 4, 0, [-1, 0], { block: false, dialogue: "dia_statue" });
+  place("obj_p_candles", -5, 4, [0, 1], { block: false });
+  place("obj_p_candles", 5, 4, [0, 1], { block: false });
 
-  // ── Temple Interior (north section, raised) ────────────────────────────
-  buildHall(-8, -18, 8, -12, WALL_MARBLE, MARBLE, { x: 0, z: -12 });
-  place("obj_altar", 0, -15, [0, -1]);
-  for (const dx of [-6, -3, 3, 6]) {
-    placeIfClear("obj_column", dx, -13, [0, 1]);
-    placeIfClear("obj_column", dx, -17, [0, 1]);
-  }
+  // Cordon Plaza Decor
+  place("obj_lantern_post", -12, 8, [0, 1]);
+  place("obj_lantern_post", 12, 8, [0, 1]);
+  place("obj_lantern_post", -12, -8, [0, 1]);
+  place("obj_lantern_post", 12, -8, [0, 1]);
+  place("obj_well", 0, 12, [0, 1]); // plaza fountain (well stand-in)
+  place("obj_pew", -6, 12, [1, 0]);
+  place("obj_pew", 6, 12, [-1, 0]);
 
-  // ── Lower Graves (southeast, z 6-16) ──────────────────────────────────
-  paveRect(4, 6, 16, 16, GROUND);
-  placeIfClear("obj_column_broken", 6, 8, [0, 1]);
-  placeIfClear("obj_column_broken", 14, 8, [0, 1]);
-  placeIfClear("obj_column_broken", 8, 14, [0, 1]);
-  placeIfClear("obj_column_broken", 12, 14, [0, 1]);
-  placeIfClear("obj_p_shrine_stone", 10, 11, [0, 1]);
-
-  // ── Prison / Hall of Custody (south, z 8-18) ──────────────────────────
-  buildHall(-16, 8, -6, 18, WALL_MARBLE, MARBLE, { x: -6, z: 13 });
-  // Cell bars dividing prisoner from warden
-  for (let z = 9; z <= 17; z++) {
-    place("obj_cell_bars", -11, z, [1, 0], {
-      dialogue: z === 13 ? "dia_nessa_bars" : undefined,
-    });
+  // ── The Temple Basilica (North, x = -16 to 16, z = -36 to -14) ──────────
+  buildBuilding(-16, -36, 16, -14, WALL_MARBLE, MARBLE, [{ x: -2, z: -14 }, { x: 2, z: -14 }]);
+  addHippedRoof(cells, -16, -36, 16, -14, "slate");
+  // Grand interior
+  for (let x = -8; x <= 8; x += 4) {
+    place("obj_column", x, -30, [0, 1]);
+    place("obj_column", x, -24, [0, 1]);
   }
-  place("obj_pallet_bed", -14, 10, [0, 1]); // Nessa's cell
-  place("obj_pallet_bed", -14, 16, [0, 1]);
-  place("obj_table", -8, 11, [0, 1]); // warden's desk
-  place("obj_pew", -8, 15, [0, 1]);
-  placeContainer("cnt_gaol_effects", -14, 12, {
-    name: "Confiscated Effects",
-    items: [{ item_id: "itm_carried_stone" }, { item_id: "itm_votive" }],
+  // Pews
+  for (let z = -28; z <= -20; z += 2) {
+    place("obj_pew", -6, z, [1, 0]);
+    place("obj_pew", -4, z, [1, 0]);
+    place("obj_pew", 4, z, [-1, 0]);
+    place("obj_pew", 6, z, [-1, 0]);
+  }
+  place("obj_altar", 0, -32, [0, 1]);
+  place("obj_podium", -4, -34, [0, 1]);
+  place("obj_lantern_post", -8, -34, [0, 1]);
+  place("obj_lantern_post", 8, -34, [0, 1]);
+  place("obj_statue_votary", -12, -32, [0, 1]);
+  place("obj_statue_votary", 12, -32, [0, 1]);
+  placeContainer("cnt_temple_tithe", 14, -34, {
+    name: "Tithe Box",
+    items: [{ item_id: "itm_votive", count: 4 }],
   });
 
-  // ── Entity Placements ──────────────────────────────────────────────────
+  // ── The Lower Graves (South/West, x = -36 to -4, z = 16 to 36) ──────────
+  // Deterministic so the layout stays stable between runs.
+  const graveRng = (() => { let s = 0x6772; return () => { s = (s * 1103515245 + 12345) & 0x7fffffff; return s / 0x7fffffff; }; })();
+  for (let x = -36; x <= -4; x += 4) {
+    for (let z = 18; z <= 36; z += 4) {
+      const r = graveRng();
+      if (r < 0.5) {
+        placeIfClear("obj_p_headstone", x, z, [0, 1]);
+        if (graveRng() < 0.4) placeItem(`wi_votive_${x}_${z}`, "itm_votive", x, z + 1);
+      } else if (r < 0.7) {
+        placeIfClear("obj_p_grave_cross", x, z, [0, 1]);
+      } else if (r < 0.85) {
+        placeIfClear("obj_dead_tree", x, z, [0, 1]);
+      }
+    }
+  }
+
+  // ── The Gaol / Prison (Southeast, x = 12 to 36, z = 16 to 36) ───────────
+  buildBuilding(12, 16, 36, 36, WALL_CLAY, MARBLE, [{ x: 12, z: 26 }]);
+  addHippedRoof(cells, 12, 16, 36, 36, "slate");
+  // Prison cells along the walls
+  for (let z = 18; z <= 34; z += 4) {
+    // Left side cells
+    place("obj_cell_bars", 16, z, [1, 0]); // Facing East
+    place("obj_pallet_bed", 14, z, [1, 0]);
+    // Right side cells
+    place("obj_cell_bars", 32, z, [-1, 0]); // Facing West
+    place("obj_pallet_bed", 34, z, [-1, 0]);
+  }
+  place("obj_cell_bars", 32, 32, [-1, 0], { dialogue: "dia_nessa_bars" });
+  // Interrogator's desk
+  place("obj_table", 24, 20, [0, 1]);
+  place("obj_pew", 24, 18, [0, 1]);
+  place("obj_lantern_post", 20, 24, [0, 1]);
+  place("obj_lantern_post", 28, 24, [0, 1]);
+
+  // Unique punishment props in the center aisle
+  place("obj_iron_maiden", 24, 28, [0, -1]);
+  place("obj_pillory", 24, 32, [0, -1]);
+
+  // ── Entity Placements ───────────────────────────────────────────────────
   const entity_placements: EntityPlacementData[] = [
-    { entity_id: "ent_priest", cell: [0, -14] },
-    { entity_id: "ent_guard_cordon", cell: [0, 0] },
-    { entity_id: "ent_nessa", cell: [-13, 13] }, // behind bars
-    { entity_id: "ent_gaoler", cell: [-9, 13] },
-    { entity_id: "ent_burial_keeper", cell: [10, 10] },
-    { entity_id: "ent_mason", cell: [8, 7] },
+    { entity_id: "ent_save", cell: [0, 10] }, // save point near fountain
+    { entity_id: "ent_priest", cell: [0, -31], schedule: [
+      { hour: 5, cell: [0, -31] },
+      { hour: 10, cell: [0, -29] },
+      { hour: 18, cell: [-2, -14] },
+      { hour: 22, cell: [0, -34] },
+    ] }, // Father Imre at the altar
+    { entity_id: "ent_guard_cordon", cell: [-5, -4], schedule: [
+      { hour: 6, cell: [-5, -4] },
+      { hour: 18, cell: [-5, -6] },
+      { hour: 22, cell: [5, -4] },
+    ] }, // Guard Bren outside the cordon
+    { entity_id: "ent_nessa", cell: [34, 32] }, // Nessa visible behind the bars
+    { entity_id: "ent_gaoler", cell: [24, 22], schedule: [
+      { hour: 6, cell: [24, 22] },
+      { hour: 18, cell: [27, 24] },
+      { hour: 23, cell: [30, 34] },
+    ] }, // Warden Sefa at the interrogator's desk
+    { entity_id: "ent_burial_keeper", cell: [-21, 26], schedule: [
+      { hour: 6, cell: [-21, 26] },
+      { hour: 14, cell: [-30, 28] },
+      { hour: 20, cell: [-10, 20] },
+    ] }, // Marta among the lower graves
   ];
 
-  // ── Triggers ───────────────────────────────────────────────────────────
+  // ── Triggers ────────────────────────────────────────────────────────────
   const triggers: TriggerData[] = [
-    // Town music on enter
     {
       id: "trg_temple_music",
       type: "on_load",
@@ -249,42 +291,22 @@ export const generateTempleCordonCells = (): {
       cutscene_id: "cut_town_music",
       once: false,
     },
-    // First sight of the cordon
     {
-      id: "trg_cordon_sight_0",
-      cell: [0, -1],
-      type: "step",
+      id: "trg_nessa_talk",
+      cell: [32, 32],
+      type: "interact",
       conditions: [],
-      condition: { not: { switch: "seen_cordon" } },
-      cutscene_id: "cut_first_sight",
+      condition: { switch: "vampire_cleared" },
+      cutscene_id: "cut_gaol_entry",
       once: true,
     },
     {
-      id: "trg_cordon_sight_1",
-      cell: [1, -1],
-      type: "step",
+      id: "trg_witness_first_sight_interact",
+      cell: [0, -4],
+      type: "interact",
       conditions: [],
       condition: { not: { switch: "seen_cordon" } },
       cutscene_id: "cut_first_sight",
-      once: true,
-    },
-    // Prison gate — blocked until vampire cleared
-    {
-      id: "trg_gate_prison_0",
-      cell: [-6, 13],
-      type: "step",
-      conditions: [],
-      condition: { not: { switch: "vampire_cleared" } },
-      cutscene_id: "cut_gate_blocked_prison",
-      once: false,
-    },
-    {
-      id: "trg_gate_prison_1",
-      cell: [-6, 12],
-      type: "step",
-      conditions: [],
-      condition: { not: { switch: "vampire_cleared" } },
-      cutscene_id: "cut_gate_blocked_prison",
       once: false,
     },
   ];

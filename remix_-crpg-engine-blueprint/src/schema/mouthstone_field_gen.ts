@@ -138,7 +138,7 @@ export const generateMouthstoneFieldCells = (): {
   // ── Central Mouthstone Plaza ────────────────────────────────────────────
   paveRect(-8, -8, 8, 6); // the ritual clearing
   // The Mouthstone itself (large monolith, center)
-  place("obj_mouthstone_gate", 0, -2, [0, 1]);
+  place("obj_mouthstone_gate", 0, -2, [0, 1], { dialogue: "dia_mouthstone" });
   // Votary circle around the Mouthstone
   for (const angle of [0, 1, 2, 3, 4, 5, 6, 7]) {
     const radius = 7;
@@ -160,8 +160,9 @@ export const generateMouthstoneFieldCells = (): {
   placeIfClear("obj_column_broken", 14, -4, [0, 1]);
   placeIfClear("obj_column_broken", -10, 10, [0, 1]);
   placeIfClear("obj_column_broken", 10, 10, [0, 1]);
-  placeIfClear("obj_stele", -5, -12, [0, 1]);
-  placeIfClear("obj_stele", 5, -12, [0, 1]);
+  // Worn standing stones flanking the approach (votary statues as steles).
+  placeIfClear("obj_statue_votary", -5, -12, [0, 1]);
+  placeIfClear("obj_statue_votary", 5, -12, [0, 1]);
 
   // Sparse grass tufts (barren landscape)
   placeIfClear("obj_grass_tuft", -16, -14, [0, 1]);
@@ -185,6 +186,11 @@ export const generateMouthstoneFieldCells = (): {
 
   // ── Entity Placements ───────────────────────────────────────────────────
   const entity_placements: EntityPlacementData[] = [
+    { entity_id: "ent_gate_anchorite", cell: [-2, 6], schedule: [
+      { hour: 5, cell: [-2, 6] },
+      { hour: 14, cell: [-6, 2] },
+      { hour: 22, cell: [2, 6] },
+    ] },
     { entity_id: "ent_save", cell: [0, 18] }, // save candle near south exit
   ];
 

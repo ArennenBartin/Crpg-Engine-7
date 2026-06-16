@@ -7,38 +7,21 @@ import {
   WorldItemPlacementData,
 } from "./game";
 
-// ── Cave Upper Map ────────────────────────────────────────────────────────
-// The eastern cave system — first level. A descending path from the surface
-// into the cave mouth, branching tunnel, grotto with the sigil offering,
-// and corridor south to the deep cave exit.
-//
-// Exits: north (→ residential, surface return), south (→ cave deep)
-//
-//   ┌────────────────────────────────────┐
-//   │  road north (cave path, surface)   │
-//   │          │                         │
-//   │     [Cave Mouth]                   │
-//   │          │                         │
-//   │  [Grotto] ── [Tunnel] ── [Branch]  │
-//   │  (sigil)       │                   │
-//   │                │                   │
-//   │          [Corridor South]          │
-//   │                ↓                   │
-//   │         exit → cave deep           │
-//   └────────────────────────────────────┘
+// ── Upper Caves Map (Expanded) ──────────────────────────────────────────
+// Subterranean entry from the Residential district down into the network.
 
 type Vec2 = [number, number];
 
-const MIN_X = -20;
-const MAX_X = 20;
-const MIN_Z = -20;
-const MAX_Z = 20;
+const MIN_X = -40;
+const MAX_X = 40;
+const MIN_Z = -40;
+const MAX_Z = 40;
 
 export const CAVE_UPPER_W = MAX_X - MIN_X + 1;
 export const CAVE_UPPER_H = MAX_Z - MIN_Z + 1;
 
 const GROUND = "obj_floor_dirt";
-const MARBLE = "obj_floor_stone";
+const WOOD = "obj_floor_wood";
 
 const key = (x: number, z: number) => `${x}|${z}`;
 
@@ -59,6 +42,25 @@ export const generateCaveUpperCells = (): {
 
   const get = (x: number, z: number) => grid.get(key(x, z));
   const reserve = (x: number, z: number) => reserved.add(key(x, z));
+
+  const setTile = (
+    x: number, z: number, objectId: string,
+    opts: { walkable?: boolean; blocksLos?: boolean; visualHeight?: number } = {},
+  ) => {
+    const c = get(x, z);
+    if (!c) return;
+    c.object_id = objectId;
+    c.walkable = opts.walkable ?? true;
+    c.blocks_los = opts.blocksLos ?? objectId.startsWith("obj_wall");
+    c.visual_height = opts.visualHeight ?? (objectId.startsWith("obj_wall") ? 4 : 0);
+    c.terrain = objectId === GROUND ? "grass" : "stone";
+    c.surface_tag = "none";
+  };
+
+  const pave = (x: number, z: number, floor = GROUND) => setTile(x, z, floor);
+  const paveRect = (x0: number, z0: number, x1: number, z1: number, floor = GROUND) => {
+    for (let x = x0; x <= x1; x++) for (let z = z0; z <= z1; z++) pave(x, z, floor);
+  };
 
   const place = (
     objectId: string, x: number, z: number, facing: Vec2 = [0, 1],
@@ -84,148 +86,90 @@ export const generateCaveUpperCells = (): {
     return true;
   };
 
-  const placeContainer = (
-    id: string, x: number, z: number,
-    opts: { name?: string; locked?: boolean; key?: string; items?: { item_id: string; count?: number }[] } = {},
-  ) => {
-    container_placements.push({
-      id, object_id: "obj_chest", cell: [x, z], facing: [0, 1],
-      display_name: opts.name, locked: opts.locked ?? false,
-      key_item_id: opts.key, consume_key: false,
-      items: (opts.items || []).map(e => ({ item_id: e.item_id, count: e.count ?? 1 })),
-    });
-    reserve(x, z);
-    const c = get(x, z);
-    if (c) { c.walkable = false; c.blocks_los = false; }
-  };
-
-  const placeItem = (id: string, itemId: string, x: number, z: number, count = 1) => {
-    item_placements.push({ id, item_id: itemId, cell: [x, z], count });
-    reserve(x, z);
-  };
-
-  // Cave maps use a different approach: void by default, carve walkable areas.
-  // We fill with inactive void, then carve cave chambers as walkable ground.
-
-  // Start with void everywhere
+  // ── Base void ────────────────────────────────────────────────────────
   for (let x = MIN_X; x <= MAX_X; x++) {
     for (let z = MIN_Z; z <= MAX_Z; z++) {
       const cell: CellData = {
         x, y: 0, z,
-        active: true, walkable: false, blocks_los: true,
-        height: 0, visual_height: 2, // cave walls feel taller
-        terrain: "stone", surface_tag: "none", object_id: MARBLE,
+        active: false, walkable: false, blocks_los: true,
+        height: 0, visual_height: 4,
+        terrain: "grass", surface_tag: "none",
       };
       grid.set(key(x, z), cell);
       cells.push(cell);
     }
   }
 
-  // Carve helper: make cells walkable ground
-  const carve = (x: number, z: number) => {
-    const c = get(x, z);
-    if (c) {
-      c.walkable = true;
-      c.blocks_los = false;
-      c.visual_height = 0;
-      c.object_id = GROUND;
-      c.terrain = "grass"; // cave dirt
+  const carveRoom = (x0: number, z0: number, x1: number, z1: number, floor = GROUND) => {
+    for (let x = x0; x <= x1; x++) {
+      for (let z = z0; z <= z1; z++) {
+        const c = get(x, z);
+        if (c) {
+          c.active = true; c.walkable = true; c.blocks_los = false; c.visual_height = 0; c.object_id = floor;
+        }
+      }
     }
   };
-  const carveRect = (x0: number, z0: number, x1: number, z1: number) => {
-    for (let x = x0; x <= x1; x++) for (let z = z0; z <= z1; z++) carve(x, z);
-  };
 
-  // ── Cave Path (north entrance, z = -20 to -12) ────────────────────────
-  // Road from surface, narrows into cave mouth
-  carveRect(-3, -20, 3, -12); // entrance corridor from north exit
-  carveRect(-2, -20, 2, -20); // narrow at map edge (exit cells)
+  // Main tunnel from North (x=-2 to 2, z=-40 to -24)
+  carveRoom(-2, -40, 2, -24);
+  // Large Cavern (x=-12 to 12, z=-24 to -8)
+  carveRoom(-12, -24, 12, -8);
+  // West witness/log alcove: optional but visible from the main cavern.
+  carveRoom(-24, -22, -13, -14);
+  // Tunnel to East (x=12 to 40, z=-14 to -10)
+  carveRoom(12, -14, 40, -10);
+  
+  // Winding path South (x=-4 to 4, z=-8 to 16)
+  carveRoom(-4, -8, 4, 16);
+  // Ravine Bridge (x=-8 to 8, z=16 to 24)
+  carveRoom(-8, 16, 8, 24, WOOD);
+  // Tunnel to South Exit (x=-2 to 2, z=24 to 40)
+  carveRoom(-2, 24, 2, 40);
 
-  // ── Cave Mouth (z = -12 to -6) ────────────────────────────────────────
-  carveRect(-5, -12, 5, -6); // first chamber, wider
-  placeIfClear("obj_lantern_post", -4, -10, [0, 1]);
-  placeIfClear("obj_lantern_post", 4, -10, [0, 1]);
+  // Dress the cavern with cave-appropriate props (network kit).
+  for (let x = -10; x <= 10; x += 4) {
+    place("obj_net_column_root", x, -22, [0, 1]);
+    place("obj_net_rubble", x, -10, [0, 1]);
+  }
+  placeIfClear("obj_net_votive_heap", -8, -16, [0, 1]);
+  placeIfClear("obj_net_rubble", -6, -16, [0, 1]);
+  placeIfClear("obj_net_brazier_cold", 0, -16, [0, 1]);
+  placeIfClear("obj_net_shrine_family", -22, -18, [1, 0]);
+  placeIfClear("obj_net_candle_cluster", -18, -20, [0, 1], { block: false });
+  placeIfClear("obj_net_root_curtain", -14, -18, [1, 0]);
+  placeIfClear("obj_net_stele", 8, -22, [0, 1], { block: false });
 
-  // ── Main Tunnel (z = -6 to 6, x = -3 to 3) ────────────────────────────
-  carveRect(-3, -6, 3, 6); // central corridor
+  // Ravine bridge: cold braziers along the planks.
+  placeIfClear("obj_net_brazier_cold", -4, 20, [0, 1]);
+  placeIfClear("obj_net_brazier_cold", 4, 20, [0, 1]);
 
-  // ── Grotto (west branch, x = -14 to -5, z = -3 to 3) ──────────────────
-  carveRect(-14, -3, -4, 3); // grotto chamber
-  placeIfClear("obj_p_shrine_stone", -10, 0, [0, 1]);
-  placeContainer("cnt_grotto_offering", -12, -1, {
-    name: "Shrine Offering",
-    items: [{ item_id: "itm_cave_sigil" }, { item_id: "itm_votive", count: 2 }],
-  });
-  placeItem("wi_cave_potion_1", "itm_health_potion", -8, 2);
-
-  // ── East Branch (x = 4 to 20, z = -2 to 2) — extends to east edge exit (→ Cave Grotto)
-  carveRect(4, -2, 20, 2); // corridor to east exit
-  placeIfClear("obj_column_broken", 8, 0, [0, 1]);
-  placeIfClear("obj_lantern_post", 16, 0, [0, 1]);
-  placeItem("wi_cave_potion_2", "itm_health_potion", 10, 1);
-
-  // ── South Corridor (z = 6 to 18, narrow) ──────────────────────────────
-  carveRect(-2, 6, 2, 20); // corridor toward deep cave exit
-  // The deep gate: blocked until player has sigil
-  // (Triggers handle the gate; the cells are walkable)
-
-  // ── Entity Placements (enemies) ────────────────────────────────────────
   const entity_placements: EntityPlacementData[] = [
-    { entity_id: "ent_save", cell: [0, -11] }, // cave entrance save candle
-    { entity_id: "ent_rite_remnant_1", cell: [0, -4] },
-    { entity_id: "ent_rite_remnant_2", cell: [-2, 3] },
-    { entity_id: "ent_rite_remnant_3", cell: [1, 8] },
-    { entity_id: "ent_candle_eaten_1", cell: [-11, 1] }, // grotto
-    { entity_id: "ent_candle_eaten_2", cell: [-8, -2] }, // grotto
-    { entity_id: "ent_partial_conversion_1", cell: [8, -1] }, // east branch
+    { entity_id: "ent_candle_eaten_1", cell: [0, -18] },
+    { entity_id: "ent_partial_conversion_1", cell: [20, -12] }, // guarding the east exit
+    { entity_id: "ent_partial_conversion_2", cell: [0, 20] },   // guarding the bridge
   ];
 
-  // ── Triggers ───────────────────────────────────────────────────────────
   const triggers: TriggerData[] = [
-    // Cave music on enter
     {
-      id: "trg_cave_music",
-      type: "on_load",
+      id: "trg_read_log_1",
+      cell: [-8, -16],
+      type: "interact",
       conditions: [],
-      cutscene_id: "cut_network_upper_enter",
-      once: false,
-    },
-    // Gate: deep cave blocked without sigil
-    {
-      id: "trg_gate_deep_0",
-      cell: [0, 14],
-      type: "step",
-      conditions: [],
-      condition: { not: { has_item: "itm_cave_sigil" } },
-      cutscene_id: "cut_gate_blocked_deep",
-      once: false,
+      condition: { not: { switch: "found_log_1" } },
+      cutscene_id: "cut_read_log_1",
+      once: true,
     },
     {
-      id: "trg_gate_deep_1",
-      cell: [-1, 14],
-      type: "step",
+      id: "trg_read_log_2",
+      cell: [0, -16],
+      type: "interact",
       conditions: [],
-      condition: { not: { has_item: "itm_cave_sigil" } },
-      cutscene_id: "cut_gate_blocked_deep",
-      once: false,
-    },
-    {
-      id: "trg_gate_deep_2",
-      cell: [1, 14],
-      type: "step",
-      conditions: [],
-      condition: { not: { has_item: "itm_cave_sigil" } },
-      cutscene_id: "cut_gate_blocked_deep",
-      once: false,
+      condition: { not: { switch: "found_log_2" } },
+      cutscene_id: "cut_read_log_2",
+      once: true,
     },
   ];
 
-  return {
-    cells,
-    custom_object_placements,
-    item_placements,
-    container_placements,
-    entity_placements,
-    triggers,
-  };
+  return { cells, custom_object_placements, item_placements, container_placements, entity_placements, triggers };
 };

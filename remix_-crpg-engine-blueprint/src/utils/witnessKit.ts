@@ -2318,6 +2318,61 @@ const flowerBush = () =>
     },
   });
 
+// ── Unique Prison Props ─────────────────────────────────────────────────────
+
+const pillory = () =>
+  sculpt({
+    id: "obj_pillory",
+    name: "Wooden Pillory",
+    category: "prop",
+    tags: ["wood", "prison"],
+    materialKeys: ["cedar", "darkCedar", "bronze"],
+    build: (m, rng) => {
+      // Base post
+      tube(m, "post", mat("darkCedar"), [[0, 0, 0], [0, 1.2, 0]], [0.08, 0.08], 4);
+      // Lower board
+      const lowerB = placeRing(m, slabProfile(1.4, 0.1), [0, 1.2, 0]);
+      const lowerT = placeRing(m, slabProfile(1.4, 0.1), [0, 1.4, 0]);
+      loft(m, "board_low", mat("cedar"), [lowerB, lowerT]);
+      cap(m, "board_low_top", mat("cedar"), lowerT);
+      cap(m, "board_low_bot", mat("cedar"), lowerB, true);
+      // Upper board
+      const upperB = placeRing(m, slabProfile(1.4, 0.1), [0, 1.45, 0]);
+      const upperT = placeRing(m, slabProfile(1.4, 0.1), [0, 1.65, 0]);
+      loft(m, "board_high", mat("cedar"), [upperB, upperT]);
+      cap(m, "board_high_top", mat("cedar"), upperT);
+      cap(m, "board_high_bot", mat("cedar"), upperB, true);
+      // Lock
+      blob(m, "lock", mat("bronze"), [0.75, 1.425, 0], [0.1, 0.15, 0.12], rng, 4, 1, 0);
+    },
+  });
+
+const ironMaiden = () =>
+  sculpt({
+    id: "obj_iron_maiden",
+    name: "Bronze Maiden",
+    category: "prop",
+    tags: ["metal", "prison"],
+    materialKeys: ["bronze", "blood"],
+    build: (m, rng) => {
+      lathe(
+        m,
+        "body",
+        mat("bronze"),
+        [
+          [0.4, 0],
+          [0.45, 1.0],
+          [0.4, 1.8],
+          [0.1, 2.1],
+          [0.01, 2.15]
+        ],
+        8,
+        { jitter: 0.02, rng }
+      );
+      blob(m, "stain", mat("blood"), [0, 0.05, 0.42], [0.3, 0.4, 0.1], rng, 5, 2, 0.05);
+    },
+  });
+
 // ── Library export ──────────────────────────────────────────────────────────
 
 export const createWitnessTownLibrary = (): ObjectData[] => [
@@ -2357,4 +2412,6 @@ export const createWitnessTownLibrary = (): ObjectData[] => [
   figTree(),
   flowerBush(),
   grassTuft(),
+  pillory(),
+  ironMaiden(),
 ];
