@@ -143,18 +143,20 @@ export const generateOldProcessionalWoodCells = (): {
   }
 
   // Readable landmarks: sign, old tally, and procession stones.
-  placeIfClear("obj_p_placard", 0, -14, [0, 1], { block: false, dialogue: "dia_processional_wood_sign" });
-  placeIfClear("obj_net_stele", -8, 0, [1, 0], { block: false, dialogue: "dia_tally_animal_clue" });
+  placeIfClear("obj_ald_processional_marker", 0, -14, [0, 1], { block: false, dialogue: "dia_processional_wood_sign" });
+  placeIfClear("obj_ald_processional_marker", -8, 0, [1, 0], { block: false, dialogue: "dia_tally_animal_clue" });
   for (const z of [-10, -6, 6, 10]) {
-    placeIfClear("obj_statue_votary", -4, z, [1, 0]);
-    placeIfClear("obj_statue_votary", 4, z, [-1, 0]);
+    if (z === -10 || z === 10) {
+      placeIfClear("obj_ald_processional_marker", -4, z, [1, 0]);
+      placeIfClear("obj_ald_processional_marker", 4, z, [-1, 0]);
+    }
   }
   placeIfClear("obj_net_votive_heap", 8, 10, [0, 1], { block: false });
-  placeIfClear("obj_net_candle_cluster", 6, 11, [0, 1], { block: false });
-  placeIfClear("obj_lantern_post", -3, -17);
-  placeIfClear("obj_lantern_post", 3, -17);
-  placeIfClear("obj_lantern_post", -3, 17);
-  placeIfClear("obj_lantern_post", 3, 17);
+  placeIfClear("obj_ald_votive_light_cluster", 6, 11, [0, 1], { block: false });
+  placeIfClear("obj_ald_civic_lantern_post", -3, -17);
+  placeIfClear("obj_ald_civic_lantern_post", 3, -17);
+  placeIfClear("obj_ald_civic_lantern_post", -3, 17);
+  placeIfClear("obj_ald_civic_lantern_post", 3, 17);
 
   return {
     cells,

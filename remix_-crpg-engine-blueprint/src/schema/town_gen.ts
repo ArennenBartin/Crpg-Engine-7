@@ -6,6 +6,7 @@ import {
   TriggerData,
   WorldItemPlacementData,
 } from "./game";
+import { DOOR_OBJECT_ID, doorFacingForBounds } from "../utils/doorPlacement";
 
 // ── The Town of the Witness, rebuilt ────────────────────────────────────────
 // A terraced procession town. The sacred way climbs three terraces from the
@@ -308,7 +309,7 @@ export const generateTownCells = (): {
   place("obj_column_broken", -8, -32, [1, 0]);
 
   // ── The procession itself: paired votaries/lamps make the climb legible. ─
-  for (const z of [-28, -20, -12, -4, 4]) {
+  for (const z of [-28, -20, -12, -4, 6]) {
     placeIfClear("obj_statue_votary", -3, z, [1, 0]);
     placeIfClear("obj_statue_votary", 3, z, [-1, 0]);
   }
@@ -350,6 +351,7 @@ export const generateTownCells = (): {
     if (courtyard)
       for (let x = courtyard.x0; x <= courtyard.x1; x++)
         for (let z = courtyard.z0; z <= courtyard.z1; z++) skip.add(key(x, z));
+    place(DOOR_OBJECT_ID, door.x, door.z, doorFacingForBounds(door, x0, z0, x1, z1), { block: false });
     addRoof(x0, z0, x1, z1, skip);
   };
 
@@ -802,7 +804,7 @@ export const generateTownCells = (): {
       ],
     },
     {
-      entity_id: "ent_glass_apprentice",
+      entity_id: "ent_orin_public",
       cell: [43, 43],
       schedule: [
         { hour: 7, cell: [43, 43] },
@@ -888,13 +890,13 @@ export const generateTownCells = (): {
     { switch: "act1_assigned" },
   );
   wideTrigger("trg_rhyme", "cut_children_rhyme", "heard_rhyme", [
-    [3, -16], [4, -16], [5, -16], [6, -16],
+    [2, -16], [3, -16], [5, -16], [6, -16],
   ]);
   wideTrigger("trg_upper_walk", "cut_first_sight", "seen_cordon", [
     [-1, 5], [0, 5], [1, 5], [-13, 5], [13, 5],
   ]);
   wideTrigger("trg_funeral", "cut_funeral_shrine", "seen_funeral", [
-    [-9, 12], [-8, 12], [-10, 12],
+    [-9, 12], [-10, 12], [-11, 12],
   ]);
   wideTrigger(
     "trg_cellar",

@@ -159,7 +159,7 @@ export const generateNetworkCells = (): {
   place("obj_column", -2, -10);
   place("obj_column", 2, -10);
   // Kept off the centerline so the ladder cell at [0,-19] stays reachable.
-  place("obj_lantern_post", 1, -18);
+  place("obj_ald_votive_light_cluster", 1, -18);
 
   // Vestibule space (0, 0)
   paveRect(-8, 0, 8, 8, CATACOMB);
@@ -167,7 +167,7 @@ export const generateNetworkCells = (): {
   place("obj_net_column_root", 6, 2);
   place("obj_net_column_root", -6, 6);
   place("obj_net_column_root", 6, 6);
-  place("obj_altar", 0, 4, [0, 1]);
+  place("obj_ald_network_family_altar", 0, 4, [0, 1]);
   place("obj_net_votive_heap", 0, 5, [0, 1], { block: false });
   entity_placements.push({ entity_id: "ent_save", cell: [5, 2] });
 
@@ -176,14 +176,14 @@ export const generateNetworkCells = (): {
 
   // Giant central rite circle
   paveRect(-8, 20, 8, 30, RITUAL);
-  place("obj_net_rite_circle", 0, 25, [0, 1], { block: false });
+  place("obj_ald_network_omphalos_ring", 0, 25, [0, 1], { block: false });
 
   // Outer pillars of the processional
   for(let z = 12; z <= 38; z += 6) {
     place("obj_net_column_root", -10, z);
     place("obj_net_column_root", 10, z);
-    place("obj_net_brazier_cold", -9, z);
-    place("obj_net_brazier_cold", 9, z);
+    place("obj_ald_glass_threshold_brazier", -9, z);
+    place("obj_ald_glass_threshold_brazier", 9, z);
   }
 
   // Pagan altars replacing the old statues
@@ -258,14 +258,14 @@ export const generateNetworkCells = (): {
   paveRect(21, 9, 29, 16, CATACOMB);
   place("obj_net_column_root", 23, 10);
   place("obj_net_column_root", 23, 15);
-  place("obj_net_brazier_cold", 27, 10);
-  place("obj_net_brazier_cold", 27, 15);
+  place("obj_ald_glass_threshold_brazier", 27, 10);
+  place("obj_ald_glass_threshold_brazier", 27, 15);
 
   // Rusk chapel: family rites and the first house mark.
   paveRect(30, 6, 45, 17, CATACOMB);
   paveRect(36, 10, 42, 16, RITUAL);
-  place("obj_net_shrine_family", 41, 16, [0, -1]);
-  place("obj_net_candle_cluster", 39, 15, [0, 1], { block: false });
+  place("obj_ald_network_family_altar", 41, 16, [0, -1]);
+  place("obj_ald_votive_light_cluster", 39, 15, [0, 1], { block: false });
   place("obj_net_bone_pile", 34, 8, [0, 1], { block: false });
   place("obj_net_stele", 44, 10, [-1, 0]);
   placeItem("itm_family_mark_1", "itm_family_mark_1", 40, 14);
@@ -299,7 +299,7 @@ export const generateNetworkCells = (): {
   place("obj_net_shrine_family", 35, 44, [0, -1]);
   placeItem("itm_family_mark_2", "itm_family_mark_2", 35, 43);
   place("obj_net_bone_pile", 33, 42, [0, 1], { block: false });
-  place("obj_net_candle_cluster", 37, 42, [0, 1], { block: false });
+  place("obj_ald_votive_light_cluster", 37, 42, [0, 1], { block: false });
   triggers.push({
     id: "trg_fen_votive_count",
     cell: [35, 44],
@@ -313,12 +313,12 @@ export const generateNetworkCells = (): {
   // the other half of the rite text here, in an ossuary niche. Reading it is
   // the proof that she was willing.
   paveRect(47, 33, 55, 42, RITUAL);
-  place("obj_net_rite_circle", 51, 37, [0, 1], { block: false });
+  place("obj_ald_network_omphalos_ring", 51, 37, [0, 1], { block: false });
   place("obj_net_stele", 54, 37, [-1, 0]);
-  place("obj_net_brazier_cold", 49, 35);
-  place("obj_net_brazier_cold", 49, 40);
+  place("obj_ald_glass_threshold_brazier", 49, 35);
+  place("obj_ald_glass_threshold_brazier", 49, 40);
   place("obj_net_bone_pile", 53, 35, [0, 1], { block: false });
-  place("obj_net_candle_cluster", 50, 37, [0, 1], { block: false });
+  place("obj_ald_votive_light_cluster", 50, 37, [0, 1], { block: false });
   placeContainer("cnt_crypt_offering", 54, 40, {
     name: "Crypt Offering Chest",
     items: [
@@ -357,7 +357,7 @@ export const generateNetworkCells = (): {
   }
 
   // The lesser omphalos at the center
-  place("obj_net_omphalos", 0, 55);
+  place("obj_ald_network_omphalos_ring", 0, 55);
 
   // Ring of glass kneelers
   place("obj_net_glass_kneeler", 0, 51, [0, 1]);
@@ -370,8 +370,8 @@ export const generateNetworkCells = (): {
   place("obj_net_column_root", 7, 48);
   place("obj_net_column_root", -7, 62);
   place("obj_net_column_root", 7, 62);
-  place("obj_net_brazier_cold", -9, 55);
-  place("obj_net_brazier_cold", 9, 55);
+  place("obj_ald_glass_threshold_brazier", -9, 55);
+  place("obj_ald_glass_threshold_brazier", 9, 55);
 
   // Antechamber guardians
   entity_placements.push({ entity_id: "ent_partial_conversion_4", cell: [-4, 50] });

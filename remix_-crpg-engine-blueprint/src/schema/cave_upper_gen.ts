@@ -20,7 +20,7 @@ const MAX_Z = 40;
 export const CAVE_UPPER_W = MAX_X - MIN_X + 1;
 export const CAVE_UPPER_H = MAX_Z - MIN_Z + 1;
 
-const GROUND = "obj_floor_dirt";
+const GROUND = "obj_ald_cave_floor";
 const WOOD = "obj_floor_wood";
 
 const key = (x: number, z: number) => `${x}|${z}`;
@@ -132,17 +132,17 @@ export const generateCaveUpperCells = (): {
     place("obj_net_column_root", x, -22, [0, 1]);
     place("obj_net_rubble", x, -10, [0, 1]);
   }
-  placeIfClear("obj_net_votive_heap", -8, -16, [0, 1]);
+  placeIfClear("obj_ald_cave_evidence_shrine", -8, -16, [0, 1], { block: false });
   placeIfClear("obj_net_rubble", -6, -16, [0, 1]);
-  placeIfClear("obj_net_brazier_cold", 0, -16, [0, 1]);
+  placeIfClear("obj_ald_cave_evidence_shrine", 0, -16, [0, 1], { block: false });
   placeIfClear("obj_net_shrine_family", -22, -18, [1, 0]);
-  placeIfClear("obj_net_candle_cluster", -18, -20, [0, 1], { block: false });
+  placeIfClear("obj_ald_votive_light_cluster", -18, -20, [0, 1], { block: false });
   placeIfClear("obj_net_root_curtain", -14, -18, [1, 0]);
   placeIfClear("obj_net_stele", 8, -22, [0, 1], { block: false });
 
   // Ravine bridge: cold braziers along the planks.
-  placeIfClear("obj_net_brazier_cold", -4, 20, [0, 1]);
-  placeIfClear("obj_net_brazier_cold", 4, 20, [0, 1]);
+  placeIfClear("obj_ald_glass_threshold_brazier", -4, 20, [0, 1]);
+  placeIfClear("obj_ald_glass_threshold_brazier", 4, 20, [0, 1]);
 
   const entity_placements: EntityPlacementData[] = [
     { entity_id: "ent_candle_eaten_1", cell: [0, -18] },

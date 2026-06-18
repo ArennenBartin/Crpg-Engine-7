@@ -226,13 +226,12 @@ export const generateParishCells = () => {
     m.place({ at: [x, -24], role: "stairs", facing: "north", block: false });
     m.place({ at: [x, 18], role: "stairs", facing: "south", block: false });
   }
-  for (const z of [16, 17, 18]) m.place({ at: [EXILE_GATE_X, z], role: "stairs", facing: "east", block: false });
+  for (const z of [16, 17, 18]) m.place({ at: [EXILE_GATE_X, z], role: "fence.iron", facing: "east" });
   for (const x of [-43, -42, -41, 27, 28, 29]) {
     m.place({ at: [x, 18], role: "stairs", facing: "south", block: false });
   }
   m.place({ at: [-32, -24], role: "fence.iron", facing: "north" }); // visible locked clergy shortcut
   m.place({ at: [EXILE_GATE_X, -8], role: "lych_gate", facing: "east", block: false });
-  m.place({ at: [EXILE_GATE_X, 17], role: "fence.iron", facing: "east" }); // industrial side gate, locked
 
   // ═════════════════════════════════════════════════════════════════════════
   // UPPER AUTHORITY TIER
@@ -336,7 +335,6 @@ export const generateParishCells = () => {
     m.place({ at: [7, z], role: "fence.cordon", facing: "west" });
   }
   m.place({ at: [9, -10], role: "placard", facing: "west", dialogue: "dia_notice_board", block: false });
-  m.place({ at: [-9, -10], role: "placard", facing: "east", dialogue: "dia_notice_board", block: false });
 
   // Churchyard and cemetery field: spatial placeholder only.
   m.pave(rect(21, -20, 34, 1), "floor.grave_earth");
@@ -537,7 +535,7 @@ export const generateParishCells = () => {
   addStepTrigger(m, "trg_office", [[-17, -34], [-16, -34], [-18, -34]], "cut_office_briefing", "office_briefed", {
     not: { switch: "act1_rite_text" },
   });
-  addStepTrigger(m, "trg_office_after", [[-17, -35], [-16, -35], [-18, -35]], "cut_office_after", "act1_complete", {
+  addStepTrigger(m, "trg_office_after", [[-17, -35], [-17, -34], [-18, -35]], "cut_office_after", "act1_complete", {
     switch: "act1_rite_text",
   });
   addStepTrigger(m, "trg_gaol", [[17, -34], [18, -34], [19, -34]], "cut_gaol_entry", "gaol_entered", {

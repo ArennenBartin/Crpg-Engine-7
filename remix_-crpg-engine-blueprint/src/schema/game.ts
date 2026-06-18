@@ -16,6 +16,8 @@ import { generateGlassworksCells, GLASS_W, GLASS_H } from "./glassworks_gen";
 import { generateCaveGrottoCells, GROTTO_W, GROTTO_H } from "./cave_grotto_gen";
 import { generateOldProcessionalWoodCells, OLD_WOOD_W, OLD_WOOD_H } from "./old_processional_wood_gen";
 import { generateGlassTouchedCopseCells, GLASS_COPSE_W, GLASS_COPSE_H } from "./glass_touched_copse_gen";
+import { removeNonStoryMapClutter } from "../utils/mapClutterCleanup";
+import { pruneObjectLibraryToAct1Usage } from "../utils/objectLibraryPrune";
 import {
   FD_CUTSCENES,
   FD_DIALOGUE,
@@ -286,6 +288,7 @@ export const EventActionSchema = z.object({
   condition: ConditionSchema.optional(), // for branch
   music_id: z.string().optional(), // for play_music (settings.music_tracks key)
   music_url: z.string().optional(), // for play_music (direct URL / data URL)
+  sound_id: z.string().optional(), // for play_sound (settings.sound_effects key)
   volume: z.number().optional(), // for play_music (0..1)
   fade: z.enum(["in", "out"]).optional(), // for screen_fade
   color: z.string().optional(), // for screen_fade
@@ -453,6 +456,7 @@ export const ObjectMaterialSchema = z.object({
   texture_kind: MaterialTextureKindSchema,
   texture_scale: z.number().default(1),
   texture_strength: z.number().default(0.45),
+  texture_image_url: z.string().optional(),
 });
 
 export const ObjectDecalSchema = z.object({
@@ -555,6 +559,15 @@ const DialogueOptionSchema = z.preprocess(
     // Choosing this option sets a switch. set_switch_value defaults true.
     set_switch: z.string().optional(),
     set_switch_value: z.boolean().optional(),
+    // For choices that need to mark multiple story facts at once.
+    set_switches: z
+      .array(
+        z.object({
+          switch_id: z.string(),
+          switch_value: z.boolean().optional(),
+        }),
+      )
+      .optional(),
     trigger_cutscene: z.string().optional(),
   }),
 );
@@ -563,6 +576,8 @@ export const DialogueNodeSchema = z.object({
   id: z.string(),
   speaker: z.string(),
   text: z.string(),
+  scene_image_url: z.string().optional(),
+  scene_image_alt: z.string().optional(),
   options: z.array(DialogueOptionSchema).default([]),
 });
 
@@ -687,7 +702,7 @@ export const createEmptyGamePackage = (): GamePackage => {
   const caveGrotto = generateCaveGrottoCells();
   const oldProcessionalWood = generateOldProcessionalWoodCells();
   const glassTouchedCopse = generateGlassTouchedCopseCells();
-  return {
+  const gamePackage: GamePackage = {
     schema: "familiar_dark_game_package_v1",
     metadata: {
       title: "The Familiar Dark",
@@ -702,11 +717,34 @@ export const createEmptyGamePackage = (): GamePackage => {
       minutes_per_turn: 2,
       player_sprite_id: "spr_hero",
       music_tracks: {
-        title: "/music/titlescreen.ogg",
-        town: "/music/roll away.ogg",
+        title: "/music/rain-on-the-ledger.mp3",
+        town: "/music/l-ombre-des-bles.mp3",
         network: "/music/Pagan Network.wav",
         river: "/music/River.wav",
-        combat: "/music/underworld-battle theme.ogg",
+        combat: "/music/le-verre-en-spleen.mp3",
+      },
+      sound_effects: {
+        ui_click: "/sfx/ui-click.wav",
+        ui_back: "/sfx/ui-back.wav",
+        dialogue_open: "/sfx/dialogue-open.wav",
+        dialogue_next: "/sfx/dialogue-next.wav",
+        document_open: "/sfx/document-open.wav",
+        item_pickup: "/sfx/item-pickup.wav",
+        coin: "/sfx/coin.wav",
+        save_candle: "/sfx/save-candle.wav",
+        shop_open: "/sfx/shop-open.wav",
+        door_transition: "/sfx/door-transition.wav",
+        footstep_stone: "/sfx/footstep-stone.wav",
+        bump: "/sfx/bump.wav",
+        melee_swing: "/sfx/melee-swing.wav",
+        melee_hit: "/sfx/melee-hit.wav",
+        melee_crit: "/sfx/melee-crit.wav",
+        enemy_defeat: "/sfx/enemy-defeat.wav",
+        spell_cast: "/sfx/spell-cast.wav",
+        spell_hit: "/sfx/spell-hit.wav",
+        heal: "/sfx/heal.wav",
+        level_up: "/sfx/level-up.wav",
+        warning: "/sfx/warning.wav",
       },
       map_music: {
         map_town_square: "town",
@@ -741,6 +779,7 @@ export const createEmptyGamePackage = (): GamePackage => {
           { id: "spawn_from_south", cell: [0, 19], facing: [0, -1] },
           { id: "spawn_from_east", cell: [19, 0], facing: [-1, 0] },
           { id: "spawn_from_north", cell: [0, -19], facing: [0, 1] },
+          { id: "spawn_from_cellar", cell: [-11, 13], facing: [-1, 0] },
         ],
         cells: townSquare.cells,
         props: [],
@@ -887,6 +926,7 @@ export const createEmptyGamePackage = (): GamePackage => {
             target_map_id: "map_glassworks",
             target_spawn_id: "spawn_from_west",
             facing: [1, 0] as [number, number],
+            condition: { switch: "orin_public_accusation_seen" },
           })),
         ],
       },
@@ -1186,14 +1226,14 @@ export const createEmptyGamePackage = (): GamePackage => {
           // North end of the Surface Seam: the ladder back up to the cellar.
           {
             cell: [0, -19],
-            target_map_id: "map_parish",
-            target_spawn_id: "spawn_from_network",
+            target_map_id: "map_town_square",
+            target_spawn_id: "spawn_from_cellar",
             facing: [0, 1],
           },
           {
             cell: [-1, -19],
-            target_map_id: "map_parish",
-            target_spawn_id: "spawn_from_network",
+            target_map_id: "map_town_square",
+            target_spawn_id: "spawn_from_cellar",
             facing: [0, 1],
           },
         ],
@@ -1395,4 +1435,6 @@ export const createEmptyGamePackage = (): GamePackage => {
     endings: [],
     validators: {},
   };
+
+  return pruneObjectLibraryToAct1Usage(removeNonStoryMapClutter(gamePackage));
 };

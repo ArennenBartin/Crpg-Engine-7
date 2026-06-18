@@ -20,7 +20,7 @@ const MAX_Z = 40;
 export const CAVE_DEEP_W = MAX_X - MIN_X + 1;
 export const CAVE_DEEP_H = MAX_Z - MIN_Z + 1;
 
-const GROUND = "obj_floor_dirt";
+const GROUND = "obj_ald_cave_floor";
 const MARBLE = "obj_floor_stone";
 
 const key = (x: number, z: number) => `${x}|${z}`;
@@ -132,11 +132,11 @@ export const generateCaveDeepCells = (): {
     placeIfClear("obj_net_bone_pile", -8, x, [0, 1]);
     placeIfClear("obj_net_bone_pile", 8, x, [0, 1]);
   }
-  place("obj_net_rite_circle", 0, -2, [0, 1]);
+  place("obj_ald_network_omphalos_ring", 0, -2, [0, 1], { block: false });
   place("obj_net_glass_kneeler", -2, -2, [0, -1]);
   place("obj_net_glass_kneeler", 2, -2, [0, -1]);
-  place("obj_net_brazier_cold", -4, 4, [0, 1]);
-  place("obj_net_brazier_cold", 4, 4, [0, 1]);
+  place("obj_ald_glass_threshold_brazier", -4, 4, [0, 1]);
+  place("obj_ald_glass_threshold_brazier", 4, 4, [0, 1]);
 
   // Rubble piles strewn around the cavern edges (deterministic seed).
   const rng = (() => { let s = 0xdee1; return () => { s = (s * 1664525 + 1013904223) & 0x7fffffff; return s / 0x7fffffff; }; })();

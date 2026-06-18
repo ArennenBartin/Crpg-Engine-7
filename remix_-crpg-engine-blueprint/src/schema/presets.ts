@@ -2,6 +2,8 @@ import { createWitnessTownLibrary } from "../utils/witnessKit";
 import { createPaganNetworkKit } from "../utils/networkKit";
 import { createParishKit } from "../utils/parishKit";
 import { createCityKit } from "../utils/cityKit";
+import { createAlderamonticoRemixKit } from "../utils/remixModelKit";
+import { applyAlderamonticoModelKit } from "../utils/alderamonticoModelKit";
 
 export const asciiToPixels = (
   ascii: string,
@@ -2199,12 +2201,16 @@ const baseObjectLibraryPresets = [
   ...createPaganNetworkKit(),
   ...createParishKit(),
   ...createCityKit(),
+  ...createAlderamonticoRemixKit(),
 ];
 
-export const objectLibraryPresets = baseObjectLibraryPresets.map((object) =>
-  object.id === witnessStatueAssetPreset.id
-    ? witnessStatueAssetPreset
-    : object.id === mouthstoneGateAssetPreset.id
-      ? mouthstoneGateAssetPreset
-      : object,
-);
+export const objectLibraryPresets = baseObjectLibraryPresets.map((object) => {
+  const heroObject =
+    object.id === witnessStatueAssetPreset.id
+      ? witnessStatueAssetPreset
+      : object.id === mouthstoneGateAssetPreset.id
+        ? mouthstoneGateAssetPreset
+        : object;
+
+  return applyAlderamonticoModelKit(heroObject as any);
+});

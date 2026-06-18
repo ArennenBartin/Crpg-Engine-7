@@ -158,9 +158,7 @@ export const generateRiverPathCells = (): {
 
   // ── Fishing Dock (west of bridge, extends into river) ───────────────────
   paveRect(-16, -1, -13, 1, WOOD);
-  place("obj_barrel", -16, -1, [0, 1]);
-  place("obj_barrel", -16, 1, [0, 1]);
-  place("obj_p_dock", -15, 0, [1, 0], { block: false, dialogue: "dia_ferryman" });
+  place("obj_ald_river_votive_landing", -15, 0, [1, 0], { block: false, dialogue: "dia_ferryman" });
 
   // ── East bank embellishments ────────────────────────────────────────────
   // Willows and reeds along the riverbank
@@ -170,6 +168,12 @@ export const generateRiverPathCells = (): {
   placeIfClear("obj_cypress", -5, 16, [0, 1]);
   placeIfClear("obj_flower_bush", -7, -6, [0, 1]);
   placeIfClear("obj_flower_bush", -7, 6, [0, 1]);
+  for (const [x, z] of [
+    [16, -16], [20, -10], [18, 10], [22, 16],
+    [30, -14], [32, 8], [36, -4],
+  ] as Vec2[]) {
+    placeIfClear("obj_cypress", x, z, [0, 1]);
+  }
   for (const z of [-14, -10, -6, 6, 10, 14]) {
     placeIfClear("obj_p_reeds", -8, z, [0, 1], { block: false });
     placeIfClear("obj_p_votive_token", -6, z + 1, [0, 1], { block: false });
@@ -179,9 +183,9 @@ export const generateRiverPathCells = (): {
   paveRect(4, 8, 12, 14, GROUND);
   placeIfClear("obj_pew", 6, 10, [0, -1]);
   placeIfClear("obj_pew", 10, 10, [0, -1]);
-  placeIfClear("obj_lantern_post", 4, 8, [1, 1]);
-  placeIfClear("obj_p_shrine_stone", 12, 12, [0, -1], { dialogue: "dia_old_rite_shrine" });
-  placeIfClear("obj_p_candles", 12, 10, [0, -1], { block: false });
+  placeIfClear("obj_ald_river_fog_lantern", 4, 8, [1, 1]);
+  placeIfClear("obj_ald_processional_marker", 12, 12, [0, -1], { dialogue: "dia_old_rite_shrine" });
+  placeIfClear("obj_ald_votive_light_cluster", 12, 10, [0, -1], { block: false });
 
   // North meadow dressing
   placeIfClear("obj_grass_tuft", 6, -8, [0, 1]);
@@ -195,8 +199,8 @@ export const generateRiverPathCells = (): {
   });
 
   // ── Lanterns along road ─────────────────────────────────────────────────
-  placeIfClear("obj_lantern_post", 0, -4, [0, 1]);
-  placeIfClear("obj_lantern_post", 10, -4, [0, 1]);
+  placeIfClear("obj_ald_river_fog_lantern", 0, -4, [0, 1]);
+  placeIfClear("obj_ald_river_fog_lantern", 10, -4, [0, 1]);
 
   // ── Entity Placements ───────────────────────────────────────────────────
   const entity_placements: EntityPlacementData[] = [

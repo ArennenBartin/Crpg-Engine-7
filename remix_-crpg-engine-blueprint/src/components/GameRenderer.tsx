@@ -13,6 +13,7 @@ import {
   ObjectData,
   ObjectPlacementData,
 } from "../schema/game";
+import type { MapDelta } from "../schema/save";
 import { Billboard } from "@react-three/drei";
 import * as THREE from "three";
 import { useEngineStore } from "../store/engineStore";
@@ -35,6 +36,7 @@ import {
   getObjectMaterialTexture,
   resolveObjectMaterial,
 } from "../utils/objectMaterials";
+import { isDoorPlacementOpen } from "../utils/doorPlacement";
 
 const spriteTextureCache = new Map<
   string,
@@ -173,6 +175,7 @@ interface GameRendererProps {
   entityStates?: Record<string, any>;
   partyFollowers?: { entity_id: string; cell: [number, number] }[];
   partyMemberIds?: string[];
+  mapDelta?: MapDelta;
   // Turn-queue combat: true while the queue runs; activeTurnKey is the actor
   // whose turn it is ("player", a party entity id, or an enemy state key).
   inCombat?: boolean;
@@ -912,6 +915,17 @@ const getCellCoordKey = (x: number, z: number) => `${x}:${z}`;
 const getCellTopY = (cell: CellData) =>
   (cell.y || 0) + (cell.visual_height || 0) * 0.5;
 
+const getTileSurfaceOffset = (
+  tileDef: ObjectData | undefined,
+  extents?: ReturnType<typeof getObjectVerticalExtents>,
+) => {
+  if (!tileDef) return 0.05;
+  // Floor tile models may include raised painted/etched detail. That visual
+  // relief should not lift characters and props above the actual floor plane.
+  if (tileDef.tags?.includes("floor")) return 0;
+  return (extents || getObjectVerticalExtents(tileDef)).maxY;
+};
+
 // Y of the standing surface at a cell. Raised cells (visual_height > 0)
 // render as boxes, so their top is the surface even when a flat floor object
 // is also present; flat cells take the floor object's mesh height instead.
@@ -927,10 +941,7 @@ const getStandingSurfaceY = (
   } else if (cell?.object_id) {
     const tileDef = objectById.get(cell.object_id);
     if (tileDef) {
-      surfaceOffset = Math.max(
-        minOffset,
-        getObjectVerticalExtents(tileDef).maxY,
-      );
+      surfaceOffset = Math.max(minOffset, getTileSurfaceOffset(tileDef));
     }
   }
   return baseHeight + surfaceOffset;
@@ -978,11 +989,15 @@ const shouldRenderCellWithOcclusion = (
 const isWallObject = (object: ObjectData | null | undefined) =>
   Boolean(object?.tags?.includes("wall"));
 
+const isRoofObject = (object: ObjectData | null | undefined) =>
+  Boolean(object?.tags?.includes("roof"));
+
 const isFastTileObject = (object: ObjectData | null | undefined) =>
   !object ||
-  object.tags?.includes("floor") ||
-  object.tags?.includes("water") ||
-  object.collision.profile === "none";
+  (!isRoofObject(object) &&
+    (object.tags?.includes("floor") ||
+      object.tags?.includes("water") ||
+      object.collision.profile === "none"));
 
 const vectorToRotationY = (x: number, z: number) => Math.atan2(x, z);
 
@@ -1065,6 +1080,7 @@ type RuntimeMaterialProps = {
   textureKind: ReturnType<typeof resolveObjectMaterial>["textureKind"];
   textureScale: number;
   textureStrength: number;
+  textureImageUrl?: string;
 };
 
 const getCellMaterialProps = (
@@ -1086,6 +1102,7 @@ const getCellMaterialProps = (
       textureKind: material.textureKind,
       textureScale: material.textureScale,
       textureStrength: material.textureStrength,
+      textureImageUrl: material.textureImageUrl,
     };
   }
 
@@ -1102,6 +1119,7 @@ const getCellMaterialProps = (
     textureKind: "none",
     textureScale: 1,
     textureStrength: 0,
+    textureImageUrl: undefined,
   };
 };
 
@@ -1154,6 +1172,8 @@ function InstancedCellGroup({
       args={[undefined as any, undefined as any, group.cells.length]}
       frustumCulled={false}
       raycast={() => null}
+      receiveShadow
+      castShadow={group.kind === "box"}
     >
       {group.kind === "plane" ? (
         <planeGeometry args={[1, 1]} />
@@ -1312,7 +1332,12 @@ function OccludingCellRenderer({
       {!fastTile && object ? (
         <ObjectRuntimeModelRenderer object={object} />
       ) : kind === "box" ? (
-        <mesh position={[0, Math.max(0.05, height) / 2, 0]} raycast={() => null}>
+        <mesh
+          position={[0, Math.max(0.05, height) / 2, 0]}
+          raycast={() => null}
+          castShadow
+          receiveShadow
+        >
           <boxGeometry args={[1, Math.max(0.05, height), 1]} />
           <meshLambertMaterial
             map={texture || undefined}
@@ -1330,6 +1355,7 @@ function OccludingCellRenderer({
           position={[0, 0.001, 0]}
           rotation={[-Math.PI / 2, 0, 0]}
           raycast={() => null}
+          receiveShadow
         >
           <planeGeometry args={[1, 1]} />
           <meshLambertMaterial
@@ -1821,6 +1847,8 @@ function InstancedRuntimeGeometryGroup({
       args={[undefined as any, undefined as any, instances.length]}
       frustumCulled={false}
       raycast={() => null}
+      castShadow
+      receiveShadow
     >
       <primitive object={geometryGroup.geometry} attach="geometry" />
       <meshLambertMaterial
@@ -1881,6 +1909,7 @@ function getPlacementRenderInfo(
     string,
     ReturnType<typeof getObjectVerticalExtents>
   >,
+  mapDelta?: MapDelta,
 ) {
   const object = objectById.get(placement.object_id);
   if (!object) return null;
@@ -1899,7 +1928,7 @@ function getPlacementRenderInfo(
       const tileExtents =
         extentsByObjectId.get(tileDef.id) || getObjectVerticalExtents(tileDef);
       extentsByObjectId.set(tileDef.id, tileExtents);
-      surfaceOffset = tileExtents.maxY;
+      surfaceOffset = getTileSurfaceOffset(tileDef, tileExtents);
     }
   }
 
@@ -1909,6 +1938,7 @@ function getPlacementRenderInfo(
 
   const facing = placement.facing || [0, 1];
   const rotY = Math.atan2(facing[0], facing[1]);
+  const openRotation = isDoorPlacementOpen(mapDelta, placement) ? Math.PI / 2 : 0;
   const minY = objectExtents.minY;
   const yOffset = baseHeight + surfaceOffset - minY + 0.01;
 
@@ -1921,21 +1951,97 @@ function getPlacementRenderInfo(
       number,
       number,
     ],
-    rotationY: rotY,
+    rotationY: rotY + openRotation,
     maxY: objectExtents.maxY,
   };
 }
+
+type PlacementLightConfig = {
+  color: string;
+  intensity: number;
+  distance: number;
+  height: number;
+};
+
+type PlacementLight = PlacementLightConfig & {
+  key: string;
+  position: [number, number, number];
+  castsShadow: boolean;
+};
+
+const MAX_PLACEMENT_LIGHTS = 28;
+const MAX_SHADOW_CASTING_PLACEMENT_LIGHTS = 4;
+let lightPoolTextureCache: THREE.CanvasTexture | null = null;
+
+const getLightPoolTexture = () => {
+  if (lightPoolTextureCache) return lightPoolTextureCache;
+
+  const canvas = document.createElement("canvas");
+  canvas.width = 128;
+  canvas.height = 128;
+  const ctx = canvas.getContext("2d");
+  if (ctx) {
+    const gradient = ctx.createRadialGradient(64, 64, 0, 64, 64, 62);
+    gradient.addColorStop(0, "rgba(255,255,255,0.72)");
+    gradient.addColorStop(0.44, "rgba(255,255,255,0.24)");
+    gradient.addColorStop(1, "rgba(255,255,255,0)");
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  }
+
+  lightPoolTextureCache = new THREE.CanvasTexture(canvas);
+  lightPoolTextureCache.colorSpace = THREE.SRGBColorSpace;
+  return lightPoolTextureCache;
+};
+
+const getPlacementLightConfig = (
+  object: ObjectData,
+): PlacementLightConfig | null => {
+  const tags = new Set(object.tags || []);
+  if (!tags.has("light_source")) return null;
+
+  let color = "#FFB05D";
+  if (tags.has("light_cyan")) color = "#69E6FF";
+  else if (tags.has("light_violet")) color = "#9A6CFF";
+
+  const config: PlacementLightConfig = {
+    color,
+    intensity: 2.15,
+    distance: 10.5,
+    height: 1.2,
+  };
+
+  if (tags.has("light_small")) {
+    config.intensity = 1.85;
+    config.distance = 9.25;
+    config.height = 0.9;
+  }
+  if (tags.has("light_medium")) {
+    config.intensity = 3;
+    config.distance = 13;
+    config.height = 1.65;
+  }
+  if (tags.has("light_large")) {
+    config.intensity = 4.6;
+    config.distance = 17;
+    config.height = 1.55;
+  }
+
+  return config;
+};
 
 function CustomObjectPlacementLayer({
   placements,
   objectById,
   highestCellByCoord,
+  mapDelta,
 }: {
   placements: ObjectPlacementData[];
   objectById: Map<string, ObjectData>;
   highestCellByCoord: Map<string, CellData>;
+  mapDelta?: MapDelta;
 }) {
-  const { singles, instanceGroups } = useMemo(() => {
+  const { singles, instanceGroups, lights } = useMemo(() => {
     const objectCounts = placements.reduce((counts, placement) => {
       counts.set(placement.object_id, (counts.get(placement.object_id) || 0) + 1);
       return counts;
@@ -1945,6 +2051,8 @@ function CustomObjectPlacementLayer({
       ReturnType<typeof getObjectVerticalExtents>
     >();
     const nextSingles: ReturnType<typeof getPlacementRenderInfo>[] = [];
+    const nextLights: PlacementLight[] = [];
+    let shadowCastingLightCount = 0;
     const groupedInstances = new Map<
       string,
       { object: ObjectData; instances: RuntimeObjectInstance[] }
@@ -1957,8 +2065,27 @@ function CustomObjectPlacementLayer({
         objectById,
         highestCellByCoord,
         extentsByObjectId,
+        mapDelta,
       );
       if (!info) return;
+
+      const lightConfig = getPlacementLightConfig(info.object);
+      if (lightConfig && nextLights.length < MAX_PLACEMENT_LIGHTS) {
+        const castsShadow =
+          lightConfig.distance >= 9 &&
+          shadowCastingLightCount < MAX_SHADOW_CASTING_PLACEMENT_LIGHTS;
+        if (castsShadow) shadowCastingLightCount += 1;
+        nextLights.push({
+          key: `${info.key}_light`,
+          position: [
+            info.position[0],
+            info.position[1] + lightConfig.height,
+            info.position[2],
+          ],
+          castsShadow,
+          ...lightConfig,
+        });
+      }
 
       const repeated = (objectCounts.get(placement.object_id) || 0) > 2;
       const canInstance =
@@ -1991,11 +2118,46 @@ function CustomObjectPlacementLayer({
         ReturnType<typeof getPlacementRenderInfo>
       >[],
       instanceGroups: Array.from(groupedInstances.values()),
+      lights: nextLights,
     };
-  }, [placements, objectById, highestCellByCoord]);
+  }, [placements, objectById, highestCellByCoord, mapDelta]);
 
   return (
     <>
+      {lights.map((light) => (
+        <React.Fragment key={light.key}>
+          <pointLight
+            position={light.position}
+            color={light.color}
+            intensity={light.intensity}
+            distance={light.distance}
+            decay={2}
+            castShadow={light.castsShadow}
+            shadow-bias={-0.001}
+            shadow-mapSize-width={128}
+            shadow-mapSize-height={128}
+          />
+          <mesh
+            position={[
+              light.position[0],
+              Math.max(0.018, light.position[1] - light.height + 0.018),
+              light.position[2],
+            ]}
+            rotation={[-Math.PI / 2, 0, 0]}
+            raycast={() => null}
+          >
+            <circleGeometry args={[light.distance * 0.5, 28]} />
+            <meshBasicMaterial
+              map={getLightPoolTexture()}
+              color={light.color}
+              transparent
+              opacity={light.castsShadow ? 0.26 : 0.16}
+              depthWrite={false}
+              blending={THREE.AdditiveBlending}
+            />
+          </mesh>
+        </React.Fragment>
+      ))}
       {instanceGroups.map((group) => (
         <RuntimeObjectInstances
           key={`instances_${group.object.id}`}
@@ -2043,6 +2205,7 @@ export const GameRenderer = memo(function GameRenderer({
   entityStates,
   partyFollowers = [],
   partyMemberIds = [],
+  mapDelta,
   inCombat = false,
   activeTurnKey = null,
   showGrid,
@@ -2215,6 +2378,7 @@ export const GameRenderer = memo(function GameRenderer({
           placements={renderPlacements}
           objectById={objectById}
           highestCellByCoord={placementSurfaceByCoord}
+          mapDelta={mapDelta}
         />
 
         {editLayerY !== undefined && map.triggers?.map((trigger, i) => {
@@ -2242,7 +2406,7 @@ export const GameRenderer = memo(function GameRenderer({
         })}
       </group>
     );
-  }, [editLayerY, renderPlacements, map.triggers, objectById, highestCellByCoord, placementSurfaceByCoord]);
+  }, [editLayerY, renderPlacements, map.triggers, objectById, highestCellByCoord, placementSurfaceByCoord, mapDelta]);
 
   const { texture: playerSpriteTex, spriteDef: playerSpriteDef } = useSpriteTexture(
     playerSpriteId || gamePackage.settings?.player_sprite_id,
@@ -2472,7 +2636,7 @@ export const GameRenderer = memo(function GameRenderer({
           if (playerCell?.object_id) {
             const tileDef = objectById.get(playerCell.object_id);
             if (tileDef) {
-              surfaceOffset = getObjectVerticalExtents(tileDef).maxY;
+              surfaceOffset = getTileSurfaceOffset(tileDef);
             }
           }
 

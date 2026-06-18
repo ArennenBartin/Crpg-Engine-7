@@ -50,12 +50,12 @@ export const PARISH_MATERIALS = {
   fieldstone: {
     id: "pmat_fieldstone",
     name: "Fieldstone",
-    color: "#7C7468",
-    emissive: "#000000",
-    emissive_intensity: 0,
+    color: "#797162",
+    emissive: "#0A0814",
+    emissive_intensity: 0.04,
     opacity: 1,
     transparent: false,
-    roughness: 0.92,
+    roughness: 0.9,
     metalness: 0.01,
     texture_kind: "stone_grain",
     texture_scale: 1.5,
@@ -64,13 +64,13 @@ export const PARISH_MATERIALS = {
   darkStone: {
     id: "pmat_dark_stone",
     name: "Shadowed Stone",
-    color: "#574F47",
-    emissive: "#000000",
-    emissive_intensity: 0,
+    color: "#524B45",
+    emissive: "#0B0918",
+    emissive_intensity: 0.05,
     opacity: 1,
     transparent: false,
-    roughness: 0.94,
-    metalness: 0.01,
+    roughness: 0.9,
+    metalness: 0.02,
     texture_kind: "stone_grain",
     texture_scale: 1.6,
     texture_strength: 0.62,
@@ -78,13 +78,14 @@ export const PARISH_MATERIALS = {
   ashlar: {
     id: "pmat_ashlar",
     name: "Church Ashlar",
-    color: "#8E867A",
-    emissive: "#000000",
-    emissive_intensity: 0,
+    // Matches the witness-kit sacred marble so temple stone reads cohesive.
+    color: "#928B82",
+    emissive: "#0E0B1E",
+    emissive_intensity: 0.07,
     opacity: 1,
     transparent: false,
-    roughness: 0.8,
-    metalness: 0.02,
+    roughness: 0.6,
+    metalness: 0.03,
     texture_kind: "stone_grain",
     texture_scale: 1.2,
     texture_strength: 0.5,
@@ -204,14 +205,14 @@ export const PARISH_MATERIALS = {
   graveMarble: {
     id: "pmat_grave_marble",
     name: "Weathered Headstone",
-    color: "#9C988C",
-    emissive: "#000000",
-    emissive_intensity: 0,
+    color: "#9A968E",
+    emissive: "#0C0A18",
+    emissive_intensity: 0.06,
     opacity: 1,
     transparent: false,
-    roughness: 0.85,
-    metalness: 0.01,
-    texture_kind: "stone_grain",
+    roughness: 0.62,
+    metalness: 0.02,
+    texture_kind: "marble_veins",
     texture_scale: 1.4,
     texture_strength: 0.5,
   },
@@ -387,13 +388,13 @@ export const PARISH_MATERIALS = {
   gold: {
     id: "pmat_gold",
     name: "Engraved Gold",
-    color: "#C79A3E",
-    emissive: "#5A3E0C",
-    emissive_intensity: 0.5,
+    color: "#E2B450",
+    emissive: "#8C5E18",
+    emissive_intensity: 0.46,
     opacity: 1,
     transparent: false,
-    roughness: 0.34,
-    metalness: 0.7,
+    roughness: 0.3,
+    metalness: 0.68,
     texture_kind: "metal_scratches",
     texture_scale: 1.2,
     texture_strength: 0.3,
@@ -961,6 +962,23 @@ const buildSlope = (m: ObjectMeshData, material: string, rotQuarters: number) =>
   quad(m, "ridge_edge", material, r(uA), r(uB), r(tB), r(tA), "roof");
   quad(m, "side_l", material, r(tA), r(tD), r(uD), r(uA), "roof");
   quad(m, "side_r", material, r(tC), r(tB), r(uB), r(uC), "roof");
+  // Tile-course lips: small upstands across the slope so the roof reads as
+  // overlapping rows of tiles rather than a smooth ramp.
+  const span = -0.5 - lo; // ridge z to eave z (positive)
+  [0.3, 0.55, 0.8].forEach((t, i) => {
+    const zc = -0.5 + t * span;
+    const yc = RIDGE_Y + t * (EAVE_Y - RIDGE_Y);
+    quad(
+      m,
+      `course_${i}`,
+      material,
+      r([-hx, yc, zc]),
+      r([hx, yc, zc]),
+      r([hx, yc + 0.05, zc - 0.04]),
+      r([-hx, yc + 0.05, zc - 0.04]),
+      "roof",
+    );
+  });
 };
 
 // Hip corner: the cell at a building corner, sloping down toward its two

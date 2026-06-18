@@ -40,6 +40,7 @@ export type ResolvedObjectMaterial = {
   textureKind: MaterialTextureKind;
   textureScale: number;
   textureStrength: number;
+  textureImageUrl?: string;
 };
 
 export const DECAL_KIND_PRESETS: Record<
@@ -178,10 +179,11 @@ export const resolveObjectMaterial = (
     textureKind: normalizeTextureKind(material.texture_kind),
     textureScale: clamp(Number(material.texture_scale ?? 1), 0.25, 6),
     textureStrength: clamp(Number(material.texture_strength ?? 0.45), 0, 1),
+    textureImageUrl: material.texture_image_url?.trim() || undefined,
   };
 };
 
-const textureCache = new Map<string, THREE.CanvasTexture>();
+const textureCache = new Map<string, THREE.Texture>();
 
 const hashString = (value: string) => {
   let hash = 2166136261;
@@ -445,7 +447,28 @@ const drawTexturePattern = (
 
 export const getObjectMaterialTexture = (
   material: ResolvedObjectMaterial,
-): THREE.CanvasTexture | null => {
+): THREE.Texture | null => {
+  if (material.textureImageUrl && typeof document !== "undefined") {
+    const key = [
+      "image",
+      material.textureImageUrl,
+      material.textureScale.toFixed(2),
+    ].join("|");
+    const cached = textureCache.get(key);
+    if (cached) return cached;
+
+    const texture = new THREE.TextureLoader().load(material.textureImageUrl);
+    texture.colorSpace = THREE.SRGBColorSpace;
+    texture.wrapS = THREE.RepeatWrapping;
+    texture.wrapT = THREE.RepeatWrapping;
+    texture.repeat.set(material.textureScale, material.textureScale);
+    texture.magFilter = THREE.LinearFilter;
+    texture.minFilter = THREE.LinearMipmapLinearFilter;
+    texture.anisotropy = 4;
+    textureCache.set(key, texture);
+    return texture;
+  }
+
   if (
     material.textureKind === "none" ||
     material.textureStrength <= 0.01 ||

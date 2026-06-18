@@ -146,7 +146,7 @@ export const generateNetworkDepthsCells = (): {
   // ── Stair landing (from the upper level) ──────────────────────────────────
   paveRect(-2, -19, 2, -15);
   place("obj_net_stele", -2, -18, [1, 0]);
-  place("obj_net_brazier_cold", 2, -16);
+  place("obj_ald_glass_threshold_brazier", 2, -16);
   // The wayside candle keeps the zone entrance.
   entity_placements.push({ entity_id: "ent_save", cell: [2, -18] });
 
@@ -180,8 +180,8 @@ export const generateNetworkDepthsCells = (): {
   place("obj_net_bone_pile", -5, -4, [0, 1], { block: false });
   place("obj_net_bone_pile", 5, 0, [0, 1], { block: false });
   place("obj_net_rubble", -6, 0);
-  place("obj_net_brazier_cold", 6, -4);
-  place("obj_net_candle_cluster", -3, 1);
+  place("obj_ald_glass_threshold_brazier", 6, -4);
+  place("obj_ald_votive_light_cluster", -3, 1);
   // Fast little horrors haunt the crossing.
   entity_placements.push({ entity_id: "ent_candle_eaten_1", cell: [-4, -2] });
   entity_placements.push({ entity_id: "ent_candle_eaten_2", cell: [4, -1] });
@@ -222,7 +222,7 @@ export const generateNetworkDepthsCells = (): {
   place("obj_net_shrine_family", 21, -4, [-1, 0]);
   place("obj_net_shrine_family", 20, 0, [-1, 0]);
   place("obj_net_shrine_family", 21, 4, [-1, 0]);
-  place("obj_net_candle_cluster", 19, -4);
+  place("obj_ald_votive_light_cluster", 19, -4);
   place("obj_net_votive_heap", 19, 2, [0, 1], { block: false });
   place("obj_net_column_root", 14, -5);
   place("obj_net_column_root", 14, 5);
@@ -273,7 +273,7 @@ export const generateNetworkDepthsCells = (): {
   place("obj_net_column_root", 3, 8);
   place("obj_net_column_root", -3, 14);
   place("obj_net_column_root", 3, 14);
-  place("obj_net_candle_cluster", -4, 11);
+  place("obj_ald_votive_light_cluster", -4, 11);
   entity_placements.push({ entity_id: "ent_rite_remnant_1", cell: [-2, 9] });
   entity_placements.push({ entity_id: "ent_rite_remnant_2", cell: [2, 13] });
 
@@ -298,8 +298,8 @@ export const generateNetworkDepthsCells = (): {
   paveRect(-16, 10, -12, 14, RITUAL);
   place("obj_net_rite_circle", -14, 12, [0, 1], { block: false });
   place("obj_net_krater", -17, 9);
-  place("obj_net_candle_cluster", -11, 9);
-  place("obj_net_candle_cluster", -17, 15);
+  place("obj_ald_votive_light_cluster", -11, 9);
+  place("obj_ald_votive_light_cluster", -17, 15);
   place("obj_net_votive_heap", -11, 15, [0, 1], { block: false });
   place("obj_net_shrine_family", -19, 12, [1, 0]);
   place("obj_net_bone_pile", -12, 10, [0, 1], { block: false });

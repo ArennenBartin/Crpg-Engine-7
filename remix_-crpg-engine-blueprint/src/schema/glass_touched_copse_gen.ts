@@ -145,13 +145,13 @@ export const generateGlassTouchedCopseCells = (): {
   ] as Vec2[]) {
     placeIfClear("obj_net_glass_growth", x, z, [0, 1], { block: false });
   }
-  placeIfClear("obj_net_stele", 7, -4, [-1, 0], { block: false, dialogue: "dia_glass_copse_trace" });
+  placeIfClear("obj_ald_glass_threshold_brazier", 7, -4, [-1, 0], { block: false, dialogue: "dia_glass_copse_trace" });
   placeIfClear("obj_net_arch_sigil", 7, 16, [0, 1], { block: false, dialogue: "dia_glass_copse_exit" });
   placeIfClear("obj_net_root_curtain", 8, 18, [0, 1], { block: false });
-  placeIfClear("obj_lantern_post", -3, -17);
-  placeIfClear("obj_lantern_post", 3, -17);
-  placeIfClear("obj_net_brazier_cold", 4, 15);
-  placeIfClear("obj_net_brazier_cold", 10, 15);
+  placeIfClear("obj_ald_civic_lantern_post", -3, -17);
+  placeIfClear("obj_ald_civic_lantern_post", 3, -17);
+  placeIfClear("obj_ald_glass_threshold_brazier", 4, 15);
+  placeIfClear("obj_ald_glass_threshold_brazier", 10, 15);
 
   return {
     cells,

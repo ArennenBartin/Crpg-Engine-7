@@ -7,6 +7,7 @@ import {
   WorldItemPlacementData,
 } from "./game";
 import { addHippedRoof } from "../utils/cellRoofHelper";
+import { DOOR_OBJECT_ID, doorFacingForBounds } from "../utils/doorPlacement";
 
 // ── Lazare's House (Interior/Estate) ────────────────────────────────────
 // A standalone map representing Lazare the vampire's shuttered estate.
@@ -16,6 +17,7 @@ import { addHippedRoof } from "../utils/cellRoofHelper";
 // Dead-end map: only exit is south (→ residential, back to the street).
 
 type Vec2 = [number, number];
+type LazareDoor = { x: number; z: number; dialogue?: string };
 
 const MIN_X = -40;
 const MAX_X = 40;
@@ -47,6 +49,7 @@ export const generateLazareHouseCells = (): {
   const container_placements: ContainerPlacementData[] = [];
   const grid = new Map<string, CellData>();
   const reserved = new Set<string>();
+  const placedDoorCells = new Set<string>();
 
   const get = (x: number, z: number) => grid.get(key(x, z));
   const reserve = (x: number, z: number) => reserved.add(key(x, z));
@@ -120,7 +123,7 @@ export const generateLazareHouseCells = (): {
 
   const buildRoom = (
     x0: number, z0: number, x1: number, z1: number,
-    wall: string, floor: string, doors: { x: number; z: number }[],
+    wall: string, floor: string, doors: LazareDoor[],
   ) => {
     for (let x = x0; x <= x1; x++) {
       for (let z = z0; z <= z1; z++) {
@@ -131,6 +134,15 @@ export const generateLazareHouseCells = (): {
         else { pave(x, z, floor); reserve(x, z); }
       }
     }
+    doors.forEach((door) => {
+      const doorKey = key(door.x, door.z);
+      if (placedDoorCells.has(doorKey)) return;
+      placedDoorCells.add(doorKey);
+      place(DOOR_OBJECT_ID, door.x, door.z, doorFacingForBounds(door, x0, z0, x1, z1), {
+        block: false,
+        dialogue: door.dialogue,
+      });
+    });
   };
 
   // ── Base terrain ────────────────────────────────────────────────────────
@@ -150,6 +162,8 @@ export const generateLazareHouseCells = (): {
   // ── West Entrance Road & Outer Walls ────────────────────────────────────
   // Path from the West edge into the overgrown courtyard
   paveRect(MIN_X, 8, -4, 12, GROUND);
+  paveRect(-4, 8, 4, 12, GROUND);
+  paveRect(-2, -2, 2, 8, MARBLE);
 
   // Solid South Wall
   for (let x = -20; x <= 20; x++) {
@@ -160,10 +174,10 @@ export const generateLazareHouseCells = (): {
   // A dense thicket of dead trees and large pines to obscure the house.
   // Deterministic RNG so the garden lays out the same way each load.
   const gardenRng = (() => { let s = 0x6aa1; return () => { s = (s * 1664525 + 1013904223) & 0x7fffffff; return s / 0x7fffffff; }; })();
-  for (let x = -36; x <= 36; x += 4) {
-    for (let z = 0; z <= 28; z += 4) {
+  for (let x = -36; x <= 36; x += 6) {
+    for (let z = 0; z <= 28; z += 6) {
       const protectedCourtyard = Math.abs(x) <= 6 && z >= 4 && z <= 16;
-      if (!protectedCourtyard && gardenRng() > 0.4 && (x < -6 || x > 6 || z < 10)) {
+      if (!protectedCourtyard && gardenRng() > 0.72 && (x < -6 || x > 6 || z < 10)) {
         const treeType = gardenRng() > 0.5 ? "obj_dead_tree" : "obj_pine_large";
         placeIfClear(treeType, x + Math.floor(gardenRng() * 2), z + Math.floor(gardenRng() * 2), [0, 1]);
       }
@@ -185,11 +199,16 @@ export const generateLazareHouseCells = (): {
   placeIfClear("obj_p_iron_fence", -2, 14, [0, 1]);
   placeIfClear("obj_p_iron_fence", 2, 14, [0, 1]);
   placeIfClear("obj_p_iron_fence", 6, 14, [0, 1]);
-  placeIfClear("obj_p_candles", 0, 14, [0, 1], { block: false });
+  place("obj_ald_lazare_license_threshold", 1, -1, [0, 1], { block: false, dialogue: "dia_lazare_threshold" });
 
   // ── Mansion Structure ───────────────────────────────────────────────────
   // Foyer & Main Hall (x = -12 to 12, z = -16 to -2)
-  buildRoom(-12, -16, 12, -2, WALL_MARBLE, MARBLE, [{ x: 0, z: -2 }, { x: -12, z: -8 }, { x: 12, z: -8 }, { x: 0, z: -16 }]);
+  buildRoom(-12, -16, 12, -2, WALL_MARBLE, MARBLE, [
+    { x: 0, z: -2, dialogue: "dia_lazare_vampire" },
+    { x: -12, z: -8 },
+    { x: 12, z: -8 },
+    { x: 0, z: -16 },
+  ]);
   addHippedRoof(cells, -12, -16, 12, -2, "slate");
   place("obj_column", -6, -6, [0, 1]);
   place("obj_column", 6, -6, [0, 1]);
@@ -210,11 +229,12 @@ export const generateLazareHouseCells = (): {
     place("obj_pew", x, -18, [0, -1]);
     place("obj_pew", x, -14, [0, 1]);
   }
+  place("obj_p_desk", -32, -24, [0, 1]);
   placeItem("wi_lazare_votive_1", "itm_votive", -24, -15);
   placeItem("wi_lazare_votive_2", "itm_votive", -20, -17);
-  place("obj_lantern_post", -34, -26, [0, 1]);
-  place("obj_lantern_post", -34, -6, [0, 1]);
-  place("obj_lantern_post", -14, -26, [0, 1]);
+  place("obj_ald_civic_lantern_post", -34, -26, [0, 1]);
+  place("obj_ald_civic_lantern_post", -34, -6, [0, 1]);
+  place("obj_ald_civic_lantern_post", -14, -26, [0, 1]);
 
   // Library Wing (East, x = 12 to 36, z = -28 to -4)
   buildRoom(12, -28, 36, -4, WALL_MARBLE, WOOD, [{ x: 12, z: -8 }]);
@@ -226,6 +246,8 @@ export const generateLazareHouseCells = (): {
     place("obj_pew", x, -20, [0, 1]);
     place("obj_pew", x, -12, [0, -1]);
   }
+  place("obj_p_desk", 22, -25, [0, 1]);
+  place("obj_p_desk", 30, -25, [0, 1]);
   placeItem("wi_lazare_diary", "itm_votive", 34, -16); // placeholder until doc_lazare_diary exists
   place("obj_statue_votary", 34, -26, [0, -1]);
   place("obj_statue_votary", 34, -6, [0, 1]);
@@ -238,8 +260,8 @@ export const generateLazareHouseCells = (): {
   place("obj_pallet_bed", 4, -32, [0, 1]);
   place("obj_altar", -6, -34, [0, 1]);
   place("obj_altar", 6, -34, [0, 1]);
-  place("obj_lantern_post", -8, -20, [0, 1]);
-  place("obj_lantern_post", 8, -20, [0, 1]);
+  place("obj_ald_civic_lantern_post", -8, -20, [0, 1]);
+  place("obj_ald_civic_lantern_post", 8, -20, [0, 1]);
   placeContainer("cnt_lazare_stash", 0, -36, {
     name: "Lazare's Locked Chest",
     locked: true,
@@ -250,14 +272,13 @@ export const generateLazareHouseCells = (): {
   // ── Entity Placements ───────────────────────────────────────────────────
   const entity_placements: EntityPlacementData[] = [
     { entity_id: "ent_save", cell: [0, 8] }, // save candle near fountain
-    { entity_id: "ent_lazare_vampire", cell: [0, -30] }, // Lazare in his sanctum
   ];
 
   // ── Triggers ────────────────────────────────────────────────────────────
   const triggers: TriggerData[] = [
     {
       id: "trg_lazare_after_verdict",
-      cell: [0, -28],
+      cell: [0, -1],
       type: "step",
       conditions: [],
       condition: {

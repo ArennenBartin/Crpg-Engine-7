@@ -16,6 +16,7 @@ import {
   ScheduleEntryData,
   TriggerData,
   GamePackage,
+  ObjectPlacementData,
 } from "../schema/game";
 import { MapDelta, PlaySave } from "../schema/save";
 import {
@@ -27,6 +28,7 @@ import {
 } from "../utils/conditions";
 import {
   playMusic,
+  playSound,
   stopMusic,
   getCurrentMusicUrl,
 } from "../utils/audioManager";
@@ -51,6 +53,11 @@ import {
   getPlacementFootprint,
   placementOccupiesCell,
 } from "../utils/objectFootprint";
+import {
+  doorPlacementKey,
+  isBuildingDoorPlacement,
+  isDoorPlacementOpen,
+} from "../utils/doorPlacement";
 import { entityStateKey } from "../utils/entityState";
 import {
   Briefcase,
@@ -86,6 +93,7 @@ const CAMERA_FOLLOW_SNAP_DISTANCE = 6;
 const PLAYER_STEP_READY_DISTANCE = 0.18;
 const MOVEMENT_REPEAT_START_MS = 105;
 const MOVEMENT_REPEAT_INTERVAL_MS = 105;
+const COMBAT_ACTOR_SWITCH_INPUT_DELAY_MS = 180;
 const PLAY_RENDER_RADIUS = 20;
 const PLAY_NATIVE_DPR = Math.max(
   1,
@@ -103,6 +111,25 @@ const PLAY_DPR_RAISE = 0.04;
 const NPC_SIMULATION_RADIUS = 16;
 const NPC_SCHEDULE_PATH_LIMIT = 96;
 const TWO_PI = Math.PI * 2;
+
+const MOVEMENT_COMMAND_KEYS = new Set([
+  "arrowup",
+  "arrowdown",
+  "arrowleft",
+  "arrowright",
+  "w",
+  "a",
+  "s",
+  "d",
+  "z",
+  ".",
+]);
+
+const isMovementCommandKey = (key: string) => MOVEMENT_COMMAND_KEYS.has(key);
+const isCombatCommandKey = (key: string) =>
+  isMovementCommandKey(key) || key === " " || key === "enter" || /^[1-6]$/.test(key);
+const inputNow = () =>
+  typeof performance !== "undefined" ? performance.now() : Date.now();
 
 type DialoguePortraitConfig = {
   id: string;
@@ -684,9 +711,9 @@ function BlackStarLightRig({ playerPos }: { playerPos: [number, number] }) {
       lastLightUpdateRef.current = t;
       if (chromaRef.current) {
         chromaRef.current.color.setHSL((t * 0.075 + 0.03) % 1, 0.92, 0.6);
-        chromaRef.current.intensity = 2.35 + Math.sin(t * 1.05) * 0.35;
+        chromaRef.current.intensity = 3.15 + Math.sin(t * 1.05) * 0.45;
         chromaRef.current.position.x = Math.sin(t * 0.45) * 1.25;
-        chromaRef.current.position.y = 4.8 + Math.sin(t * 0.65) * 0.75;
+        chromaRef.current.position.y = 5.1 + Math.sin(t * 0.65) * 0.75;
         chromaRef.current.position.z = Math.cos(t * 0.38) * 1.25;
       }
       if (moonRef.current) {
@@ -708,30 +735,31 @@ function BlackStarLightRig({ playerPos }: { playerPos: [number, number] }) {
 
   return (
     <>
-      <hemisphereLight color="#5E72B8" groundColor="#1E1930" intensity={0.72} />
-      <ambientLight color="#403A62" intensity={0.55} />
+      <hemisphereLight color="#7F94E0" groundColor="#2A213E" intensity={0.62} />
+      <ambientLight color="#5D5485" intensity={0.34} />
       {/* The moon, drifting between ice-blue and violet */}
       <directionalLight
         ref={moonRef}
         position={[-9, 20, -7]}
         color="#C2CCFF"
-        intensity={1.15}
+        intensity={0.98}
+        castShadow
       />
       {/* Counter-fill that wanders the warm side of the wheel */}
       <directionalLight
         ref={counterRef}
         position={[10, 10, 8]}
         color="#A05E9C"
-        intensity={0.5}
+        intensity={0.44}
       />
       <group ref={lightRigRef} position={[playerPos[0], 0, playerPos[1]]}>
         {/* One carried black-star light; the color moves, not the shader count. */}
         <pointLight
           ref={chromaRef}
-          position={[0, 4.8, 0]}
+          position={[0, 5.1, 0]}
           color="#ff2fb3"
-          intensity={2.45}
-          distance={20}
+          intensity={2.35}
+          distance={16}
           decay={2}
         />
       </group>
@@ -915,6 +943,22 @@ function DialoguePortraitStage({ speaker }: { speaker: string }) {
   );
 }
 
+function DialogueSceneImageStage({ src, alt }: { src: string; alt?: string }) {
+  return (
+    <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden bg-black">
+      <img
+        src={src}
+        alt={alt || ""}
+        aria-hidden={alt ? undefined : true}
+        className="absolute inset-0 h-full w-full object-cover object-center opacity-95 select-none"
+        draggable={false}
+      />
+      <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(0,0,0,0.72)_0%,rgba(0,0,0,0.18)_34%,rgba(0,0,0,0.14)_66%,rgba(0,0,0,0.62)_100%)]" />
+      <div className="absolute inset-0 bg-[linear-gradient(0deg,rgba(0,0,0,0.90)_0%,rgba(0,0,0,0.54)_28%,rgba(0,0,0,0.12)_62%,rgba(0,0,0,0.36)_100%)]" />
+    </div>
+  );
+}
+
 const _cameraTargetVec = new THREE.Vector3();
 const _cameraSavedTargetVec = new THREE.Vector3();
 
@@ -990,6 +1034,30 @@ const firstCurrentStep = (steps: QuestJournalStep[]) =>
   steps.find((step) => step.status === "locked") ||
   steps[steps.length - 1];
 
+const hasAllVampireTestimonies = (flags: Record<string, any>) =>
+  Boolean(
+    flags.testimonies_gathered ||
+      (flags.testimony_dimos &&
+        flags.testimony_orin &&
+        flags.testimony_marta &&
+        flags.testimony_holt),
+  );
+
+const canInterviewLazareAtDoor = (flags: Record<string, any>) =>
+  Boolean(
+    flags.vampire_cleared ||
+      flags.lazare_talked ||
+      (flags.act1_assigned && hasAllVampireTestimonies(flags)),
+  );
+
+const isLazareInterviewDoor = (
+  map: MapData | null | undefined,
+  placement: Pick<ObjectPlacementData, "object_id" | "dialogue_id"> | undefined,
+) =>
+  map?.id === "map_lazare_house" &&
+  placement?.object_id === "obj_p_door" &&
+  placement.dialogue_id === "dia_lazare_vampire";
+
 const buildQuestJournal = (
   save: PlaySave,
   gamePackage: GamePackage,
@@ -997,12 +1065,12 @@ const buildQuestJournal = (
   const flags = save.flags || {};
   const quests = save.quests || {};
   const questById = new Map(gamePackage.quests.map((quest) => [quest.id, quest]));
-  const caveRemnantDefeated = hasDeadEntity(save, "map_cave_deep", "ent_bound_remnant");
+    const caveRemnantDefeated =
+      flags.cyberghost_defeated ||
+      hasDeadEntity(save, "map_cave_deep", "ent_bound_remnant");
   const readAnyCaveLog =
     flags.found_log_1 || flags.found_log_2 || flags.found_log_3 || flags.found_log_4;
-  const allTestimony =
-    flags.testimonies_gathered ||
-    (flags.testimony_dimos && flags.testimony_orin && flags.testimony_marta && flags.testimony_holt);
+  const allTestimony = hasAllVampireTestimonies(flags);
   const vampireActive =
     quests.quest_vampire ||
     flags.opening_ceremony_complete ||
@@ -1052,7 +1120,7 @@ const buildQuestJournal = (
       },
       {
         id: "lazare",
-        text: "Visit Lazare behind the shutters.",
+        text: "Knock at Lazare's shuttered front door.",
         status: flags.lazare_talked ? "done" : allTestimony ? "current" : "locked",
       },
       {
@@ -1073,7 +1141,7 @@ const buildQuestJournal = (
       {
         id: "verdict",
         text: "Return to Aldric with the cave evidence.",
-        status: flags.vampire_cleared ? "done" : flags.found_log_4 || caveRemnantDefeated ? "current" : "locked",
+        status: flags.vampire_cleared ? "done" : flags.found_log_4 && caveRemnantDefeated ? "current" : "locked",
       },
     ];
     entries.push({
@@ -1268,17 +1336,49 @@ export function PlayEngine() {
       ),
     [gamePackage.object_library],
   );
+  const activeMapDelta = activeMap
+    ? saveData?.map_deltas?.[activeMap.id]
+    : undefined;
+  const lazareDoorReady = canInterviewLazareAtDoor(saveData?.flags || {});
+  const isDoorOpenForPlay = useCallback(
+    (placement: ObjectPlacementData) => {
+      if (isLazareInterviewDoor(activeMap, placement) && !lazareDoorReady) {
+        return false;
+      }
+      return isDoorPlacementOpen(activeMapDelta, placement);
+    },
+    [activeMap?.id, activeMapDelta, lazareDoorReady],
+  );
+  useEffect(() => {
+    if (!activeMap || lazareDoorReady) return;
+    const lazareDoor = activeMap.custom_object_placements.find((placement) =>
+      isLazareInterviewDoor(activeMap, placement),
+    );
+    if (!lazareDoor || !isDoorPlacementOpen(activeMapDelta, lazareDoor)) return;
+    usePlayStore.getState().closeDoor(activeMap.id, doorPlacementKey(lazareDoor));
+  }, [
+    activeMap,
+    activeMapDelta?.opened_doors,
+    lazareDoorReady,
+  ]);
   const blockingPlacementCells = useMemo(() => {
     const blocked = new Set<string>();
     activeMap?.custom_object_placements?.forEach((placement) => {
       const objDef = objectByIdForPlay.get(placement.object_id);
+      if (isBuildingDoorPlacement(placement)) {
+        if (isDoorOpenForPlay(placement)) return;
+        getPlacementFootprint(placement, objDef).forEach(([x, z]) => {
+          blocked.add(playCellKey(x, z));
+        });
+        return;
+      }
       if (!objDef || objDef.collision?.profile === "none") return;
       getPlacementFootprint(placement, objDef).forEach(([x, z]) => {
         blocked.add(playCellKey(x, z));
       });
     });
     return blocked;
-  }, [activeMap?.custom_object_placements, objectByIdForPlay]);
+  }, [activeMap?.custom_object_placements, isDoorOpenForPlay, objectByIdForPlay]);
   const containerByCoord = useMemo(() => {
     const lookup = new Map<string, ContainerPlacementData>();
     activeMap?.container_placements?.forEach((container) => {
@@ -1307,6 +1407,13 @@ export function PlayEngine() {
 
     activeMap?.custom_object_placements?.forEach((placement) => {
       const objDef = objectByIdForPlay.get(placement.object_id);
+      if (isBuildingDoorPlacement(placement)) {
+        if (isDoorOpenForPlay(placement)) return;
+        getPlacementFootprint(placement, objDef).forEach(([x, z]) => {
+          walkable.delete(pathCellKey(x, z));
+        });
+        return;
+      }
       if (!objDef || objDef.collision?.profile === "none") return;
       getPlacementFootprint(placement, objDef).forEach(([x, z]) => {
         walkable.delete(pathCellKey(x, z));
@@ -1321,6 +1428,7 @@ export function PlayEngine() {
     activeMap?.cells,
     activeMap?.custom_object_placements,
     activeMap?.container_placements,
+    isDoorOpenForPlay,
     objectByIdForPlay,
   ]);
 
@@ -1336,20 +1444,39 @@ export function PlayEngine() {
   const pendingLevelUps = getPendingLevelUps(saveData);
   const levelUpOpen = pendingLevelUps > 0;
   const levelUpOpenRef = useRef(false);
+  const playSfx = useCallback(
+    (
+      idOrUrl: string | undefined,
+      opts: { volume?: number; playbackRate?: number; cooldownMs?: number } = {},
+    ) => {
+      const settings = useEngineStore.getState().gamePackage.settings || {};
+      playSound(idOrUrl, {
+        ...opts,
+        customSounds: settings.sound_effects || {},
+      });
+    },
+    [],
+  );
 
   const logExperienceGrant = useCallback(
     (result: ExperienceGrantResult | null) => {
       if (!result || result.awarded <= 0) return;
       addLog(`Gained ${result.awarded} XP.`);
       if (result.levelUps > 0) {
+        playSfx("level_up", { volume: 0.65, cooldownMs: 400 });
         addLog(`Level ${result.level} reached. Choose a stat.`);
+      } else {
+        playSfx("coin", { volume: 0.35, cooldownMs: 160 });
       }
     },
-    [addLog],
+    [addLog, playSfx],
   );
 
   const handleEnemyDefeatedExperience = useCallback(
     (entityData: GamePackage["entities"][number] | undefined | null) => {
+      if (entityData?.id === "ent_bound_remnant") {
+        usePlayStore.getState().setFlag("cyberghost_defeated", true);
+      }
       const xp = getEnemyXpReward(entityData);
       if (xp <= 0) return;
       const store = usePlayStore.getState();
@@ -1366,10 +1493,11 @@ export function PlayEngine() {
     (stat: LevelUpStat) => {
       const choice = LEVEL_UP_CHOICES.find((candidate) => candidate.id === stat);
       if (chooseLevelUpStat(stat)) {
+        playSfx("level_up", { volume: 0.55, cooldownMs: 500 });
         addLog(`${choice?.label || "Stat"} increased.`);
       }
     },
-    [addLog, chooseLevelUpStat],
+    [addLog, chooseLevelUpStat, playSfx],
   );
 
   const computeTargetPattern = useCallback(
@@ -1473,6 +1601,7 @@ export function PlayEngine() {
 
       const pattern = computeTargetPattern(x, z);
       if (pattern.length === 0) {
+        playSfx("warning", { volume: 0.35, cooldownMs: 200 });
         addLog("Invalid target or out of range.");
         setTargetingSkillId(null);
         return;
@@ -1484,11 +1613,13 @@ export function PlayEngine() {
         caster.isPlayer &&
         (saveData.playerStats.energy || 0) < skill.ap_cost
       ) {
+        playSfx("warning", { volume: 0.35, cooldownMs: 200 });
         addLog("Not enough AP/Energy to cast.");
         setTargetingSkillId(null);
         return;
       }
       if (caster.mp < skill.mp_cost) {
+        playSfx("warning", { volume: 0.35, cooldownMs: 200 });
         addLog("Not enough MP to cast.");
         setTargetingSkillId(null);
         return;
@@ -1517,6 +1648,7 @@ export function PlayEngine() {
           ? `You cast ${skill.display_name}!`
           : `${caster.name} casts ${skill.display_name}!`,
       );
+      playSfx("spell_cast", { volume: 0.45, cooldownMs: 180 });
       const fx = useFxStore.getState();
 
       // Apply Payloads to all valid cells in pattern
@@ -1567,6 +1699,7 @@ export function PlayEngine() {
                   crit ? "#fbbf24" : "#c4b5fd",
                 );
                 fx.flashEntity(key);
+                playSfx("spell_hit", { volume: crit ? 0.58 : 0.42, cooldownMs: 80 });
                 addLog(
                   crit
                     ? `Critical! ${skill.display_name} hits ${eData?.display_name} for ${dmg}!`
@@ -1576,6 +1709,7 @@ export function PlayEngine() {
                 curHp = Math.min(eData?.max_hp || 10, curHp + payload.value);
                 struckAnything = true;
                 fx.addPopup(cellTuple, `+${payload.value}`, "#4ade80");
+                playSfx("heal", { volume: 0.42, cooldownMs: 120 });
                 addLog(
                   `Healed ${eData?.display_name} for ${payload.value} HP.`,
                 );
@@ -1586,6 +1720,7 @@ export function PlayEngine() {
               est.dead = true;
               curHp = 0;
               fx.addPopup(cellTuple, "✕", "#f87171");
+              playSfx("enemy_defeat", { volume: 0.45, cooldownMs: 180 });
               addLog(`${eData?.display_name} is defeated!`);
               handleEnemyDefeatedExperience(eData);
             }
@@ -1615,10 +1750,12 @@ export function PlayEngine() {
               struckAnything = true;
               fx.addPopup(cellTuple, `${dmg}`, "#f87171");
               fx.flashEntity(pid);
+              playSfx("spell_hit", { volume: 0.45, cooldownMs: 80 });
               addLog(`${pDef.display_name} is caught in it for ${dmg}!`);
               if (pEst.hp <= 0) {
                 pEst.dead = true;
                 fx.addPopup(cellTuple, "✕", "#f87171");
+                playSfx("enemy_defeat", { volume: 0.35, cooldownMs: 180 });
                 addLog(`${pDef.display_name} is down!`);
               }
             } else if (payload.type === "heal" && payload.value) {
@@ -1628,6 +1765,7 @@ export function PlayEngine() {
               );
               struckAnything = true;
               fx.addPopup(cellTuple, `+${payload.value}`, "#4ade80");
+              playSfx("heal", { volume: 0.42, cooldownMs: 120 });
               addLog(`${pDef.display_name} is mended for ${payload.value}.`);
             }
           }
@@ -1649,6 +1787,7 @@ export function PlayEngine() {
                 "#f87171",
               );
               fx.markPlayerHurt();
+              playSfx("spell_hit", { volume: 0.5, cooldownMs: 80 });
               addLog(
                 `You were hit for ${payload.value} damage by your own spell!`,
               );
@@ -1660,6 +1799,7 @@ export function PlayEngine() {
                 `+${payload.value}`,
                 "#4ade80",
               );
+              playSfx("heal", { volume: 0.42, cooldownMs: 120 });
               addLog(`Restored ${payload.value} HP.`);
               struckAnything = true;
             }
@@ -1668,6 +1808,7 @@ export function PlayEngine() {
       });
 
       if (!struckAnything) {
+        playSfx("warning", { volume: 0.28, cooldownMs: 200 });
         addLog("It strikes nothing but air.");
       }
 
@@ -1698,6 +1839,7 @@ export function PlayEngine() {
       addLog,
       getActiveCell,
       handleEnemyDefeatedExperience,
+      playSfx,
     ],
   );
 
@@ -1724,10 +1866,12 @@ export function PlayEngine() {
         actor.isPlayer &&
         (save.playerStats.energy || 0) < skill.ap_cost
       ) {
+        playSfx("warning", { volume: 0.35, cooldownMs: 200 });
         addLog("Not ready to act yet.");
         return;
       }
       if (actor.mp < skill.mp_cost) {
+        playSfx("warning", { volume: 0.35, cooldownMs: 200 });
         addLog(`Not enough MP for ${skill.display_name}.`);
         return;
       }
@@ -1735,11 +1879,12 @@ export function PlayEngine() {
       setShowSkills(false);
       setHoveredCell(null);
       setTargetingSkillId(skillId);
+      playSfx("ui_click", { volume: 0.22, cooldownMs: 120 });
       addLog(
         `${actor.isPlayer ? "Aiming" : `${actor.name} readies`} ${skill.display_name} — tap a tile, tap again to cast.`,
       );
     },
-    [gamePackage, addLog],
+    [gamePackage, addLog, playSfx],
   );
 
   const beginTargetingRef = useRef(beginTargeting);
@@ -1754,6 +1899,10 @@ export function PlayEngine() {
 
   const isEnemyNearbyRef = useRef<(() => boolean) & { getNearbyEnemyIds?: () => string[] } | null>(null);
   const keysDownRef = useRef<Set<string>>(new Set());
+  const combatInputLockUntilRef = useRef(0);
+  const combatInputNeedsReleaseRef = useRef(false);
+  const combatInputHeldKeysRef = useRef<Set<string>>(new Set());
+  const activeCombatTurnRef = useRef<string | null>(null);
   const repeatStateRef = useRef({
     dx: 0,
     dz: 0,
@@ -1762,6 +1911,23 @@ export function PlayEngine() {
     bufferStart: 0,
     active: false,
   });
+  const resetRepeatInputState = useCallback(() => {
+    repeatStateRef.current.active = false;
+    repeatStateRef.current.bufferStart = 0;
+  }, []);
+  const releaseCombatInputGateIfReady = useCallback((time = inputNow()) => {
+    if (!combatInputNeedsReleaseRef.current) {
+      return time >= combatInputLockUntilRef.current;
+    }
+    if (time < combatInputLockUntilRef.current) return false;
+    if (combatInputHeldKeysRef.current.size > 0) return false;
+    combatInputNeedsReleaseRef.current = false;
+    return true;
+  }, []);
+  const isCombatInputGateActive = useCallback(
+    (time = inputNow()) => !releaseCombatInputGateIfReady(time),
+    [releaseCombatInputGateIfReady],
+  );
 
   useEffect(() => {
     activeMapRef.current = activeMap;
@@ -1791,7 +1957,7 @@ export function PlayEngine() {
         activeDocumentId ||
         activeContainerId,
     );
-    if (inputBlockedRef.current) repeatStateRef.current.active = false;
+    if (inputBlockedRef.current) resetRepeatInputState();
     if (levelUpOpen) keysDownRef.current.clear();
   }, [
     activeCutscene,
@@ -1805,12 +1971,27 @@ export function PlayEngine() {
     activeShopId,
     activeDocumentId,
     activeContainerId,
+    resetRepeatInputState,
   ]);
 
   const simulateKey = useCallback((key: string, isDown: boolean) => {
-    if (isDown) keysDownRef.current.add(key.toLowerCase());
-    else keysDownRef.current.delete(key.toLowerCase());
-  }, []);
+    const normalizedKey = key.toLowerCase();
+    if (isMovementCommandKey(normalizedKey)) {
+      if (isDown && isCombatInputGateActive()) {
+        combatInputHeldKeysRef.current.add(normalizedKey);
+        combatInputNeedsReleaseRef.current = true;
+        keysDownRef.current.delete(normalizedKey);
+        resetRepeatInputState();
+        return;
+      }
+      if (!isDown) {
+        combatInputHeldKeysRef.current.delete(normalizedKey);
+        releaseCombatInputGateIfReady();
+      }
+    }
+    if (isDown) keysDownRef.current.add(normalizedKey);
+    else keysDownRef.current.delete(normalizedKey);
+  }, [isCombatInputGateActive, releaseCombatInputGateIfReady, resetRepeatInputState]);
 
   // ── Virtual Joystick ──────────────────────────────────────────────────────
   const JOYSTICK_DEAD = 14;
@@ -1830,8 +2011,37 @@ export function PlayEngine() {
     joystickKeysRef.current.clear();
     joystickActive.current = false;
     joystickPointerId.current = null;
+    resetRepeatInputState();
     setJoystickVis({ visible: false, baseX: 0, baseY: 0, thumbX: 0, thumbY: 0 });
   };
+
+  useEffect(() => {
+    const activeTurn = saveData?.in_combat
+      ? (saveData.active_turn_id ?? null)
+      : null;
+    const previousTurn = activeCombatTurnRef.current;
+
+    if (!activeTurn) {
+      activeCombatTurnRef.current = null;
+      combatInputLockUntilRef.current = 0;
+      combatInputNeedsReleaseRef.current = false;
+      combatInputHeldKeysRef.current.clear();
+      return;
+    }
+
+    if (previousTurn === activeTurn) return;
+
+    const heldMovementKeys = new Set([
+      ...combatInputHeldKeysRef.current,
+      ...[...keysDownRef.current].filter(isMovementCommandKey),
+    ]);
+    activeCombatTurnRef.current = activeTurn;
+    clearInputState();
+    combatInputHeldKeysRef.current = heldMovementKeys;
+    combatInputNeedsReleaseRef.current = heldMovementKeys.size > 0;
+    combatInputLockUntilRef.current =
+      inputNow() + COMBAT_ACTOR_SWITCH_INPUT_DELAY_MS;
+  }, [saveData?.in_combat, saveData?.active_turn_id]);
 
   // Non-passive touchmove on document so preventDefault() actually stops iOS page scroll
   useEffect(() => {
@@ -1933,7 +2143,8 @@ export function PlayEngine() {
   // before (map music set by on_load cutscenes survives the fight).
   const ambientMusicRef = useRef<string | null>(null);
   useEffect(() => {
-    const COMBAT_TRACK = "/music/underworld-battle theme.ogg";
+    const COMBAT_TRACK = "/music/le-verre-en-spleen.mp3";
+    const TOWN_TRACK = "/music/l-ombre-des-bles.mp3";
     const interval = setInterval(() => {
       if (activeCutscene) return;
 
@@ -1950,9 +2161,9 @@ export function PlayEngine() {
           playMusic(COMBAT_TRACK, { loop: true });
         }
       } else if (current === COMBAT_TRACK) {
-        playMusic(ambientMusicRef.current || "/music/roll away.ogg", { loop: true });
+        playMusic(ambientMusicRef.current || TOWN_TRACK, { loop: true });
       } else if (!current) {
-        playMusic("/music/roll away.ogg", { loop: true });
+        playMusic(TOWN_TRACK, { loop: true });
       }
     }, 500);
 
@@ -1998,6 +2209,7 @@ export function PlayEngine() {
       ];
       members.sort((a, b) => b.speed - a.speed);
       store.startCombat(members.map((m) => m.id));
+      playSfx("warning", { volume: 0.3, cooldownMs: 180 });
       store.addLog("⚔ Battle joined — initiative follows speed.");
       return;
     }
@@ -2007,6 +2219,7 @@ export function PlayEngine() {
     if (inRange.length === 0) {
       const xpResult = store.endCombat(partyIds);
       store.addLog("The dark settles. You regroup.");
+      playSfx("ui_back", { volume: 0.2, cooldownMs: 180 });
       logExperienceGrant(xpResult);
       return;
     }
@@ -2016,9 +2229,10 @@ export function PlayEngine() {
       .map((h) => h.key);
     if (newcomers.length > 0) {
       store.extendCombatQueue(newcomers);
+      playSfx("warning", { volume: 0.22, cooldownMs: 180 });
       store.addLog("Something else has noticed you.");
     }
-  }, [saveData, activeMap, activeCutscene, logExperienceGrant]);
+  }, [saveData, activeMap, activeCutscene, logExperienceGrant, playSfx]);
 
   // ── Enemy turns ───────────────────────────────────────────────────────────
   // Resolved automatically after a short beat so the order stays readable:
@@ -2094,6 +2308,11 @@ export function PlayEngine() {
         const { dmg, crit } = rollMeleeDamage(def.attack ?? 2, target.defense);
         est.facing = [target.cell[0] - cell[0], target.cell[1] - cell[1]];
         store.updateEntityState(turnId, est);
+        playSfx("melee_swing", { volume: 0.24, playbackRate: 0.92, cooldownMs: 70 });
+        playSfx(crit ? "melee_crit" : "melee_hit", {
+          volume: crit ? 0.52 : 0.36,
+          cooldownMs: 80,
+        });
         if (target.isPlayer) {
           store.updatePlayerHp(-dmg);
           fx.addPopup(target.cell, `${dmg}${crit ? "!" : ""}`, "#f87171");
@@ -2111,6 +2330,7 @@ export function PlayEngine() {
           if (tEst.hp <= 0) {
             tEst.dead = true;
             fx.addPopup(target.cell, "✕", "#f87171");
+            playSfx("enemy_defeat", { volume: 0.35, cooldownMs: 180 });
             store.addLog(`${tDef?.display_name} is down!`);
           }
           store.updateEntityState(target.id, tEst);
@@ -2158,6 +2378,11 @@ export function PlayEngine() {
             est.cell = [nx, nz];
             est.facing = [mx, mz];
             store.updateEntityState(turnId, est);
+            playSfx("footstep_stone", {
+              volume: 0.18,
+              playbackRate: 0.9,
+              cooldownMs: 90,
+            });
             break;
           }
         }
@@ -2173,6 +2398,7 @@ export function PlayEngine() {
     getActiveCell,
     getContainerAtCell,
     isBlockedByPlacement,
+    playSfx,
   ]);
 
   // Cutscene Runner
@@ -2217,6 +2443,7 @@ export function PlayEngine() {
         usePlayStore
           .getState()
           .startDialogue(action.dialogue_id, startNodeId);
+        playSfx("dialogue_open", { volume: action.volume ?? 0.34, cooldownMs: 120 });
         finishAction();
       } else if (action.type === "set_switch") {
         usePlayStore
@@ -2251,6 +2478,10 @@ export function PlayEngine() {
         }
         finishAction();
       } else if (action.type === "teleport_player") {
+        playSfx("door_transition", {
+          volume: action.volume ?? 0.42,
+          cooldownMs: 140,
+        });
         if (
           action.map_id &&
           action.map_id !== usePlayStore.getState().saveData?.current_map_id
@@ -2271,6 +2502,10 @@ export function PlayEngine() {
       } else if (action.type === "give_item") {
         if (action.item_id) {
           usePlayStore.getState().giveItem(action.item_id, action.amount || 1);
+          playSfx("item_pickup", {
+            volume: action.volume ?? 0.4,
+            cooldownMs: 120,
+          });
           const item = useEngineStore
             .getState()
             .gamePackage.items.find((i) => i.id === action.item_id);
@@ -2285,6 +2520,7 @@ export function PlayEngine() {
           usePlayStore
             .getState()
             .removeItem(action.item_id, action.amount || 1);
+          playSfx("ui_back", { volume: 0.18, cooldownMs: 120 });
         }
         finishAction();
       } else if (action.type === "set_player_sprite") {
@@ -2294,16 +2530,23 @@ export function PlayEngine() {
         if (action.document_id) {
           usePlayStore.getState().markDocumentRead(action.document_id);
           setActiveDocumentId(action.document_id);
+          playSfx("document_open", {
+            volume: action.volume ?? 0.34,
+            cooldownMs: 120,
+          });
         }
         finishAction();
       } else if (action.type === "heal_player") {
         usePlayStore.getState().updatePlayerHp(action.amount || 20);
+        playSfx("heal", { volume: action.volume ?? 0.42, cooldownMs: 120 });
         finishAction();
       } else if (action.type === "give_currency") {
         usePlayStore.getState().updateMoney(action.amount || 1);
+        playSfx("coin", { volume: action.volume ?? 0.35, cooldownMs: 100 });
         finishAction();
       } else if (action.type === "remove_currency") {
         usePlayStore.getState().updateMoney(-(action.amount || 1));
+        playSfx("coin", { volume: action.volume ?? 0.3, cooldownMs: 100 });
         finishAction();
       } else if (action.type === "add_party_member") {
         if (action.entity_id) {
@@ -2314,6 +2557,7 @@ export function PlayEngine() {
           const entity = useEngineStore
             .getState()
             .gamePackage.entities.find((e) => e.id === action.entity_id);
+          playSfx("ui_click", { volume: 0.2, cooldownMs: 120 });
           if (entity && !alreadyInParty)
             usePlayStore.getState().addLog(`${entity.display_name} joined the party.`);
         }
@@ -2321,6 +2565,7 @@ export function PlayEngine() {
       } else if (action.type === "remove_party_member") {
         if (action.entity_id) {
           usePlayStore.getState().removePartyMember(action.entity_id);
+          playSfx("ui_back", { volume: 0.2, cooldownMs: 120 });
           const entity = useEngineStore
             .getState()
             .gamePackage.entities.find((e) => e.id === action.entity_id);
@@ -2330,6 +2575,10 @@ export function PlayEngine() {
       } else if (action.type === "open_shop") {
         if (action.shop_id) {
           usePlayStore.getState().openShop(action.shop_id);
+          playSfx("shop_open", {
+            volume: action.volume ?? 0.34,
+            cooldownMs: 120,
+          });
         }
         finishAction();
       } else if (action.type === "label") {
@@ -2372,6 +2621,17 @@ export function PlayEngine() {
           stopMusic();
         }
         finishAction();
+      } else if (action.type === "play_sound") {
+        const settings = useEngineStore.getState().gamePackage.settings || {};
+        const soundUrl =
+          action.sound_id
+            ? (settings.sound_effects || {})[action.sound_id] || action.sound_id
+            : action.music_url;
+        playSfx(soundUrl, {
+          volume: action.volume,
+          cooldownMs: 30,
+        });
+        finishAction();
       } else if (action.type === "screen_fade") {
         const duration = action.duration ?? 600;
         setScreenFade({
@@ -2393,6 +2653,10 @@ export function PlayEngine() {
       } else if (action.type === "open_save_menu") {
         clearInputState();
         setShowSaveMenu(true);
+        playSfx("save_candle", {
+          volume: action.volume ?? 0.34,
+          cooldownMs: 120,
+        });
         finishAction();
       } else if (action.type === "advance_clock") {
         usePlayStore.getState().advanceClock(action.amount ?? 60);
@@ -2405,6 +2669,10 @@ export function PlayEngine() {
       } else if (action.type === "learn_skill") {
         if (action.skill_id) {
           usePlayStore.getState().learnSkill(action.skill_id);
+          playSfx("level_up", {
+            volume: action.volume ?? 0.42,
+            cooldownMs: 180,
+          });
           const skill = useEngineStore
             .getState()
             .gamePackage.abilities.find((s) => s.id === action.skill_id);
@@ -2446,6 +2714,7 @@ export function PlayEngine() {
     activeDocumentId,
     activeShopId,
     activeContainerId,
+    playSfx,
   ]);
 
   useEffect(() => {
@@ -2455,7 +2724,11 @@ export function PlayEngine() {
       animId = requestAnimationFrame(loop);
 
       if (inputBlockedRef.current) {
-        repeatStateRef.current.active = false;
+        resetRepeatInputState();
+        return;
+      }
+      if (isCombatInputGateActive(time)) {
+        resetRepeatInputState();
         return;
       }
       const currentSave = usePlayStore.getState().saveData;
@@ -2463,7 +2736,7 @@ export function PlayEngine() {
         currentSave?.playerStats.hp !== undefined &&
         currentSave.playerStats.hp <= 0
       ) {
-        repeatStateRef.current.active = false;
+        resetRepeatInputState();
         return;
       }
 
@@ -2542,8 +2815,7 @@ export function PlayEngine() {
           }
         }
       } else {
-        repeatStateRef.current.active = false;
-        repeatStateRef.current.bufferStart = 0;
+        resetRepeatInputState();
       }
     };
 
@@ -2559,6 +2831,17 @@ export function PlayEngine() {
       const key = e.key.toLowerCase();
 
       if (levelUpOpenRef.current) {
+        e.preventDefault();
+        return;
+      }
+
+      if (isCombatCommandKey(key) && isCombatInputGateActive()) {
+        if (isMovementCommandKey(key)) {
+          combatInputHeldKeysRef.current.add(key);
+          combatInputNeedsReleaseRef.current = true;
+          keysDownRef.current.delete(key);
+        }
+        resetRepeatInputState();
         e.preventDefault();
         return;
       }
@@ -2600,18 +2883,23 @@ export function PlayEngine() {
             break;
           case "q":
             setCameraQuarterTurns((turns) => turns + 1);
-            repeatStateRef.current.active = false;
+            resetRepeatInputState();
             break;
           case "e":
             setCameraQuarterTurns((turns) => turns - 1);
-            repeatStateRef.current.active = false;
+            resetRepeatInputState();
             break;
         }
       }
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
-      keysDownRef.current.delete(e.key.toLowerCase());
+      const key = e.key.toLowerCase();
+      keysDownRef.current.delete(key);
+      if (isMovementCommandKey(key)) {
+        combatInputHeldKeysRef.current.delete(key);
+        releaseCombatInputGateIfReady();
+      }
     };
 
     window.addEventListener("keydown", handleKeyDown);
@@ -2622,7 +2910,11 @@ export function PlayEngine() {
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
     };
-  }, []);
+  }, [
+    isCombatInputGateActive,
+    releaseCombatInputGateIfReady,
+    resetRepeatInputState,
+  ]);
 
   const didInitialMapLoadRef = useRef(false);
 
@@ -3043,6 +3335,7 @@ export function PlayEngine() {
       const gp = useEngineStore.getState().gamePackage;
       const actor = getControlledActor(save, gp);
       if (!actor) return;
+      playSfx("ui_click", { volume: 0.18, cooldownMs: 120 });
       usePlayStore
         .getState()
         .addLog(actor.isPlayer ? "You hold your ground." : `${actor.name} holds.`);
@@ -3054,11 +3347,12 @@ export function PlayEngine() {
       usePlayStore.getState().updatePlayerStats({ energy: energy - 1000 });
       usePlayStore.getState().updatePlayerHp(1);
       usePlayStore.getState().updatePlayerMp(1);
+      playSfx("heal", { volume: 0.36, cooldownMs: 180 });
       usePlayStore
         .getState()
         .addLog("You wait a turn. Restored 1 HP and 1 MP.");
     }
-  }, []);
+  }, [playSfx]);
 
   useEffect(() => {
     waitRef.current = performWait;
@@ -3086,9 +3380,19 @@ export function PlayEngine() {
     if (dialogue?.nodes.length) {
       clearInputState();
       usePlayStore.getState().startDialogue(dialogue.id, dialogue.nodes[0].id);
+      playSfx("dialogue_open", { volume: 0.32, cooldownMs: 120 });
       addLog(`Spoke with ${partyMember?.display_name || "party member"}.`);
     }
-  }, [activeDialogueId, activeShopId, activeDocumentId, activeContainerId, gamePackage.entities, gamePackage.dialogue, addLog]);
+  }, [
+    activeDialogueId,
+    activeShopId,
+    activeDocumentId,
+    activeContainerId,
+    gamePackage.entities,
+    gamePackage.dialogue,
+    addLog,
+    playSfx,
+  ]);
 
   // One melee strike from the controlled actor against a hostile, with crit
   // rolls, floating damage text, and hit flashes. Outside combat, party
@@ -3113,6 +3417,11 @@ export function PlayEngine() {
 
       const { dmg, crit } = rollMeleeDamage(attacker.attack, entityData.defense);
       hp -= dmg;
+      playSfx("melee_swing", { volume: 0.28, playbackRate: attacker.isPlayer ? 1 : 0.92, cooldownMs: 70 });
+      playSfx(crit ? "melee_crit" : "melee_hit", {
+        volume: crit ? 0.58 : 0.44,
+        cooldownMs: 80,
+      });
       fx.addPopup(
         targetCell,
         `${dmg}${crit ? "!" : ""}`,
@@ -3137,6 +3446,10 @@ export function PlayEngine() {
           if (d !== 1) continue;
           const assist = rollMeleeDamage(fDef.attack, entityData.defense);
           hp -= assist.dmg;
+          playSfx(assist.crit ? "melee_crit" : "melee_hit", {
+            volume: assist.crit ? 0.52 : 0.36,
+            cooldownMs: 80,
+          });
           fx.addPopup(targetCell, `${assist.dmg}`, "#7dd3fc");
           fx.flashEntity(targetKey);
           addLog(`${fDef.display_name} follows up for ${assist.dmg}!`);
@@ -3148,13 +3461,14 @@ export function PlayEngine() {
         est.dead = true;
         hp = 0;
         fx.addPopup(targetCell, "✕", "#f87171");
+        playSfx("enemy_defeat", { volume: 0.5, cooldownMs: 180 });
         addLog(`${entityData.display_name} is defeated!`);
         handleEnemyDefeatedExperience(entityData);
       }
       est.hp = hp;
       usePlayStore.getState().updateEntityState(targetKey, est);
     },
-    [addLog, handleEnemyDefeatedExperience],
+    [addLog, handleEnemyDefeatedExperience, playSfx],
   );
 
   const handleMove = useCallback(
@@ -3294,6 +3608,7 @@ export function PlayEngine() {
                 usePlayStore
                   .getState()
                   .startDialogue(dialogue.id, dialogue.nodes[0].id);
+                playSfx("dialogue_open", { volume: 0.32, cooldownMs: 120 });
                 addLog(`Started conversation with ${entityData.display_name}...`);
               }
             }
@@ -3309,9 +3624,13 @@ export function PlayEngine() {
       if (!entityPlacement) {
         if (blocked) {
           faceActor(newFacing);
+          if (actor.isPlayer) {
+            playSfx("bump", { volume: 0.24, cooldownMs: 90 });
+          }
         } else {
           if (actor.isPlayer) {
             movePlayer([nx, nz], newFacing, inCombat ? 0 : -1000);
+            playSfx("footstep_stone", { volume: 0.24, cooldownMs: 75 });
             turnEnergyConsumed = !inCombat;
           } else {
             const est = {
@@ -3347,6 +3666,7 @@ export function PlayEngine() {
                   logExperienceGrant(xpResult);
                   addLog("You flee through the passage!");
                 }
+                playSfx("door_transition", { volume: 0.42, cooldownMs: 140 });
                 const spawn =
                   (exit.target_spawn_id
                     ? targetMap.spawns.find(
@@ -3366,6 +3686,7 @@ export function PlayEngine() {
               usePlayStore
                 .getState()
                 .addLog(`The way is sealed. (Missing map: ${exit.target_map_id})`);
+              playSfx("warning", { volume: 0.24, cooldownMs: 120 });
             }
 
             // Check step triggers (player only). Several triggers may share
@@ -3415,6 +3736,7 @@ export function PlayEngine() {
       getContainerAtCell,
       isBlockedByPlacement,
       logExperienceGrant,
+      playSfx,
     ],
   );
 
@@ -3471,6 +3793,7 @@ export function PlayEngine() {
           ? "You swing at nothing."
           : `${actor.name} finds nothing to strike.`,
       );
+      playSfx("warning", { volume: 0.22, cooldownMs: 120 });
       return; // a whiff costs nothing — reposition instead
     }
 
@@ -3541,11 +3864,14 @@ export function PlayEngine() {
             usePlayStore
               .getState()
               .startDialogue(dialogue.id, dialogue.nodes[0].id);
+            playSfx("dialogue_open", { volume: 0.32, cooldownMs: 120 });
             addLog(`Started conversation with ${entityData.display_name}...`);
           } else {
+            playSfx("warning", { volume: 0.22, cooldownMs: 120 });
             addLog(`${entityData.display_name} has nothing to say.`);
           }
         } else {
+          playSfx("warning", { volume: 0.22, cooldownMs: 120 });
           addLog(`${entityData.display_name} ignores you.`);
         }
         turnConsumed = true;
@@ -3592,11 +3918,13 @@ export function PlayEngine() {
           const keyName =
             gamePackage.items.find((i) => i.id === container.key_item_id)
               ?.display_name || "the key";
+          playSfx("ui_click", { volume: 0.24, cooldownMs: 120 });
           addLog(`Unlocked ${containerName} with ${keyName}.`);
           usePlayStore.getState().updatePlayerStats({
             energy: (saveData.playerStats.energy || 0) - 1000,
           });
         } else {
+          playSfx("warning", { volume: 0.24, cooldownMs: 120 });
           addLog(`${containerName} is locked.`);
         }
         return;
@@ -3607,6 +3935,7 @@ export function PlayEngine() {
         .getState()
         .updateContainerState(activeMap.id, container.id, { opened: true });
       usePlayStore.getState().openContainer(container.id);
+      playSfx("ui_click", { volume: 0.24, cooldownMs: 120 });
       addLog(`Opened ${containerName}.`);
       usePlayStore.getState().updatePlayerStats({
         energy: (saveData.playerStats.energy || 0) - 1000,
@@ -3637,6 +3966,7 @@ export function PlayEngine() {
       addLog(
         `Picked up ${worldItem.count > 1 ? `${worldItem.count}x ` : ""}${itemDef?.display_name || worldItem.item_id}.`,
       );
+      playSfx("item_pickup", { volume: 0.38, cooldownMs: 120 });
       usePlayStore.getState().updatePlayerStats({
         energy: (saveData.playerStats.energy || 0) - 1000,
       });
@@ -3650,6 +3980,63 @@ export function PlayEngine() {
         .gamePackage.object_library.find((o) => o.id === p.object_id);
       return placementOccupiesCell(p, objDef, tx, tz);
     });
+    const placementObject = placement
+      ? gp.object_library.find((o) => o.id === placement.object_id)
+      : undefined;
+    if (
+      placement &&
+      isLazareInterviewDoor(activeMap, placement) &&
+      !lazareDoorReady
+    ) {
+      const doorKey = doorPlacementKey(placement);
+      if (isDoorPlacementOpen(saveData.map_deltas?.[activeMap.id], placement)) {
+        usePlayStore.getState().closeDoor(activeMap.id, doorKey);
+      }
+      const waitDialogue = gp.dialogue.find((d) => d.id === "dia_lazare_door_not_ready");
+      if (waitDialogue && waitDialogue.nodes.length > 0) {
+        clearInputState();
+        usePlayStore
+          .getState()
+          .startDialogue(waitDialogue.id, waitDialogue.nodes[0].id);
+        playSfx("dialogue_open", { volume: 0.26, cooldownMs: 120 });
+      } else {
+        playSfx("warning", { volume: 0.22, cooldownMs: 120 });
+        addLog("The shuttered door stays closed. The testimony is not ready.");
+      }
+      usePlayStore.getState().updatePlayerStats({
+        energy: (saveData.playerStats.energy || 0) - 1000,
+      });
+      return;
+    }
+    if (
+      placement &&
+      isBuildingDoorPlacement(placement) &&
+      !isDoorPlacementOpen(saveData.map_deltas?.[activeMap.id], placement)
+    ) {
+      const dialogue = placement.dialogue_id
+        ? gp.dialogue.find((d) => d.id === placement.dialogue_id)
+        : undefined;
+      usePlayStore.getState().openDoor(activeMap.id, doorPlacementKey(placement));
+      if (dialogue && dialogue.nodes.length > 0) {
+        clearInputState();
+        usePlayStore
+          .getState()
+          .startDialogue(dialogue.id, dialogue.nodes[0].id);
+        playSfx("door_transition", { volume: 0.28, cooldownMs: 180 });
+        playSfx("dialogue_open", { volume: 0.3, cooldownMs: 120 });
+        addLog(`Knocked at ${placementObject?.display_name || "Doorway"}...`);
+        usePlayStore.getState().updatePlayerStats({
+          energy: (saveData.playerStats.energy || 0) - 1000,
+        });
+        return;
+      }
+      playSfx("door_transition", { volume: 0.32, cooldownMs: 180 });
+      addLog(`${placementObject?.display_name || "Doorway"} opens.`);
+      usePlayStore.getState().updatePlayerStats({
+        energy: (saveData.playerStats.energy || 0) - 1000,
+      });
+      return;
+    }
     if (placement && placement.dialogue_id) {
       const dialogue = useEngineStore
         .getState()
@@ -3659,17 +4046,30 @@ export function PlayEngine() {
         usePlayStore
           .getState()
           .startDialogue(dialogue.id, dialogue.nodes[0].id);
+        playSfx("dialogue_open", { volume: 0.32, cooldownMs: 120 });
         addLog(`Started conversation with ${dialogue.nodes[0].speaker}...`);
         return;
       }
     }
+    if (placement && isBuildingDoorPlacement(placement)) {
+      playSfx("ui_click", { volume: 0.18, cooldownMs: 180 });
+      addLog(`${placementObject?.display_name || "Doorway"} is already open.`);
+      return;
+    }
+    if (placement && placementObject?.tags?.includes("door")) {
+      playSfx("door_transition", { volume: 0.28, cooldownMs: 180 });
+      addLog(`${placementObject.display_name || "Doorway"} opens onto the threshold.`);
+      return;
+    }
 
     const targetCell = activeMap.cells.find((c) => c.x === tx && c.z === tz);
     if (!targetCell) {
+      playSfx("warning", { volume: 0.22, cooldownMs: 120 });
       addLog("Nothing there.");
       return;
     }
 
+    playSfx("warning", { volume: 0.18, cooldownMs: 120 });
     addLog(`Interacted with [${tx}, ${tz}]. Nothing happened.`);
     turnConsumed = true;
     if (turnConsumed) {
@@ -3764,9 +4164,22 @@ export function PlayEngine() {
 
   // Stable render inputs for GameRenderer (recomputed only when the world
   // actually changes, not on every player step).
-  const renderMapDelta = activeMap
-    ? saveData?.map_deltas?.[activeMap.id]
-    : undefined;
+  const renderMapDelta = useMemo(() => {
+    if (!activeMap || !activeMapDelta) return undefined;
+    if (activeMap.id !== "map_lazare_house" || lazareDoorReady) return activeMapDelta;
+
+    const lazareDoor = activeMap.custom_object_placements.find((placement) =>
+      isLazareInterviewDoor(activeMap, placement),
+    );
+    if (!lazareDoor || !activeMapDelta.opened_doors?.length) return activeMapDelta;
+
+    return {
+      ...activeMapDelta,
+      opened_doors: activeMapDelta.opened_doors.filter(
+        (doorKey) => doorKey !== doorPlacementKey(lazareDoor),
+      ),
+    };
+  }, [activeMap, activeMapDelta, lazareDoorReady]);
   const containerRenderPlacements = useMemo(
     () =>
       (activeMap?.container_placements || []).map((c) => ({
@@ -3787,6 +4200,20 @@ export function PlayEngine() {
       icon: iconOf(w.item_id),
     }));
   }, [activeMap, renderMapDelta, gamePackage.items]);
+
+  const closeDialogueDoorForCurrentMap = useCallback(
+    (dialogueId: string | null | undefined) => {
+      if (!activeMap || !dialogueId) return;
+      const door = activeMap.custom_object_placements.find(
+        (placement) =>
+          isBuildingDoorPlacement(placement) &&
+          placement.dialogue_id === dialogueId,
+      );
+      if (!door) return;
+      usePlayStore.getState().closeDoor(activeMap.id, doorPlacementKey(door));
+    },
+    [activeMap],
+  );
 
   // Living hostiles in threat range — drives the danger HUD panel and the
   // engaged feel (HP bars + threat rings render in GameRenderer).
@@ -3967,11 +4394,25 @@ export function PlayEngine() {
         return { id, name, hp, maxHp, kind: "enemy" as const, dead };
       })
     : [];
+  const activeDialogue = activeDialogueId
+    ? gamePackage.dialogue.find((d) => d.id === activeDialogueId)
+    : undefined;
+  const activeDialogueNode = activeDialogue?.nodes.find(
+    (n) => n.id === activeDialogueNodeId,
+  );
+  const dialogueHasSceneImage = Boolean(activeDialogueNode?.scene_image_url);
+  const bottomPanelOpen = Boolean(
+    activeShopId ||
+      activeDocumentId ||
+      activeDialogueId ||
+      activeContainerId,
+  );
 
   return (
     <div className="flex flex-col h-full bg-neutral-950 relative overflow-hidden pb-16 sm:pb-0" style={{ touchAction: 'none' }}>
       <div className="flex-1 relative min-h-0">
         <Canvas
+          shadows
           camera={{
             position: cameraPosition,
             fov: ISO_CAMERA_FOV,
@@ -3994,8 +4435,8 @@ export function PlayEngine() {
               activeCutscene || cameraFocusOverride || commandingParty,
             )}
           />
-          <color attach="background" args={["#080A16"]} />
-          <fog attach="fog" args={["#0C1020", 72, 180]} />
+          <color attach="background" args={["#111735"]} />
+          <fog attach="fog" args={["#161D36", 78, 190]} />
           <BlackStarLightRig playerPos={playerPos} />
           <AdaptiveQualityProbe dpr={playDpr} setDpr={setPlayDpr} />
           <FramePerfProbe enabled={showPerfHud} dpr={playDpr} />
@@ -4015,6 +4456,7 @@ export function PlayEngine() {
             entityStates={saveData.entity_states}
             partyFollowers={partyFollowers}
             partyMemberIds={partyMemberIds}
+            mapDelta={renderMapDelta}
             inCombat={inCombat}
             activeTurnKey={activeTurnId}
             showGrid={false}
@@ -4397,14 +4839,20 @@ export function PlayEngine() {
         <div className="absolute top-2 right-2 z-20 flex flex-col items-end gap-1.5 pointer-events-auto">
           <div className="flex gap-1.5">
             <button
-              onClick={() => setShowInventory(true)}
+              onClick={() => {
+                playSfx("ui_click", { volume: 0.22, cooldownMs: 120 });
+                setShowInventory(true);
+              }}
               className="w-8 h-8 sm:w-10 sm:h-10 bg-neutral-900/90 border border-neutral-700 hover:bg-neutral-700 text-neutral-300 rounded-full shadow-lg transition-all flex items-center justify-center"
               title="Inventory"
             >
               <Briefcase className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
             <button
-              onClick={() => setShowSkills(true)}
+              onClick={() => {
+                playSfx("ui_click", { volume: 0.22, cooldownMs: 120 });
+                setShowSkills(true);
+              }}
               className="w-8 h-8 sm:w-10 sm:h-10 bg-indigo-900/90 border border-indigo-700 hover:bg-indigo-700 text-indigo-200 rounded-full shadow-lg transition-all flex items-center justify-center"
               title="Spells & Skills"
             >
@@ -4413,6 +4861,7 @@ export function PlayEngine() {
             <button
               onClick={() => {
                 clearInputState();
+                playSfx("ui_click", { volume: 0.22, cooldownMs: 120 });
                 setShowCaseFile(true);
               }}
               className="w-8 h-8 sm:w-10 sm:h-10 bg-sky-950/90 border border-sky-800 hover:bg-sky-800 text-sky-200 rounded-full shadow-lg transition-all flex items-center justify-center"
@@ -4423,6 +4872,7 @@ export function PlayEngine() {
             <button
               onClick={() => {
                 clearInputState();
+                playSfx("save_candle", { volume: 0.32, cooldownMs: 120 });
                 setShowSaveMenu(true);
               }}
               className="w-8 h-8 sm:w-10 sm:h-10 bg-amber-950/90 border border-amber-800 hover:bg-amber-800 text-amber-200 rounded-full shadow-lg transition-all flex items-center justify-center"
@@ -4453,6 +4903,7 @@ export function PlayEngine() {
               <button
                 onClick={() => {
                   clearInputState();
+                  playSfx("ui_click", { volume: 0.22, cooldownMs: 120 });
                   setShowCaseFile(true);
                 }}
                 className="max-w-[15rem] sm:max-w-[18rem] rounded-sm border border-sky-800/80 bg-neutral-950/86 px-3 py-2 text-left shadow-lg transition-colors hover:bg-sky-950/90"
@@ -4470,7 +4921,10 @@ export function PlayEngine() {
           {targetingSkillId && (
             <div className="flex flex-col gap-2 items-end">
               <button
-                onClick={() => setTargetingSkillId(null)}
+                onClick={() => {
+                  playSfx("ui_back", { volume: 0.22, cooldownMs: 120 });
+                  setTargetingSkillId(null);
+                }}
                 className="px-3 py-2 bg-red-900/90 border border-red-700 hover:bg-red-800 text-red-100 rounded-lg shadow-lg transition-all flex items-center gap-2 text-sm"
               >
                 <X className="w-4 h-4" />
@@ -4559,13 +5013,19 @@ export function PlayEngine() {
             </p>
             <div className="flex gap-4">
               <button
-                onClick={() => resetRun()}
+                onClick={() => {
+                  playSfx("ui_click", { volume: 0.22, cooldownMs: 120 });
+                  resetRun();
+                }}
                 className="px-8 py-3 bg-red-900 hover:bg-red-800 text-red-100 rounded shadow-[0_0_15px_rgba(153,27,27,0.5)] font-bold tracking-widest hover:scale-105 transition-all"
               >
                 AWAKEN
               </button>
               <button
-                onClick={() => setShowSaveMenu(true)}
+                onClick={() => {
+                  playSfx("save_candle", { volume: 0.32, cooldownMs: 120 });
+                  setShowSaveMenu(true);
+                }}
                 className="px-8 py-3 bg-amber-950 hover:bg-amber-900 text-amber-100 border border-amber-800 rounded font-bold tracking-widest hover:scale-105 transition-all"
               >
                 RECALL A MEMORY
@@ -4584,7 +5044,10 @@ export function PlayEngine() {
                 Case File
               </h2>
               <button
-                onClick={() => setShowCaseFile(false)}
+                onClick={() => {
+                  playSfx("ui_back", { volume: 0.2, cooldownMs: 120 });
+                  setShowCaseFile(false);
+                }}
                 className="text-neutral-400 hover:text-white transition-colors p-1"
               >
                 <X className="w-5 h-5" />
@@ -4601,6 +5064,7 @@ export function PlayEngine() {
                       <button
                         key={documentId}
                         onClick={() => {
+                          playSfx("document_open", { volume: 0.32, cooldownMs: 120 });
                           setShowCaseFile(false);
                           usePlayStore.getState().markDocumentRead(documentId);
                           setActiveDocumentId(documentId);
@@ -4725,7 +5189,10 @@ export function PlayEngine() {
                 </div>
               </div>
               <button
-                onClick={() => setShowInventory(false)}
+                onClick={() => {
+                  playSfx("ui_back", { volume: 0.2, cooldownMs: 120 });
+                  setShowInventory(false);
+                }}
                 className="text-neutral-400 hover:text-white transition-colors p-1"
               >
                 <X className="w-5 h-5" />
@@ -4836,9 +5303,12 @@ export function PlayEngine() {
                                 }
                               }
                               if (!used) {
+                                playSfx("warning", { volume: 0.24, cooldownMs: 120 });
                                 addLog(
                                   `Used ${itemDef.display_name}. Nothing happened.`,
                                 );
+                              } else {
+                                playSfx("heal", { volume: 0.32, cooldownMs: 120 });
                               }
                               usePlayStore.getState().removeItem(invItem.id, 1);
                               // Drinking mid-fight costs the turn.
@@ -4851,9 +5321,12 @@ export function PlayEngine() {
                             Use
                           </button>
                         )}
-                        <button
-                          className="mt-2 text-xs bg-neutral-700 hover:bg-neutral-600 text-neutral-200 px-3 py-1 rounded transition-colors"
-                          onClick={() => handleDropItem(invItem.id)}
+                          <button
+                            className="mt-2 text-xs bg-neutral-700 hover:bg-neutral-600 text-neutral-200 px-3 py-1 rounded transition-colors"
+                          onClick={() => {
+                            playSfx("ui_back", { volume: 0.18, cooldownMs: 120 });
+                            handleDropItem(invItem.id);
+                          }}
                         >
                           Drop
                         </button>
@@ -4885,7 +5358,10 @@ export function PlayEngine() {
                 </h2>
               </div>
               <button
-                onClick={() => setShowSkills(false)}
+                onClick={() => {
+                  playSfx("ui_back", { volume: 0.2, cooldownMs: 120 });
+                  setShowSkills(false);
+                }}
                 className="text-neutral-400 hover:text-white transition-colors p-1"
               >
                 <X className="w-5 h-5" />
@@ -4965,7 +5441,10 @@ export function PlayEngine() {
                 The Candle Remembers
               </h2>
               <button
-                onClick={() => setShowSaveMenu(false)}
+                onClick={() => {
+                  playSfx("ui_back", { volume: 0.2, cooldownMs: 120 });
+                  setShowSaveMenu(false);
+                }}
                 className="text-neutral-400 hover:text-white transition-colors p-1"
               >
                 <X className="w-5 h-5" />
@@ -5004,6 +5483,10 @@ export function PlayEngine() {
                         <button
                           onClick={() => {
                             if (usePlayStore.getState().saveToSlot(slot)) {
+                              playSfx("save_candle", {
+                                volume: 0.34,
+                                cooldownMs: 120,
+                              });
                               addLog(`The candle keeps this moment. (Memory ${slot})`);
                               setSaveSlotRevision((r) => r + 1);
                             }
@@ -5019,8 +5502,10 @@ export function PlayEngine() {
                               .getState()
                               .loadFromSlot(slot, gamePackage.metadata.version);
                             if (error) {
+                              playSfx("warning", { volume: 0.24, cooldownMs: 120 });
                               addLog(error);
                             } else {
+                              playSfx("ui_click", { volume: 0.22, cooldownMs: 120 });
                               setShowSaveMenu(false);
                             }
                           }}
@@ -5031,6 +5516,7 @@ export function PlayEngine() {
                         <button
                           disabled={!data}
                           onClick={() => {
+                            playSfx("ui_back", { volume: 0.2, cooldownMs: 120 });
                             deleteSaveSlot(slot);
                             setSaveSlotRevision((r) => r + 1);
                           }}
@@ -5051,7 +5537,7 @@ export function PlayEngine() {
 
       {/* Bottom Panel — only visible for dialogue / shop / document interactions */}
       <div
-        className={`shrink-0 transition-all duration-300 ${activeShopId || activeDocumentId || activeDialogueId || activeContainerId ? "h-[18rem] sm:h-[22rem] z-30 border-t-2 border-sacred-gold bg-sacred-parchment shadow-[0_-10px_30px_rgba(0,0,0,0.9)]" : "h-0 overflow-hidden"} flex flex-col justify-center items-center relative`}
+        className={`shrink-0 transition-all duration-300 ${bottomPanelOpen ? `h-[18rem] sm:h-[22rem] z-30 border-t-2 border-sacred-gold ${dialogueHasSceneImage ? "bg-black/25" : "bg-sacred-parchment"} shadow-[0_-10px_30px_rgba(0,0,0,0.9)]` : "h-0 overflow-hidden"} flex flex-col justify-center items-center relative`}
       >
         {activeShopId ? (
           (() => {
@@ -5061,7 +5547,10 @@ export function PlayEngine() {
                 <div className="flex flex-col items-center gap-2">
                   <p className="text-neutral-500">Shop not found.</p>
                   <button
-                    onClick={closeShop}
+                    onClick={() => {
+                      playSfx("ui_back", { volume: 0.2, cooldownMs: 120 });
+                      closeShop();
+                    }}
                     className="px-4 py-2 bg-neutral-800 rounded"
                   >
                     Close
@@ -5081,7 +5570,10 @@ export function PlayEngine() {
                       <span className="text-[var(--color-sacred-gold)]">☩</span> {saveData.money || 0}
                     </div>
                     <button
-                      onClick={closeShop}
+                      onClick={() => {
+                        playSfx("ui_back", { volume: 0.2, cooldownMs: 120 });
+                        closeShop();
+                      }}
                       className="p-1 hover:bg-black/20 rounded text-[var(--color-sacred-ink-dim)] hover:text-[var(--color-sacred-ink)] transition-colors"
                     >
                       <X className="w-6 h-6 drop-shadow-md" />
@@ -5146,7 +5638,13 @@ export function PlayEngine() {
                                     usePlayStore
                                       .getState()
                                       .giveItem(item.item_id, 1);
+                                    playSfx("coin", { volume: 0.34, cooldownMs: 100 });
                                     addLog(`Bought ${itemDef.display_name}.`);
+                                  } else {
+                                    playSfx("warning", {
+                                      volume: 0.24,
+                                      cooldownMs: 120,
+                                    });
                                   }
                                 }}
                                 className="px-4 py-2 bg-sacred-stone border border-sacred-gold text-[var(--color-sacred-gold)] hover:brightness-125 disabled:opacity-50 disabled:grayscale rounded-sm font-[family-name:var(--font-display)] tracking-wider text-sm shadow-md transition-all"
@@ -5174,7 +5672,10 @@ export function PlayEngine() {
                 <div className="flex flex-col items-center gap-2">
                   <p className="text-neutral-500">Container not found.</p>
                   <button
-                    onClick={closeContainer}
+                    onClick={() => {
+                      playSfx("ui_back", { volume: 0.2, cooldownMs: 120 });
+                      closeContainer();
+                    }}
                     className="px-4 py-2 bg-neutral-800 rounded"
                   >
                     Close
@@ -5198,6 +5699,7 @@ export function PlayEngine() {
               const entry = containerState.items[index];
               if (!entry) return;
               usePlayStore.getState().giveItem(entry.item_id, entry.count);
+              playSfx("item_pickup", { volume: 0.34, cooldownMs: 100 });
               const itemDef = gamePackage.items.find(
                 (i) => i.id === entry.item_id,
               );
@@ -5210,6 +5712,7 @@ export function PlayEngine() {
             };
             const stowItem = (itemId: string) => {
               usePlayStore.getState().removeItem(itemId, 1);
+              playSfx("ui_click", { volume: 0.22, cooldownMs: 100 });
               const existingIndex = containerState.items.findIndex(
                 (entry) => entry.item_id === itemId,
               );
@@ -5245,6 +5748,7 @@ export function PlayEngine() {
                               .getState()
                               .giveItem(entry.item_id, entry.count);
                           });
+                          playSfx("item_pickup", { volume: 0.38, cooldownMs: 120 });
                           addLog(`Emptied ${containerName}.`);
                           setContainerItems([]);
                         }}
@@ -5254,7 +5758,10 @@ export function PlayEngine() {
                       </button>
                     )}
                     <button
-                      onClick={closeContainer}
+                      onClick={() => {
+                        playSfx("ui_back", { volume: 0.2, cooldownMs: 120 });
+                        closeContainer();
+                      }}
                       className="p-1 hover:bg-black/20 rounded text-[var(--color-sacred-ink-dim)] hover:text-[var(--color-sacred-ink)] transition-colors"
                     >
                       <X className="w-6 h-6 drop-shadow-md" />
@@ -5349,7 +5856,10 @@ export function PlayEngine() {
                 <div className="flex flex-col items-center gap-2">
                   <p className="text-neutral-500">Document not found.</p>
                   <button
-                    onClick={() => setActiveDocumentId(null)}
+                    onClick={() => {
+                      playSfx("ui_back", { volume: 0.2, cooldownMs: 120 });
+                      setActiveDocumentId(null);
+                    }}
                     className="px-4 py-2 bg-neutral-800 rounded"
                   >
                     Close
@@ -5364,7 +5874,10 @@ export function PlayEngine() {
                     {document.display_name}
                   </h3>
                   <button
-                    onClick={() => setActiveDocumentId(null)}
+                    onClick={() => {
+                      playSfx("ui_back", { volume: 0.2, cooldownMs: 120 });
+                      setActiveDocumentId(null);
+                    }}
                     className="p-1 hover:bg-black/20 rounded text-[var(--color-sacred-ink-dim)] hover:text-[var(--color-sacred-ink)] transition-colors shrink-0 ml-2"
                   >
                     <X className="w-5 h-5 sm:w-6 sm:h-6 drop-shadow-md" />
@@ -5392,7 +5905,10 @@ export function PlayEngine() {
                 <div className="flex flex-col items-center gap-2">
                   <p className="text-neutral-500">Conversation ended.</p>
                   <button
-                    onClick={endDialogue}
+                    onClick={() => {
+                      playSfx("ui_back", { volume: 0.2, cooldownMs: 120 });
+                      endDialogue();
+                    }}
                     className="px-4 py-2 bg-neutral-800 rounded"
                   >
                     Close
@@ -5419,11 +5935,20 @@ export function PlayEngine() {
               if (!evaluateCondition(opt.condition, dialogueCtx)) return false;
               return true;
             });
+            const sceneImageUrl = node.scene_image_url;
+            const hasSceneImage = Boolean(sceneImageUrl);
             return (
               <>
-              <DialoguePortraitStage speaker={node.speaker} />
-              <div className="w-full max-w-2xl h-full flex flex-col bg-black/45 backdrop-blur-[1px] border-x border-[var(--color-sacred-gold-dark)]/40 shadow-[0_0_28px_rgba(0,0,0,0.55)] relative z-20">
-                <div className="px-4 py-2 sm:px-6 sm:py-4 flex flex-col items-center justify-center border-b border-[var(--color-sacred-gold-dark)] relative">
+              {hasSceneImage && sceneImageUrl ? (
+                <DialogueSceneImageStage
+                  src={sceneImageUrl}
+                  alt={node.scene_image_alt}
+                />
+              ) : (
+                <DialoguePortraitStage speaker={node.speaker} />
+              )}
+              <div className={`w-full ${hasSceneImage ? "max-w-3xl bg-black/68 backdrop-blur-[2px] border-x border-[var(--color-sacred-gold)]/55 shadow-[0_0_34px_rgba(0,0,0,0.8)]" : "max-w-2xl bg-black/45 backdrop-blur-[1px] border-x border-[var(--color-sacred-gold-dark)]/40 shadow-[0_0_28px_rgba(0,0,0,0.55)]"} h-full flex flex-col relative z-20`}>
+                <div className={`px-4 py-2 sm:px-6 sm:py-4 flex flex-col items-center justify-center border-b ${hasSceneImage ? "border-[var(--color-sacred-gold)]/45" : "border-[var(--color-sacred-gold-dark)]"} relative`}>
                   <h3 className="font-[family-name:var(--font-display)] text-base sm:text-xl font-bold text-[var(--color-sacred-gold)] uppercase tracking-[0.2em] text-sacred-glow">
                     {node.speaker}
                   </h3>
@@ -5431,16 +5956,20 @@ export function PlayEngine() {
                   <div className="w-24 h-0.5 bg-gradient-to-r from-transparent via-[var(--color-sacred-gold-dark)] to-transparent mt-1 sm:mt-2"></div>
                 </div>
                 <div className="px-4 py-2 sm:p-6 flex-1 overflow-y-auto">
-                  <p className="text-[var(--color-sacred-ink)] font-serif text-sm sm:text-lg leading-relaxed drop-shadow-sm text-center">
+                  <p className={`${hasSceneImage ? "text-neutral-100 drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)]" : "text-[var(--color-sacred-ink)] drop-shadow-sm"} font-serif text-sm sm:text-lg leading-relaxed text-center`}>
                     {node.text}
                   </p>
                 </div>
-                <div className="px-3 py-2 sm:p-4 flex flex-col gap-1.5 sm:gap-2 shrink-0 max-h-[45%] overflow-y-auto overflow-x-hidden border-t border-[var(--color-sacred-gold-dark)]">
+                <div className={`px-3 py-2 sm:p-4 flex flex-col gap-1.5 sm:gap-2 shrink-0 max-h-[45%] overflow-y-auto overflow-x-hidden border-t ${hasSceneImage ? "border-[var(--color-sacred-gold)]/45" : "border-[var(--color-sacred-gold-dark)]"}`}>
                   {visibleOptions.map((opt, i) => (
                       <button
                         key={i}
                         className="w-full text-left px-3 py-1.5 sm:py-2 bg-neutral-800/50 hover:bg-neutral-700 rounded text-xs sm:text-sm text-neutral-300 transition-colors"
                         onClick={() => {
+                          playSfx("dialogue_next", {
+                            volume: 0.24,
+                            cooldownMs: 100,
+                          });
                           if (opt.set_switch) {
                             usePlayStore
                               .getState()
@@ -5449,6 +5978,14 @@ export function PlayEngine() {
                                 opt.set_switch_value ?? true,
                               );
                           }
+                          opt.set_switches?.forEach((switchUpdate) => {
+                            usePlayStore
+                              .getState()
+                              .setFlag(
+                                switchUpdate.switch_id,
+                                switchUpdate.switch_value ?? true,
+                              );
+                          });
                           if (opt.trigger_quest && opt.trigger_quest_state) {
                             setQuestState(
                               opt.trigger_quest,
@@ -5462,6 +5999,9 @@ export function PlayEngine() {
                             addLog(
                               `Quest Updated: ${questName} -> ${opt.trigger_quest_state}`,
                             );
+                          }
+                          if (!opt.next_node_id) {
+                            closeDialogueDoorForCurrentMap(activeDialogueId);
                           }
                           advanceDialogue(opt.next_node_id);
                           if (!opt.next_node_id && opt.trigger_cutscene) {
@@ -5477,7 +6017,10 @@ export function PlayEngine() {
                     ))}
                   {visibleOptions.length === 0 && (
                     <button
-                      onClick={endDialogue}
+                      onClick={() => {
+                        playSfx("ui_back", { volume: 0.2, cooldownMs: 120 });
+                        endDialogue();
+                      }}
                       className="w-full text-center px-3 py-2 bg-neutral-800/50 hover:bg-neutral-700 rounded text-sm text-neutral-300 transition-colors italic"
                     >
                       (Close)
@@ -5500,10 +6043,19 @@ export function PlayMode() {
   const [state, setState] = useState<"title" | "playing">("title");
   const { gamePackage } = useEngineStore();
   const hasSave = !!usePlayStore((s) => s.saveData);
+  const playTitleSfx = useCallback(
+    (id: string, volume = 0.24) => {
+      playSound(id, {
+        volume,
+        customSounds: gamePackage.settings?.sound_effects || {},
+      });
+    },
+    [gamePackage.settings],
+  );
 
   useEffect(() => {
     if (state === "title") {
-      playMusic("/music/titlescreen.ogg");
+      playMusic("/music/rain-on-the-ledger.mp3");
     }
   }, [state]);
 
@@ -5535,6 +6087,7 @@ export function PlayMode() {
           <button
             className="border border-[var(--color-sacred-gold-dark)] bg-black/68 px-7 py-4 text-left font-[family-name:var(--font-display)] text-base font-bold uppercase tracking-[0.22em] text-[var(--color-sacred-ink)] shadow-[0_0_18px_rgba(0,0,0,0.75)] transition-all hover:border-[var(--color-sacred-gold)] hover:bg-black/82 hover:text-[var(--color-sacred-gold)] active:scale-[0.98] sm:min-w-52 sm:text-center"
             onClick={() => {
+              playTitleSfx("ui_click");
               usePlayStore.getState().resetRun();
               usePlayStore.setState({ saveData: null });
               setState("playing");
@@ -5549,7 +6102,12 @@ export function PlayMode() {
                 : "cursor-not-allowed border-neutral-800/70 bg-black/34 text-neutral-600"
             }`}
             onClick={() => {
-              if (hasSave) setState("playing");
+              if (hasSave) {
+                playTitleSfx("ui_click");
+                setState("playing");
+              } else {
+                playTitleSfx("warning", 0.2);
+              }
             }}
             disabled={!hasSave}
           >

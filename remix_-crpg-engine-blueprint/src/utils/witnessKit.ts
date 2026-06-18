@@ -25,40 +25,42 @@ export const WITNESS_MATERIALS = {
   marble: {
     id: "wmat_paros_marble",
     name: "Paros Marble",
-    color: "#EAE4D3",
-    emissive: "#000000",
-    emissive_intensity: 0,
+    // Sacred otherworld marble — cool, pale, with a whisper of the Grid
+    // glowing cold under the surface.
+    color: "#E9E7E2",
+    emissive: "#0E0B1E",
+    emissive_intensity: 0.08,
     opacity: 1,
     transparent: false,
-    roughness: 0.46,
-    metalness: 0.02,
+    roughness: 0.4,
+    metalness: 0.03,
     texture_kind: "marble_veins",
     texture_scale: 1.2,
-    texture_strength: 0.38,
+    texture_strength: 0.4,
   },
   weatheredMarble: {
     id: "wmat_weathered_marble",
     name: "Weathered Marble",
-    color: "#CFC7B2",
-    emissive: "#000000",
-    emissive_intensity: 0,
+    color: "#C5C1BC",
+    emissive: "#0B0916",
+    emissive_intensity: 0.05,
     opacity: 1,
     transparent: false,
-    roughness: 0.6,
+    roughness: 0.56,
     metalness: 0.02,
     texture_kind: "marble_veins",
     texture_scale: 1.5,
-    texture_strength: 0.45,
+    texture_strength: 0.48,
   },
   limestone: {
     id: "wmat_limestone",
     name: "Sun Limestone",
-    color: "#D9CBA8",
-    emissive: "#000000",
-    emissive_intensity: 0,
+    color: "#D6CEBC",
+    emissive: "#0A0814",
+    emissive_intensity: 0.04,
     opacity: 1,
     transparent: false,
-    roughness: 0.72,
+    roughness: 0.68,
     metalness: 0.01,
     texture_kind: "stone_grain",
     texture_scale: 1.6,
@@ -137,27 +139,29 @@ export const WITNESS_MATERIALS = {
   bronze: {
     id: "wmat_bronze",
     name: "Temple Bronze",
-    color: "#8A6B3C",
-    emissive: "#1A1206",
-    emissive_intensity: 0.12,
+    // Dark votive bronze, lit faintly warm from within like a banked coal.
+    color: "#6E5430",
+    emissive: "#2A1A06",
+    emissive_intensity: 0.2,
     opacity: 1,
     transparent: false,
-    roughness: 0.42,
-    metalness: 0.55,
+    roughness: 0.4,
+    metalness: 0.62,
     texture_kind: "metal_scratches",
     texture_scale: 1.3,
-    texture_strength: 0.42,
+    texture_strength: 0.44,
   },
   gold: {
     id: "wmat_votive_gold",
     name: "Votive Gold",
-    color: "#D9A648",
-    emissive: "#7A5414",
-    emissive_intensity: 0.28,
+    // Sacred gold leaf — brighter, warmer, the holiest accent in the set.
+    color: "#E2B450",
+    emissive: "#8C5E18",
+    emissive_intensity: 0.46,
     opacity: 1,
     transparent: false,
-    roughness: 0.34,
-    metalness: 0.5,
+    roughness: 0.3,
+    metalness: 0.68,
     texture_kind: "metal_scratches",
     texture_scale: 1.2,
     texture_strength: 0.3,
@@ -263,16 +267,18 @@ export const WITNESS_MATERIALS = {
   soil: {
     id: "wmat_warm_soil",
     name: "Processional Earth",
-    color: "#6B563F",
-    emissive: "#000000",
-    emissive_intensity: 0,
+    // The trodden sacred ground of the whole town — a cooler, ashen packed
+    // earth with the faintest cold light caught in the grit.
+    color: "#5C5444",
+    emissive: "#0A0814",
+    emissive_intensity: 0.03,
     opacity: 1,
     transparent: false,
-    roughness: 0.95,
+    roughness: 0.92,
     metalness: 0,
     texture_kind: "soil_grit",
     texture_scale: 1.8,
-    texture_strength: 0.6,
+    texture_strength: 0.62,
   },
   nightWater: {
     id: "wmat_night_water",
@@ -333,16 +339,17 @@ export const WITNESS_MATERIALS = {
   mosaic: {
     id: "wmat_mosaic",
     name: "Cella Mosaic",
-    color: "#3D4666",
-    emissive: "#11142A",
-    emissive_intensity: 0.18,
+    // Sacred tesserae floor — deep indigo glass lit from within.
+    color: "#3A4470",
+    emissive: "#1A1C44",
+    emissive_intensity: 0.3,
     opacity: 1,
     transparent: false,
-    roughness: 0.5,
-    metalness: 0.04,
+    roughness: 0.42,
+    metalness: 0.05,
     texture_kind: "glass_facets",
     texture_scale: 2.4,
-    texture_strength: 0.5,
+    texture_strength: 0.55,
   },
   linen: {
     id: "wmat_linen",
@@ -843,7 +850,7 @@ const column = () =>
     name: "Doric Column",
     category: "architecture",
     tags: ["prop", "architecture", "column"],
-    materialKeys: ["marble", "weatheredMarble"],
+    materialKeys: ["marble", "weatheredMarble", "gold"],
     build: (m) => {
       const plinthBase = placeRing(m, slabProfile(0.84, 0.84, 0.07), [0, 0, 0]);
       const plinthTop = placeRing(m, slabProfile(0.72, 0.72, 0.06), [0, 0.18, 0]);
@@ -856,6 +863,16 @@ const column = () =>
         capBottom: false,
         capTop: false,
       });
+
+      // Gilded sacred collar — a thin gold neck-ring beneath the capital.
+      lathe(
+        m,
+        "gold_collar",
+        mat("gold"),
+        [[0.215, 1.82], [0.235, 1.86], [0.215, 1.9]],
+        16,
+        { capBottom: false, capTop: false },
+      );
 
       // Echinus: the cushion flare under the abacus.
       lathe(
@@ -1383,49 +1400,82 @@ const altar = () =>
   });
 
 // Small weathered votary statue for shrines and graves.
+// A tiny low-poly sacred votary: a cowled marble worshipper on a stepped
+// plinth, head bowed, arms folded over the chest, a thin gold halo standing
+// behind the hood. The repeated sacred figure of Alderamontico — carved as
+// if by another world's hand: Hellenic robe, gothic stillness, Grid-cold
+// marble with one warm halo of votive gold.
 const votaryStatue = () =>
   sculpt({
     id: "obj_statue_votary",
     name: "Votary Statue",
     category: "setpiece",
     tags: ["prop", "shrine"],
-    materialKeys: ["weatheredMarble", "marble"],
+    materialKeys: ["weatheredMarble", "marble", "gold"],
     build: (m, rng) => {
-      const base = placeRing(m, slabProfile(0.6, 0.6, 0.06), [0, 0, 0]);
-      const baseTop = placeRing(m, slabProfile(0.48, 0.48, 0.05), [0, 0.14, 0]);
-      loft(m, "base", mat("weatheredMarble"), [base, baseTop]);
-      cap(m, "base_top", mat("weatheredMarble"), baseTop);
+      // Stepped plinth: two chamfered slabs + a moulded plinth band.
+      const baseA = placeRing(m, slabProfile(0.58, 0.58, 0.06), [0, 0, 0]);
+      const baseB = placeRing(m, slabProfile(0.5, 0.5, 0.05), [0, 0.12, 0]);
+      const baseC = placeRing(m, slabProfile(0.4, 0.4, 0.04), [0, 0.22, 0]);
+      loft(m, "plinth", mat("weatheredMarble"), [baseA, baseB, baseC]);
+      cap(m, "plinth_top", mat("marble"), baseC);
 
+      // Robed body — flared hem, pinched waist, narrow cowled shoulders.
       lathe(
         m,
-        "figure",
-        mat("weatheredMarble"),
-        [
-          [0.22, 0.14],
-          [0.18, 0.5],
-          [0.13, 0.92],
-          [0.15, 1.16],
-          [0.1, 1.3],
-          [0.08, 1.46],
-          [0.03, 1.56],
-        ],
-        6,
-        { jitter: 0.012, rng, scaleZ: 0.8, capBottom: false },
-      );
-      // Praying hands suggested by one small wedge at the chest.
-      strip(
-        m,
-        "hands",
+        "robe",
         mat("marble"),
         [
-          [-0.05, 1.0, 0.12],
-          [0, 1.12, 0.16],
+          [0.26, 0.22],
+          [0.24, 0.42],
+          [0.17, 0.82],
+          [0.2, 1.04],
+          [0.15, 1.18],
+          [0.09, 1.26],
         ],
-        [
-          [0.05, 1.0, 0.12],
-          [0, 1.04, 0.17],
-        ],
+        7,
+        { jitter: 0.012, rng, scaleZ: 0.82, capBottom: false, capTop: false },
       );
+
+      // Bowed cowl + head: small lathe drifting forward (+z) as it rises so
+      // the figure reads as looking down in prayer.
+      const neck = placeRing(m, circleProfile(7, 0.09, { jitter: 0.006, rng }), [0, 1.26, 0.0], 1, 0.85);
+      const brow = placeRing(m, circleProfile(7, 0.12, { jitter: 0.006, rng }), [0, 1.36, 0.05], 1, 0.85);
+      const crown = placeRing(m, circleProfile(7, 0.06, { jitter: 0.006, rng }), [0, 1.45, 0.09], 1, 0.8);
+      loft(m, "cowl", mat("marble"), [neck, brow, crown]);
+      cap(m, "cowl_crown", mat("marble"), crown);
+      // Shadowed face plane inside the hood.
+      strip(
+        m,
+        "face",
+        mat("weatheredMarble"),
+        [[-0.07, 1.28, 0.12], [-0.06, 1.38, 0.15]],
+        [[0.07, 1.28, 0.12], [0.06, 1.38, 0.15]],
+      );
+
+      // Folded forearms across the chest.
+      strip(
+        m,
+        "arms",
+        mat("weatheredMarble"),
+        [[-0.16, 1.0, 0.13], [-0.02, 0.92, 0.17]],
+        [[0.16, 1.0, 0.13], [0.02, 0.92, 0.17]],
+      );
+
+      // Thin gold halo standing behind the bowed head.
+      const haloOuter = circleProfile(12, 0.2);
+      const haloInner = circleProfile(12, 0.15);
+      const cy = 1.4, cz = -0.05;
+      const oF = haloOuter.map(([x, y]) => addV(m, [x, cy + y, cz]));
+      const oB = haloOuter.map(([x, y]) => addV(m, [x, cy + y, cz - 0.03]));
+      const iF = haloInner.map(([x, y]) => addV(m, [x, cy + y, cz]));
+      const iB = haloInner.map(([x, y]) => addV(m, [x, cy + y, cz - 0.03]));
+      for (let i = 0; i < 12; i += 1) {
+        const j = (i + 1) % 12;
+        addFace(m, `halo_f_${i}`, [oF[i], oF[j], iF[j], iF[i]], mat("gold"), "halo");
+        addFace(m, `halo_b_${i}`, [iB[i], iB[j], oB[j], oB[i]], mat("gold"), "halo");
+        addFace(m, `halo_r_${i}`, [oF[j], oF[i], oB[i], oB[j]], mat("gold"), "halo");
+      }
     },
   });
 
@@ -1437,7 +1487,7 @@ const brazier = () =>
     name: "Tripod Brazier",
     category: "props",
     tags: ["prop", "light"],
-    materialKeys: ["bronze", "flame", "flameCore"],
+    materialKeys: ["bronze", "flame", "flameCore", "gold"],
     build: (m, rng) => {
       for (let i = 0; i < 3; i += 1) {
         const angle = (i / 3) * Math.PI * 2 + 0.5;
@@ -1469,6 +1519,15 @@ const brazier = () =>
         ],
         10,
         { capBottom: true, capTop: true },
+      );
+      // Gilded rim band around the bowl lip — sacred votive gold.
+      lathe(
+        m,
+        "gold_rim",
+        mat("gold"),
+        [[0.38, 1.13], [0.4, 1.16], [0.37, 1.2]],
+        10,
+        { capBottom: false, capTop: false },
       );
       // Flame: two nested wavering cones.
       lathe(

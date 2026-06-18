@@ -11,6 +11,7 @@ export interface ContainerSaveState {
 // dropped, and container contents. Keyed by map id in PlaySave.map_deltas.
 export interface MapDelta {
   taken_items?: string[]; // authored item_placement ids that were picked up
+  opened_doors?: string[]; // authored obj_p_door placement keys that were opened
   dropped_items?: {
     id: string;
     item_id: string;

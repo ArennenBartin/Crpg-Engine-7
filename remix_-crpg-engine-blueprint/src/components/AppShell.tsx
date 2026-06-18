@@ -15,10 +15,43 @@ import { DocumentEditor } from "./DocumentEditor";
 import { ShopEditor } from "./ShopEditor";
 import { SkillEditor } from "./SkillEditor";
 import { Store } from "lucide-react";
+import { refreshTexturedBuildingObjects } from "../utils/buildingTextureMigration";
+import {
+  refreshBuildingDoorPlacements,
+  refreshCaveGroundTextureCells,
+  refreshLazareEstateStoryLayout,
+  refreshResidentialRoofAlignment,
+  refreshTempleCordonGeneratedLayout,
+} from "../utils/mapLayoutMigration";
+import { removeNonStoryMapClutter } from "../utils/mapClutterCleanup";
+import { refreshAlderamonticoObjectModels } from "../utils/objectModelMigration";
+import { pruneObjectLibraryToAct1Usage } from "../utils/objectLibraryPrune";
 
 export function AppShell() {
   const { mode, setMode, undo, redo, undoStack, redoStack } = useEngineStore();
+  const gamePackage = useEngineStore((state) => state.gamePackage);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  useEffect(() => {
+    const refreshed = pruneObjectLibraryToAct1Usage(
+      removeNonStoryMapClutter(
+        refreshAlderamonticoObjectModels(
+          refreshTempleCordonGeneratedLayout(
+            refreshLazareEstateStoryLayout(
+              refreshBuildingDoorPlacements(
+                refreshCaveGroundTextureCells(
+                  refreshResidentialRoofAlignment(refreshTexturedBuildingObjects(gamePackage)),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    if (refreshed !== gamePackage) {
+      useEngineStore.setState({ gamePackage: refreshed });
+    }
+  }, [gamePackage]);
 
   // Group nav items by primary and secondary for mobile
   const mainNavItems: { id: EditorMode; label: string; icon: React.ReactNode }[] = [

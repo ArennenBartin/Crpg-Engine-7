@@ -755,6 +755,7 @@ export function MapEditor() {
       <div className="flex-1 flex min-h-0">
         <div className="relative flex-1 min-h-0">
         <Canvas
+          shadows
           dpr={[1, 1.5]}
           frameloop="demand"
           gl={{ antialias: false, powerPreference: "high-performance" }}
@@ -771,8 +772,8 @@ export function MapEditor() {
             <PerspectiveCamera makeDefault position={[0, 10, 10]} fov={45} />
           )}
           <color attach="background" args={["#111111"]} />
-          <ambientLight intensity={0.5} />
-          <directionalLight position={[10, 20, 10]} intensity={1} castShadow />
+          <ambientLight intensity={0.24} />
+          <directionalLight position={[10, 20, 10]} intensity={0.68} castShadow />
           <GameRenderer
             map={activeMap}
             // We can preview the spawn point using the player marker concept

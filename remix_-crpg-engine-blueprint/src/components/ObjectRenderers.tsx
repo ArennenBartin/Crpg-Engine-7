@@ -238,6 +238,8 @@ export const ShapeRenderer = memo(function ShapeRenderer({
       position={part.position as [number, number, number]}
       rotation={part.rotation as [number, number, number]}
       onClick={onClick}
+      castShadow
+      receiveShadow
     >
       {["box", "slab", "rib", "stair"].includes(part.shape) && (
         <boxGeometry args={args as any} />
@@ -459,6 +461,8 @@ function MeshFaceRenderer({
   return (
     <mesh
       geometry={geometry}
+      castShadow
+      receiveShadow
       onClick={(event) => {
         if (!selectable || !onFaceClick) return;
         event.stopPropagation();
@@ -731,7 +735,7 @@ function RuntimeMeshGroupRenderer({
   const texture = getObjectMaterialTexture(material);
 
   return (
-    <mesh geometry={group.geometry} raycast={() => null}>
+    <mesh geometry={group.geometry} raycast={() => null} castShadow receiveShadow>
       <meshLambertMaterial
         map={texture || undefined}
         color={material.color}

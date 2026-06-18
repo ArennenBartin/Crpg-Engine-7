@@ -7,6 +7,7 @@ import {
   WorldItemPlacementData,
 } from "./game";
 import { addHippedRoof } from "../utils/cellRoofHelper";
+import { DOOR_OBJECT_ID, doorFacingForBounds } from "../utils/doorPlacement";
 
 // ── Glassworks Map (Expanded) ───────────────────────────────────────────
 // An abandoned glassworks/workshop east of the Temple Cordon. Furnaces,
@@ -131,6 +132,7 @@ export const generateGlassworksCells = (): {
         else { pave(x, z, floor); reserve(x, z); }
       }
     }
+    place(DOOR_OBJECT_ID, door.x, door.z, doorFacingForBounds(door, x0, z0, x1, z1), { block: false });
   };
 
   // ── Base terrain ────────────────────────────────────────────────────────
@@ -152,19 +154,22 @@ export const generateGlassworksCells = (): {
 
   // ── Central Cooling Yard (x = -24 to 24, z = -16 to 12) ─────────────────
   paveRect(-24, -16, 24, 12, GROUND);
-  place("obj_well", 0, 0, [0, 1]);
+  place("obj_ald_glass_threshold_brazier", 0, 0, [0, 1], { block: false });
   place("obj_c_glass_dome", 0, -8, [0, 1], { block: false });
-  placeIfClear("obj_lantern_post", -12, -12, [0, 1]);
-  placeIfClear("obj_lantern_post", 12, -12, [0, 1]);
-  placeIfClear("obj_lantern_post", -12, 8, [0, 1]);
-  placeIfClear("obj_lantern_post", 12, 8, [0, 1]);
+  placeIfClear("obj_ald_glassworks_arc_lamp", -12, -12, [0, 1]);
+  placeIfClear("obj_ald_glassworks_arc_lamp", 12, -12, [0, 1]);
+  placeIfClear("obj_ald_glassworks_arc_lamp", -12, 8, [0, 1]);
+  placeIfClear("obj_ald_glassworks_arc_lamp", 12, 8, [0, 1]);
+  for (const [x, z] of [
+    [-30, -12], [-30, 10], [30, -12], [30, 10],
+    [-36, -8], [-36, 8], [36, -8], [36, 8],
+  ] as Vec2[]) {
+    placeIfClear("obj_dead_tree", x, z, [0, 1]);
+  }
 
   // Industrial litter
-  placeIfClear("obj_p_railcart", 4, 2, [1, 0]);
   placeIfClear("obj_p_railcart", 6, 2, [1, 0]);
   placeIfClear("obj_p_railcart", -12, -4, [1, 0]);
-  placeIfClear("obj_amphora", -16, 8, [0, 1]);
-  placeIfClear("obj_amphora", -15, 8, [0, 1]);
   placeIfClear("obj_barrel", -16, 6, [0, 1]);
   placeIfClear("obj_column_broken", 0, -8, [0, 1]);
   placeIfClear("obj_column_broken", -2, -9, [0, 1]);
@@ -173,13 +178,11 @@ export const generateGlassworksCells = (): {
   buildHall(-24, -38, 24, -16, WALL_CLAY, MARBLE, { x: 0, z: -16 });
   addHippedRoof(cells, -24, -38, 24, -16, "slate");
 
-  // Massive line of furnaces
-  for (let x = -20; x <= 20; x += 4) {
-    place("obj_p_furnace", x, -34, [0, 1]);
-    place("obj_p_smokestack", x, -36, [0, 1]);
-    place("obj_table", x, -30, [0, 1]);
-    placeIfClear("obj_p_pipes", x, -32, [0, 1], { block: false });
-    placeIfClear("obj_barrel", x - 1, -30, [0, 1]);
+  // Three readable machinery banks replace the old row of small repeated props.
+  for (const x of [-14, 0, 14]) {
+    place("obj_ald_glassworks_furnace_bank", x, -34, [0, 1]);
+    place("obj_ald_smokestack_cluster", x, -37, [0, 1]);
+    placeIfClear("obj_p_pipes", x, -31, [0, 1], { block: false });
   }
   placeItem("wi_glass_shard_1", "itm_glass_shard", 4, -28);
   placeItem("wi_glass_shard_2", "itm_glass_shard", -16, -28);
@@ -193,8 +196,8 @@ export const generateGlassworksCells = (): {
 
   // Storage aisles — deterministic (no Math.random in gens).
   const storeRng = (() => { let s = 0x5701; return () => { s = (s * 1664525 + 1013904223) & 0x7fffffff; return s / 0x7fffffff; }; })();
-  for (let x = 28; x <= 34; x += 4) {
-    for (let z = -12; z <= 32; z += 4) {
+  for (let x = 28; x <= 34; x += 6) {
+    for (let z = -12; z <= 32; z += 8) {
       if (storeRng() > 0.3) {
         place("obj_chest", x, z, [0, 1]);
       } else {
@@ -216,12 +219,12 @@ export const generateGlassworksCells = (): {
   place("obj_column", -8, 24, [0, 1]);
   place("obj_column", 0, 24, [0, 1]);
   place("obj_column", 8, 24, [0, 1]);
-  placeIfClear("obj_notice_board", -4, 28, [0, -1]); // display stele → notice board
+  placeIfClear("obj_ald_cave_evidence_shrine", -4, 28, [0, -1], { block: false });
   placeItem("wi_glass_display", "itm_glass_shard", -16, 22);
   placeItem("wi_glass_display_2", "itm_glass_shard", 8, 22);
 
   // Office space
-  place("obj_table", -20, 34, [0, 1]);
+  place("obj_table", -20, 34, [0, 1], { dialogue: "dia_orin_workbench" });
   place("obj_table", -16, 34, [0, 1]);
   place("obj_pew", -20, 36, [0, 1]);
   placeContainer("cnt_glass_office", -12, 34, {

@@ -6,6 +6,7 @@ import {
   TriggerData,
   WorldItemPlacementData,
 } from "./game";
+import { DOOR_OBJECT_ID, doorFacingForBounds } from "../utils/doorPlacement";
 
 // ── Residential Block Test Map ──────────────────────────────────────────────
 // A standalone block of the town featuring 3 distinct houses and diverse props.
@@ -40,6 +41,7 @@ const ROOF_NW = "obj_p_roof_clay_hip_nw";
 const ROOF_NE = "obj_p_roof_clay_hip_ne";
 const ROOF_SE = "obj_p_roof_clay_hip_se";
 const ROOF_SW = "obj_p_roof_clay_hip_sw";
+const RESIDENTIAL_ROOF_Z_OFFSET = 0;
 
 const key = (x: number, z: number) => `${x}|${z}`;
 
@@ -184,7 +186,9 @@ export const generateResidentialBlockCells = (): {
         if (skip?.has(key(x, z))) continue;
         const objectId = roofIdFor(x, z);
         cells.push({
-          x, y: objectId === ROOF_TILE ? ROOF_PLANE_Y : ROOF_CONNECTOR_Y, z,
+          x,
+          y: objectId === ROOF_TILE ? ROOF_PLANE_Y : ROOF_CONNECTOR_Y,
+          z: z + RESIDENTIAL_ROOF_Z_OFFSET,
           active: true, walkable: false, blocks_los: true,
           height: 0, visual_height: 0,
           terrain: "stone", surface_tag: "none", object_id: objectId,
@@ -213,6 +217,7 @@ export const generateResidentialBlockCells = (): {
         }
       }
     }
+    place(DOOR_OBJECT_ID, door.x, door.z, doorFacingForBounds(door, x0, z0, x1, z1), { block: false });
     addRoof(x0, z0, x1, z1);
   };
 
@@ -230,27 +235,35 @@ export const generateResidentialBlockCells = (): {
     }
   }
 
-  // ── Central Crossroads ────────────────────────────────────────────────────
-  // Visual connections to the rest of the town at map edges.
-  paveRect(-4, MIN_Z, 4, MAX_Z, MARBLE); // North-South street
-  paveRect(MIN_X, -4, MAX_X, 4, MARBLE); // East-West street
+  // ── Irregular Residential Lanes ──────────────────────────────────────────
+  // Visual connections to the same edges, but through bent alleys rather
+  // than a perfect crossroad.
+  paveRect(-2, MIN_Z, 2, -7, MARBLE);
+  paveRect(-4, -8, 2, -2, MARBLE);
+  paveRect(2, -5, 5, -3, MARBLE);
+  paveRect(-6, -2, 2, 6, MARBLE);
+  paveRect(-5, 6, 3, MAX_Z, MARBLE);
+  paveRect(MIN_X, -2, -5, 2, MARBLE);
+  paveRect(1, -2, MAX_X, 2, MARBLE);
+  paveRect(16, -5, 19, -3, MARBLE);
+  paveRect(-10, 11, -6, 15, MARBLE);
+  paveRect(-14, 6, -10, 8, GROUND);
 
   // East-edge estate lane — visual cue that the east road now leads to
   // Lazare's estate (the temple cordon is reached via the town square).
-  place("obj_lantern_post", 17, -3, [1, 0]); // flanking lanterns at the east gate
-  place("obj_lantern_post", 17, 3, [1, 0]);
-  place("obj_notice_board", 18, -5, [-1, 0], { dialogue: "dia_notice_board" }); // "ESTATE" sign at the east gate
+  place("obj_ald_civic_lantern_post", 17, -3, [1, 0]); // flanking lanterns at the east gate
+  place("obj_ald_civic_lantern_post", 17, 3, [1, 0]);
+  place("obj_ald_lazare_license_threshold", 18, -5, [-1, 0], { block: false, dialogue: "dia_estate_road_sign" });
   placeIfClear("obj_p_iron_fence", 15, -6, [0, 1]);
   placeIfClear("obj_p_iron_fence", 16, -6, [0, 1]);
   placeIfClear("obj_p_iron_fence", 15, 6, [0, 1]);
   placeIfClear("obj_p_iron_fence", 16, 6, [0, 1]);
-  placeIfClear("obj_p_placard", 13, 5, [-1, 0], { block: false });
   
   // Plazaway details
-  place("obj_well", 0, 0, [0, 1]);
-  place("obj_lantern_post", -4, -4, [1, 1]);
-  place("obj_lantern_post", 4, 4, [-1, -1]);
-  place("obj_notice_board", 2, 4, [0, -1], { dialogue: "dia_notice_board" });
+  place("obj_ald_residential_well_shrine", 0, 0, [0, 1]);
+  place("obj_ald_civic_lantern_post", -4, -4, [1, 1]);
+  place("obj_ald_civic_lantern_post", 4, 4, [-1, -1]);
+  place("obj_ald_civic_route_board", 2, 4, [0, -1], { dialogue: "dia_notice_board" });
 
   // ── Northwest House (Merchant) ───────────────────────────────────────────
   buildHouse(-18, -18, -8, -8, WALL_CLAY, WOOD, { x: -8, z: -13 });
@@ -261,7 +274,7 @@ export const generateResidentialBlockCells = (): {
   place("obj_pallet_bed", -16, -16, [0, 1]);
   placeContainer("cnt_merchant_stash", -16, -10, { name: "Merchant's Stash" });
   place("obj_p_crate", -10, -16, [0, -1]);
-  place("obj_p_candles", -10, -14, [0, -1]);
+  place("obj_ald_votive_light_cluster", -10, -14, [0, -1]);
   place("obj_amphora", -12, -16, [0, -1]);
 
   // Merchant yard & street frontage
@@ -303,7 +316,7 @@ export const generateResidentialBlockCells = (): {
   place("obj_barrel", -10, 16, [0, 1]);
   place("obj_p_shrine_stone", -10, 10, [0, -1], { dialogue: "dia_old_rite_shrine" });
   place("obj_statue_votary", -12, 10, [0, -1]);
-  place("obj_lantern_post", -10, 12, [0, -1]);
+  place("obj_ald_civic_lantern_post", -10, 12, [0, -1]);
 
   // Shrine yard
   place("obj_statue_votary", -16, 6, [0, -1]);
@@ -315,12 +328,12 @@ export const generateResidentialBlockCells = (): {
 
   // ── Southeast Park / Grove ───────────────────────────────────────────────
   paveRect(8, 8, 18, 18, GROUND);
-  place("obj_well", 13, 13, [0, 1]); // park fountain (well stand-in)
-  place("obj_notice_board", 13, 16, [0, -1], { dialogue: "dia_notice_board" }); // park stele / notice board
+  place("obj_ald_residential_well_shrine", 13, 13, [0, 1]);
+  place("obj_ald_processional_marker", 13, 16, [0, -1], { dialogue: "dia_grove_notice" });
   place("obj_pew", 10, 13, [1, 0]);
   place("obj_pew", 16, 13, [-1, 0]);
   placeIfClear("obj_p_shrine_stone", 13, 10, [0, 1], { dialogue: "dia_old_rite_shrine" });
-  placeIfClear("obj_p_candles", 13, 11, [0, 1], { block: false });
+  placeIfClear("obj_ald_votive_light_cluster", 13, 11, [0, 1], { block: false });
   
   placeMany("obj_pine_large", [[10, 10], [16, 10], [10, 16], [16, 16]], [0, 1]);
   placeMany("obj_flower_bush", [[9, 13], [17, 13], [13, 10]], [0, 1]);

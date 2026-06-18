@@ -151,13 +151,13 @@ export const generateMouthstoneFieldCells = (): {
 
   // Processional votaries along the south approach
   for (const z of [8, 11, 14, 17]) {
-    placeIfClear("obj_statue_votary", -3, z, [1, 0]);
-    placeIfClear("obj_statue_votary", 3, z, [-1, 0]);
+    placeIfClear("obj_ald_mouthstone_field_marker", -3, z, [1, 0]);
+    placeIfClear("obj_ald_mouthstone_field_marker", 3, z, [-1, 0]);
   }
 
   // ── Scattered stones and sparse vegetation ──────────────────────────────
-  placeIfClear("obj_column_broken", -14, -4, [0, 1]);
-  placeIfClear("obj_column_broken", 14, -4, [0, 1]);
+  placeIfClear("obj_ald_mouthstone_field_marker", -14, -4, [0, 1]);
+  placeIfClear("obj_ald_mouthstone_field_marker", 14, -4, [0, 1]);
   placeIfClear("obj_column_broken", -10, 10, [0, 1]);
   placeIfClear("obj_column_broken", 10, 10, [0, 1]);
   // Worn standing stones flanking the approach (votary statues as steles).
@@ -173,6 +173,12 @@ export const generateMouthstoneFieldCells = (): {
 
   // A lone dead tree far north (no path to it, just atmosphere)
   placeIfClear("obj_pine", 0, -18, [0, 1]);
+  for (const [x, z] of [
+    [-18, -18], [18, -18], [-20, 14], [20, 14],
+    [-14, 18], [14, 18],
+  ] as Vec2[]) {
+    placeIfClear("obj_dead_tree", x, z, [0, 1]);
+  }
 
   // Offering stone with loot
   placeContainer("cnt_mouthstone_offering", 4, -6, {
@@ -181,8 +187,8 @@ export const generateMouthstoneFieldCells = (): {
   });
 
   // ── Lanterns flanking processional ──────────────────────────────────────
-  placeIfClear("obj_lantern_post", -4, 6, [0, 1]);
-  placeIfClear("obj_lantern_post", 4, 6, [0, 1]);
+  placeIfClear("obj_ald_river_fog_lantern", -4, 6, [0, 1]);
+  placeIfClear("obj_ald_river_fog_lantern", 4, 6, [0, 1]);
 
   // ── Entity Placements ───────────────────────────────────────────────────
   const entity_placements: EntityPlacementData[] = [

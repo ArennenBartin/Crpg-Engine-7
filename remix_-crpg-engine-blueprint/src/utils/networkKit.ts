@@ -69,13 +69,15 @@ export const NETWORK_MATERIALS = {
   buriedMarble: {
     id: "nmat_buried_marble",
     name: "Buried Marble",
-    color: "#B5AFA4",
-    emissive: "#000000",
-    emissive_intensity: 0,
+    // Same cold inner glow as the temple marble above — the Grid runs
+    // through the stone whether it's worshipped or buried.
+    color: "#B2ADA6",
+    emissive: "#0C0A1C",
+    emissive_intensity: 0.07,
     opacity: 1,
     transparent: false,
-    roughness: 0.58,
-    metalness: 0.02,
+    roughness: 0.52,
+    metalness: 0.03,
     texture_kind: "marble_veins",
     texture_scale: 1.4,
     texture_strength: 0.46,
@@ -356,7 +358,7 @@ const wallCatacomb = () =>
     name: "Catacomb Wall",
     category: "structure",
     tags: ["tile", "wall"],
-    materialKeys: ["catacomb", "deepStone", "rootPale"],
+    materialKeys: ["catacomb", "deepStone", "rootPale", "gridGlass"],
     build: (m, rng) => {
       const course = (
         name: string,
@@ -422,6 +424,24 @@ const wallCatacomb = () =>
         [0.04, 0.028, 0.015],
         5,
         { jitter: 0.01, rng },
+      );
+
+      // A thin vein of Grid-glass bleeding up a joint — the Grid runs
+      // through every stone of the network, faintly lit.
+      strip(
+        m,
+        "grid_seam",
+        nmat("gridGlass"),
+        [
+          [-0.4, 0.22, 0.532],
+          [-0.36, 1.0, 0.542],
+          [-0.42, 1.7, 0.532],
+        ],
+        [
+          [-0.34, 0.22, 0.532],
+          [-0.3, 1.0, 0.542],
+          [-0.36, 1.7, 0.532],
+        ],
       );
     },
   });

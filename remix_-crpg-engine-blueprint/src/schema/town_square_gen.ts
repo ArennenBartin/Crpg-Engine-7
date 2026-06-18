@@ -7,6 +7,7 @@ import {
   WorldItemPlacementData,
 } from "./game";
 import { addHippedRoof } from "../utils/cellRoofHelper";
+import { DOOR_OBJECT_ID, doorFacingForBounds } from "../utils/doorPlacement";
 
 // ── Town Square Map ───────────────────────────────────────────────────────
 // The civic heart of Alderamontico. The ceremony starts here. Aldric's
@@ -146,6 +147,7 @@ export const generateTownSquareCells = (): {
         else { pave(x, z, floor); reserve(x, z); }
       }
     }
+    place(DOOR_OBJECT_ID, door.x, door.z, doorFacingForBounds(door, x0, z0, x1, z1), { block: false });
   };
 
   // ── Base terrain ───────────────────────────────────────────────────────
@@ -163,11 +165,15 @@ export const generateTownSquareCells = (): {
   }
 
   // ── Roads ──────────────────────────────────────────────────────────────
-  // N-S: north exit (Mouthstone Field) and south exit (Residential) both exist
-  paveRect(-3, MIN_Z, 3, MAX_Z); // North-South spine (full height)
-  // E-W: east exit (Temple) exists, but NO west exit — stop at plaza edge
-  paveRect(-12, -3, MAX_X, 3); // East-West road (only to east edge)
-  paveRect(-12, -12, 12, 12); // central plaza floor
+  // N-S civic spine, market elbow, and east processional road. Everything
+  // outside these authored lanes is background mass, not free plaza.
+  paveRect(-3, MIN_Z, 3, MAX_Z);
+  paveRect(-12, -2, MAX_X, 2);
+  paveRect(-10, -9, 10, 9);
+  paveRect(-8, 5, -2, 8);
+  paveRect(-13, 12, -6, 15, WOOD);
+  paveRect(11, -16, 13, -12, WOOD);
+  paveRect(-2, -14, 2, -9);
 
   // ── Old Exile Road Gate (north edge) ──────────────────────────────────
   // The actual Mouthstone appears only in map_mouthstone_field. This gate
@@ -175,19 +181,19 @@ export const generateTownSquareCells = (): {
   place("obj_p_lych_gate", 0, -18, [0, 1]);
   for (let x = -5; x <= -2; x++) place("obj_fence_stone", x, -18, [0, 1]);
   for (let x = 2; x <= 5; x++) place("obj_fence_stone", x, -18, [0, 1]);
-  place("obj_lantern_post", -4, -16, [0, 1]);
-  place("obj_lantern_post", 4, -16, [0, 1]);
+  place("obj_ald_civic_lantern_post", -4, -16, [0, 1]);
+  place("obj_ald_civic_lantern_post", 4, -16, [0, 1]);
   place("obj_statue_votary", -6, -19, [0, 1]);
   place("obj_statue_votary", 6, -19, [0, 1]);
   place("obj_p_placard", 0, -15, [0, 1], { block: false, dialogue: "dia_gate_blocked_mouthstone" });
 
   // ── Plaza features ─────────────────────────────────────────────────────
-  place("obj_well", -4, 0, [0, 1]);
-  place("obj_notice_board", 5, -4, [0, 1], { dialogue: "dia_notice_board" });
-  placeIfClear("obj_lantern_post", -10, -10, [0, 1]);
-  placeIfClear("obj_lantern_post", 10, -10, [0, 1]);
-  placeIfClear("obj_lantern_post", -10, 10, [0, 1]);
-  placeIfClear("obj_lantern_post", 10, 10, [0, 1]);
+  place("obj_ald_residential_well_shrine", -4, 0, [0, 1]);
+  place("obj_ald_civic_route_board", 5, -4, [0, 1], { dialogue: "dia_notice_board" });
+  placeIfClear("obj_ald_civic_lantern_post", -10, -10, [0, 1]);
+  placeIfClear("obj_ald_civic_lantern_post", 10, -10, [0, 1]);
+  placeIfClear("obj_ald_civic_lantern_post", -10, 10, [0, 1]);
+  placeIfClear("obj_ald_civic_lantern_post", 10, 10, [0, 1]);
 
   // Processional votaries along the north approach
   for (const z of [-14, -11]) {
@@ -196,11 +202,9 @@ export const generateTownSquareCells = (): {
   }
 
   // ── Market Stalls (south part of plaza) ────────────────────────────────
-  place("obj_p_stall", -6, 8, [0, -1]); // Dimos' stall
-  place("obj_barrel", -8, 8, [0, 1]);
-  place("obj_barrel", -4, 8, [0, 1]);
-  place("obj_p_stall", 4, 8, [0, -1]); // secondary stall
-  place("obj_barrel", 6, 8, [0, 1]);
+  place("obj_ald_market_ledger_stall", -6, 8, [0, -1]); // Dimos' stall
+  place("obj_ald_market_ledger_stall", 1, 8, [0, -1]);
+  place("obj_ald_market_ledger_stall", 8, 8, [0, -1]);
 
   // ── Counted Cup Inn (southwest social anchor) ─────────────────────────
   buildHall(-20, 10, -8, 20, WALL_CLAY, WOOD, { x: -8, z: 14 });
@@ -218,7 +222,7 @@ export const generateTownSquareCells = (): {
   // ── Scriptorium (northeast, Aldric's office) ───────────────────────────
   buildHall(12, -18, 20, -10, WALL_CLAY, WOOD, { x: 12, z: -14 });
   addHippedRoof(cells, 12, -18, 20, -10, "clay");
-  place("obj_table", 16, -14, [0, 1]);
+  place("obj_p_desk", 16, -14, [0, 1]);
   place("obj_podium", 18, -14, [0, 1]);
   place("obj_notice_board", 13, -16, [0, 1], { block: false, dialogue: "dia_case_board" });
   place("obj_pew", 14, -12, [0, 1]);
@@ -234,6 +238,13 @@ export const generateTownSquareCells = (): {
   });
   placeItem("wi_archive_key", "itm_archive_key", 14, -13);
 
+  for (const [x, z] of [
+    [-18, -12], [-16, -4], [-16, 4], [-18, 8],
+    [14, 6], [18, 8], [12, 14], [18, 16],
+  ] as Vec2[]) {
+    placeIfClear("obj_pine", x, z, [0, 1]);
+  }
+
   // ── Entity Placements ──────────────────────────────────────────────────
   const entity_placements: EntityPlacementData[] = [
     { entity_id: "ent_aldric", cell: [15, -14], schedule: [
@@ -246,10 +257,11 @@ export const generateTownSquareCells = (): {
       { hour: 18, cell: [-4, 6] },
       { hour: 22, cell: [-8, 7] },
     ]},
-    { entity_id: "ent_glass_apprentice", cell: [4, 7], schedule: [
-      { hour: 7, cell: [-2, 7] },
-      { hour: 18, cell: [4, 7] },
-      { hour: 22, cell: [2, 9] },
+    // Staged market Orin for the public accusation. The interrogable Orin lives at the Glassworks.
+    { entity_id: "ent_orin_public", cell: [-4, 7], schedule: [
+      { hour: 7, cell: [-4, 7] },
+      { hour: 18, cell: [-4, 7] },
+      { hour: 22, cell: [-4, 7] },
     ]},
     { entity_id: "ent_innkeep", cell: [-14, 14], schedule: [
       { hour: 7, cell: [-14, 14] },
@@ -260,11 +272,6 @@ export const generateTownSquareCells = (): {
       { hour: 6, cell: [0, -16] },
       { hour: 18, cell: [2, -16] },
       { hour: 22, cell: [-2, -16] },
-    ]},
-    { entity_id: "ent_gate_anchorite", cell: [-3, -17], schedule: [
-      { hour: 5, cell: [-3, -17] },
-      { hour: 14, cell: [-5, -12] },
-      { hour: 22, cell: [3, -17] },
     ]},
     { entity_id: "ent_high_clerk", cell: [7, -5], schedule: [
       { hour: 7, cell: [7, -5] },
@@ -277,6 +284,12 @@ export const generateTownSquareCells = (): {
       { hour: 23, cell: [-2, -10] },
     ]},
     { entity_id: "ent_save", cell: [8, 0] }, // wayside candle
+  ];
+
+  const marketAccusationCells: Vec2[] = [
+    [-8, 6], [-7, 6], [-6, 6], [-5, 6], [-4, 6], [-3, 6], [-2, 6],
+    [-7, 5], [-6, 5], [-5, 5], [-4, 5], [-3, 5],
+    [-7, 7], [-5, 7], [-3, 7],
   ];
 
   // ── Triggers ───────────────────────────────────────────────────────────
@@ -326,6 +339,7 @@ export const generateTownSquareCells = (): {
           { switch: "lazare_talked" },
           { switch: "testimonies_gathered" },
           { switch: "found_log_4" },
+          { switch: "cyberghost_defeated" },
           { not: { switch: "vampire_cleared" } },
         ],
       },
@@ -342,27 +356,27 @@ export const generateTownSquareCells = (): {
           { switch: "lazare_talked" },
           { switch: "testimonies_gathered" },
           { switch: "found_log_4" },
+          { switch: "cyberghost_defeated" },
           { not: { switch: "vampire_cleared" } },
         ],
       },
       cutscene_id: "cut_office_after",
       once: true,
     },
-    {
-      id: "trg_orin_public_accusation",
-      cell: [-4, 6],
-      type: "step",
+    ...marketAccusationCells.map((cell, i) => ({
+      id: `trg_orin_public_accusation_${i}`,
+      cell,
+      type: "step" as const,
       conditions: [],
       condition: {
         all: [
-          { switch: "office_briefed" },
           { not: { switch: "orin_public_accusation_seen" } },
-          { not: { switch: "testimonies_gathered" } },
+          { not: { switch: "vampire_cleared" } },
         ],
       },
       cutscene_id: "cut_orin_public_accusation",
-      once: true,
-    },
+      once: false,
+    })),
     // Mouthstone gate (always locked in Act 1)
     {
       id: "trg_mouthstone_locked",

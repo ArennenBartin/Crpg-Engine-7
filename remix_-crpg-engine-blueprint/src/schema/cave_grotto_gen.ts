@@ -21,7 +21,7 @@ const MAX_Z = 40;
 export const GROTTO_W = MAX_X - MIN_X + 1;
 export const GROTTO_H = MAX_Z - MIN_Z + 1;
 
-const GROUND = "obj_floor_dirt";
+const GROUND = "obj_ald_cave_floor";
 const WATER = "obj_water";
 
 const key = (x: number, z: number) => `${x}|${z}`;
@@ -158,11 +158,11 @@ export const generateCaveGrottoCells = (): {
   carveRoom(16, -5, 22, -1, GROUND);
 
   // Island details — a rite stele and cold braziers (cave appropriate).
-  place("obj_net_stele", 22, 0, [0, -1]);
-  place("obj_net_brazier_cold", 18, -4, [0, 1]);
-  place("obj_net_brazier_cold", 18, 4, [0, 1]);
-  place("obj_net_candle_cluster", 26, -4, [0, 1]);
-  place("obj_net_candle_cluster", 26, 4, [0, 1]);
+  place("obj_ald_cave_evidence_shrine", 22, 0, [0, -1], { block: false });
+  place("obj_ald_glass_threshold_brazier", 18, -4, [0, 1]);
+  place("obj_ald_glass_threshold_brazier", 18, 4, [0, 1]);
+  place("obj_ald_votive_light_cluster", 26, -4, [0, 1]);
+  place("obj_ald_votive_light_cluster", 26, 4, [0, 1]);
 
   // Luminescent star-glass growths around the lake (grid-sickness flora).
   const rng = (() => { let s = 0x6707; return () => { s = (s * 1664525 + 1013904223) & 0x7fffffff; return s / 0x7fffffff; }; })();

@@ -67,6 +67,8 @@ interface PlayState {
   updateMoney: (amount: number) => void;
   // World item / container persistence (per-map deltas)
   takeAuthoredWorldItem: (mapId: string, placementId: string) => void;
+  openDoor: (mapId: string, doorKey: string) => void;
+  closeDoor: (mapId: string, doorKey: string) => void;
   addDroppedItem: (
     mapId: string,
     dropped: { id: string; item_id: string; cell: [number, number]; count: number },
@@ -561,6 +563,33 @@ export const usePlayStore = create<PlayState>()(
             saveData: withMapDelta(state.saveData, mapId, (delta) => ({
               ...delta,
               taken_items: [...(delta.taken_items || []), placementId],
+            })),
+          };
+        }),
+      openDoor: (mapId, doorKey) =>
+        set((state) => {
+          if (!state.saveData) return state;
+          return {
+            saveData: withMapDelta(state.saveData, mapId, (delta) => {
+              const opened = delta.opened_doors || [];
+              return {
+                ...delta,
+                opened_doors: opened.includes(doorKey)
+                  ? opened
+                  : [...opened, doorKey],
+              };
+            }),
+          };
+        }),
+      closeDoor: (mapId, doorKey) =>
+        set((state) => {
+          if (!state.saveData) return state;
+          return {
+            saveData: withMapDelta(state.saveData, mapId, (delta) => ({
+              ...delta,
+              opened_doors: (delta.opened_doors || []).filter(
+                (openedDoorKey) => openedDoorKey !== doorKey,
+              ),
             })),
           };
         }),

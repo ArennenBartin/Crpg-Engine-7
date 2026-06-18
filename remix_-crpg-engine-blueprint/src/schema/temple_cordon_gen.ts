@@ -158,36 +158,53 @@ export const generateTempleCordonCells = (): {
   paveRect(20, -2, 40, 2, MARBLE); // Inner paved path
 
   // ── Central Plaza & The Witness Cordon ──────────────────────────────────
-  paveRect(-20, -12, 20, 16, MARBLE);
+  paveRect(-18, -10, 18, 14, MARBLE);
+  paveRect(-6, -14, 6, -10, MARBLE);
+  paveRect(-22, -4, -18, 4, MARBLE);
+  paveRect(18, -4, 22, 4, MARBLE);
 
-  // The Witness Statue (cordoned in the center)
-  // 6x6 cordon fence
-  for (let x = -3; x <= 3; x++) {
-    place("obj_p_cordon_post", x, -3, [0, 1]);
-    place("obj_p_cordon_post", x, 3, [0, 1]);
+  // The Witness Statue: a continuous Church cordon, not spaced-out fence props.
+  const cordonMin = -4;
+  const cordonMax = 4;
+  for (const [x, z] of [
+    [cordonMin, cordonMin],
+    [cordonMax, cordonMin],
+    [cordonMin, cordonMax],
+    [cordonMax, cordonMax],
+  ] as Vec2[]) {
+    place("obj_ald_cordon_corner_standard", x, z, [0, 1]);
   }
-  for (let z = -2; z <= 2; z++) {
-    place("obj_p_cordon_post", -3, z, [0, 1]);
-    place("obj_p_cordon_post", 3, z, [0, 1]);
+
+  for (let x = cordonMin + 1; x <= cordonMax - 1; x += 1) {
+    place("obj_ald_cordon_viewing_rail", x, cordonMin, [0, 1]);
+    place("obj_ald_cordon_viewing_rail", x, cordonMax, [0, -1]);
+  }
+  for (let z = cordonMin + 1; z <= cordonMax - 1; z += 1) {
+    place("obj_ald_cordon_viewing_rail", cordonMin, z, [1, 0]);
+    place("obj_ald_cordon_viewing_rail", cordonMax, z, [-1, 0]);
   }
   place("obj_bleeding_witness", 0, 0, [0, 1]); // The main event
   placeItem("wi_blood_shard", "itm_glass_shard", 1, -5);
-  place("obj_p_placard", 0, -6, [0, 1], { block: false, dialogue: "dia_cordon" });
-  place("obj_p_placard", 0, -4, [0, 1], { block: false, dialogue: "dia_statue" });
-  place("obj_p_placard", 0, 4, [0, -1], { block: false, dialogue: "dia_statue" });
-  place("obj_p_placard", -4, 0, [1, 0], { block: false, dialogue: "dia_statue" });
-  place("obj_p_placard", 4, 0, [-1, 0], { block: false, dialogue: "dia_statue" });
-  place("obj_p_candles", -5, 4, [0, 1], { block: false });
-  place("obj_p_candles", 5, 4, [0, 1], { block: false });
+  place("obj_p_placard", 0, -7, [0, 1], { block: false, dialogue: "dia_cordon" });
+  place("obj_p_placard", 0, -6, [0, 1], { block: false, dialogue: "dia_statue" });
+  place("obj_ald_witness_votive_bank", -5, 4, [0, 1], { block: false });
+  place("obj_ald_witness_votive_bank", 5, 4, [0, 1], { block: false });
 
   // Cordon Plaza Decor
-  place("obj_lantern_post", -12, 8, [0, 1]);
-  place("obj_lantern_post", 12, 8, [0, 1]);
-  place("obj_lantern_post", -12, -8, [0, 1]);
-  place("obj_lantern_post", 12, -8, [0, 1]);
+  place("obj_ald_civic_lantern_post", -12, 8, [0, 1]);
+  place("obj_ald_civic_lantern_post", 12, 8, [0, 1]);
+  place("obj_ald_civic_lantern_post", -12, -8, [0, 1]);
+  place("obj_ald_civic_lantern_post", 12, -8, [0, 1]);
   place("obj_well", 0, 12, [0, 1]); // plaza fountain (well stand-in)
+  place("obj_ald_civic_route_board", 14, -6, [0, 1], { block: false, dialogue: "dia_cordon" });
   place("obj_pew", -6, 12, [1, 0]);
   place("obj_pew", 6, 12, [-1, 0]);
+  for (const [x, z] of [
+    [-34, -8], [-28, -8], [28, -8], [34, -8],
+    [-24, 10], [-18, 12], [18, 10], [24, 12],
+  ] as Vec2[]) {
+    placeIfClear("obj_cypress", x, z, [0, 1]);
+  }
 
   // ── The Temple Basilica (North, x = -16 to 16, z = -36 to -14) ──────────
   buildBuilding(-16, -36, 16, -14, WALL_MARBLE, MARBLE, [{ x: -2, z: -14 }, { x: 2, z: -14 }]);
@@ -199,6 +216,7 @@ export const generateTempleCordonCells = (): {
   }
   // Pews
   for (let z = -28; z <= -20; z += 2) {
+    if (z === -24) continue; // Leave the transept columns readable.
     place("obj_pew", -6, z, [1, 0]);
     place("obj_pew", -4, z, [1, 0]);
     place("obj_pew", 4, z, [-1, 0]);
@@ -206,8 +224,8 @@ export const generateTempleCordonCells = (): {
   }
   place("obj_altar", 0, -32, [0, 1]);
   place("obj_podium", -4, -34, [0, 1]);
-  place("obj_lantern_post", -8, -34, [0, 1]);
-  place("obj_lantern_post", 8, -34, [0, 1]);
+  place("obj_ald_civic_lantern_post", -8, -34, [0, 1]);
+  place("obj_ald_civic_lantern_post", 8, -34, [0, 1]);
   place("obj_statue_votary", -12, -32, [0, 1]);
   place("obj_statue_votary", 12, -32, [0, 1]);
   placeContainer("cnt_temple_tithe", 14, -34, {
@@ -231,25 +249,29 @@ export const generateTempleCordonCells = (): {
       }
     }
   }
+  placeIfClear("obj_p_votive_token", -18, 24, [0, 1], { block: false, dialogue: "dia_lower_grave_cloth" });
 
   // ── The Gaol / Prison (Southeast, x = 12 to 36, z = 16 to 36) ───────────
   buildBuilding(12, 16, 36, 36, WALL_CLAY, MARBLE, [{ x: 12, z: 26 }]);
   addHippedRoof(cells, 12, 16, 36, 36, "slate");
-  // Prison cells along the walls
-  for (let z = 18; z <= 34; z += 4) {
-    // Left side cells
-    place("obj_cell_bars", 16, z, [1, 0]); // Facing East
-    place("obj_pallet_bed", 14, z, [1, 0]);
-    // Right side cells
-    place("obj_cell_bars", 32, z, [-1, 0]); // Facing West
+  // Nessa's holding side: one continuous barred wall instead of separated cells.
+  for (let z = 17; z <= 35; z += 1) {
+    place(
+      "obj_cell_bars",
+      32,
+      z,
+      [-1, 0],
+      z === 32 ? { dialogue: "dia_nessa_bars" } : {},
+    );
+  }
+  for (const z of [20, 26, 34]) {
     place("obj_pallet_bed", 34, z, [-1, 0]);
   }
-  place("obj_cell_bars", 32, 32, [-1, 0], { dialogue: "dia_nessa_bars" });
   // Interrogator's desk
-  place("obj_table", 24, 20, [0, 1]);
+  place("obj_p_desk", 24, 20, [0, 1]);
   place("obj_pew", 24, 18, [0, 1]);
-  place("obj_lantern_post", 20, 24, [0, 1]);
-  place("obj_lantern_post", 28, 24, [0, 1]);
+  place("obj_ald_civic_lantern_post", 20, 24, [0, 1]);
+  place("obj_ald_civic_lantern_post", 28, 24, [0, 1]);
 
   // Unique punishment props in the center aisle
   place("obj_iron_maiden", 24, 28, [0, -1]);
@@ -309,6 +331,15 @@ export const generateTempleCordonCells = (): {
       cutscene_id: "cut_first_sight",
       once: false,
     },
+    ...([-3, -2, -1, 0, 1, 2, 3] as number[]).map((z, i) => ({
+      id: `trg_glassworks_held_${i}`,
+      cell: [40, z] as [number, number],
+      type: "step" as const,
+      conditions: [],
+      condition: { not: { switch: "orin_public_accusation_seen" } },
+      cutscene_id: "cut_gate_blocked_glassworks",
+      once: false,
+    })),
   ];
 
   return {
