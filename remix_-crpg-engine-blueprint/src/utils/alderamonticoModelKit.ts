@@ -1506,8 +1506,8 @@ const civicLampAsset = (base: ObjectData) =>
     stats: { bytes: 10589592, vertices: 14284, triangles: 16876 },
   });
 
-const sacredTreeAsset = (base: ObjectData) =>
-  meshyAssetModel(base, {
+const sacredTreeAsset = (base: ObjectData) => {
+  const obj = meshyAssetModel(base, {
     displayName: "Alderamontico Sacred Tree",
     filename: "alderamontico-sacred-tree.glb",
     bounds: [1.123288, 1.913894, 1.13503],
@@ -1517,6 +1517,9 @@ const sacredTreeAsset = (base: ObjectData) =>
     sourceBounds: [1.123288, 1.913894, 1.13503],
     stats: { bytes: 13490152, vertices: 30530, triangles: 24690 },
   });
+  obj.asset!.scale = [2, 2, 2];
+  return obj;
+};
 
 const builders: Record<string, (base: ObjectData) => ObjectData> = {
   obj_floor_stone: (base) =>
