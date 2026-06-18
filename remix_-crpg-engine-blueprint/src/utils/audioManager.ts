@@ -3,6 +3,8 @@
 // may block playback until the player has interacted with the page — cutscene
 // clicks count, so in practice music and SFX started from play actions work.
 
+import { resolveAssetUrl } from './assetBase';
+
 let currentAudio: HTMLAudioElement | null = null;
 let currentUrl: string | null = null;
 
@@ -71,7 +73,7 @@ export const playMusic = (
     return;
   }
   stopMusic();
-  const audio = new Audio(url);
+  const audio = new Audio(resolveAssetUrl(url));
   audio.loop = opts.loop ?? true;
   audio.volume = Math.min(1, Math.max(0, opts.volume ?? 0.7));
   audio.play().catch((err) => {
@@ -112,7 +114,7 @@ export const playSound = (
   if (now - lastPlayed < cooldownMs) return;
   sfxLastPlayed.set(url, now);
 
-  const audio = new Audio(url);
+  const audio = new Audio(resolveAssetUrl(url));
   audio.loop = false;
   audio.volume = Math.min(1, Math.max(0, opts.volume ?? 0.6));
   audio.playbackRate = Math.min(4, Math.max(0.25, opts.playbackRate ?? 1));

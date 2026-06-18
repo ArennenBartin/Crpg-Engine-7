@@ -43,6 +43,10 @@ function patchSrcSetter(proto: object | undefined): void {
   });
 }
 
+export function resolveAssetUrl(url: string): string {
+  return rewrite(url);
+}
+
 export function installAssetBase(): void {
   if (!BASE) return; // dev / root deploy: nothing to do
 
