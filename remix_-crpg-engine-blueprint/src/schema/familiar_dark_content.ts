@@ -2861,8 +2861,20 @@ export const FD_DIALOGUE: DialogueData[] = [
       {
         id: "node_1",
         speaker: "Case Note",
-        text: "Act I finding: Darro Keel died from Grid sickness after Glass exposure, not vampire feeding. Lazare is dangerous, but not the cave killer.\n\nAldric has reopened Nessa's case because Darro's logs, Mara's name, and the Witness refuse to stay in separate files.\n\nThe next thread runs under the Counted Cup, where old prayers keep their own records.",
-        options: [{ text: "Continue the investigation." }],
+        text: "Act I finding: Darro Keel died from Grid sickness after Glass exposure, not vampire feeding. Lazare is dangerous, but not the cave killer.\n\nOrin Vale supplied the shard. He knew what it was.",
+        options: [{ text: "And the Witness?", next_node_id: "node_2" }],
+      },
+      {
+        id: "node_2",
+        speaker: "Brother Aldric",
+        text: "Still bleeding. The rite at the statue, Nessa's candles, Mara's prayer — none of that dies quietly just because we closed Darro's file.\n\nBut that is tomorrow's thread.",
+        options: [{ text: "Then tonight we rest.", next_node_id: "node_3" }],
+      },
+      {
+        id: "node_3",
+        speaker: "Scene",
+        text: "Above the town the Witness bleeds on in the dark, indifferent to verdicts. Somewhere under the Counted Cup, seven knocks sound in the floor, then silence, then seven again.\n\nYou do not go down tonight.",
+        options: [{ text: "— End of Act I —" }],
       },
     ],
   },
@@ -3360,6 +3372,8 @@ export const FD_CUTSCENES: CutsceneData[] = [
       { type: "set_switch", switch_id: "act1_complete", switch_value: true },
       { type: "set_switch", switch_id: "act1_end_seen", switch_value: true },
       { type: "show_dialogue", dialogue_id: "dia_act1_end" },
+      { type: "screen_fade", duration: 1200 },
+      { type: "game_end" },
     ],
   },
   {

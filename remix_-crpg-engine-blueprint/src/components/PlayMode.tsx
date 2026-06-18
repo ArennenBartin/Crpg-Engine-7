@@ -2696,6 +2696,9 @@ export function PlayEngine() {
           }
         }
         finishAction();
+      } else if (action.type === "game_end") {
+        setState("end");
+        finishAction();
       } else {
         finishAction();
       }
@@ -6040,7 +6043,7 @@ export function PlayEngine() {
 }
 
 export function PlayMode() {
-  const [state, setState] = useState<"title" | "playing">("title");
+  const [state, setState] = useState<"title" | "playing" | "end">("title");
   const { gamePackage } = useEngineStore();
   const hasSave = !!usePlayStore((s) => s.saveData);
   const playTitleSfx = useCallback(
@@ -6058,6 +6061,30 @@ export function PlayMode() {
       playMusic("/music/rain-on-the-ledger.mp3");
     }
   }, [state]);
+
+  if (state === "end") {
+    return (
+      <div className="h-full bg-neutral-950 text-white relative overflow-hidden flex flex-col items-center justify-center">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(30,20,40,0.98)_0%,rgba(0,0,0,1)_100%)]" />
+        <div className="relative z-10 flex flex-col items-center gap-8 px-8 text-center max-w-lg">
+          <div className="h-px w-32 bg-gradient-to-r from-transparent via-[var(--color-sacred-gold)] to-transparent" />
+          <h2 className="font-[family-name:var(--font-display)] text-2xl font-bold uppercase tracking-[0.28em] text-[var(--color-sacred-gold)]">
+            End of Act I
+          </h2>
+          <p className="font-[family-name:var(--font-body)] text-base leading-relaxed text-neutral-300 italic">
+            The Familiar Dark
+          </p>
+          <div className="h-px w-32 bg-gradient-to-r from-transparent via-[var(--color-sacred-gold)] to-transparent" />
+          <button
+            className="mt-4 border border-[var(--color-sacred-gold-dark)] bg-black/68 px-7 py-4 font-[family-name:var(--font-display)] text-sm font-bold uppercase tracking-[0.22em] text-[var(--color-sacred-ink)] transition-all hover:border-[var(--color-sacred-gold)] hover:bg-black/82 hover:text-[var(--color-sacred-gold)] active:scale-[0.98]"
+            onClick={() => setState("title")}
+          >
+            Return to Title
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (state === "title") {
     return (
