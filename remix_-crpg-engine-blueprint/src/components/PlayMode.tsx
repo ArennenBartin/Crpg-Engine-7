@@ -2031,14 +2031,17 @@ export function PlayEngine() {
 
     if (previousTurn === activeTurn) return;
 
-    const heldMovementKeys = new Set([
-      ...combatInputHeldKeysRef.current,
-      ...[...keysDownRef.current].filter(isMovementCommandKey),
-    ]);
+    // Only gate on keyboard keys physically held at the turn boundary.
+    // Joystick keys live in combatInputHeldKeysRef (not keysDownRef) and are
+    // continuously re-fired by pointer events, so including them here would
+    // permanently lock the gate — the joystick never "releases".
+    const heldKeyboardKeys = new Set(
+      [...keysDownRef.current].filter(isMovementCommandKey),
+    );
     activeCombatTurnRef.current = activeTurn;
     clearInputState();
-    combatInputHeldKeysRef.current = heldMovementKeys;
-    combatInputNeedsReleaseRef.current = heldMovementKeys.size > 0;
+    combatInputHeldKeysRef.current = heldKeyboardKeys;
+    combatInputNeedsReleaseRef.current = heldKeyboardKeys.size > 0;
     combatInputLockUntilRef.current =
       inputNow() + COMBAT_ACTOR_SWITCH_INPUT_DELAY_MS;
   }, [saveData?.in_combat, saveData?.active_turn_id]);
