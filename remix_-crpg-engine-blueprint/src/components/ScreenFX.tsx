@@ -13,7 +13,7 @@ import {
   Effect,
   ChromaticAberrationEffect,
 } from "postprocessing";
-import { Uniform, Vector2 } from "three";
+import { Uniform, Vector2, UnsignedByteType } from "three";
 import { useFxStore } from "../store/fxStore";
 import { getAudioBass } from "../utils/audioManager";
 
@@ -147,7 +147,7 @@ export function ScreenFX({ inCombat, mapId }: ScreenFXProps) {
   return (
     <>
       <ScreenFXDriver warpRef={warpRef} caRef={caRef} inCombat={inCombat} />
-      <EffectComposer multisampling={0}>
+      <EffectComposer multisampling={0} frameBufferType={UnsignedByteType}>
         <WarpFX ref={warpRef} />
         <Bloom
           mipmapBlur
