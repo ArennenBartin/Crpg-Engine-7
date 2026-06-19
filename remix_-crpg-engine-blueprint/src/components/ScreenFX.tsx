@@ -1,4 +1,4 @@
-import { useRef, useMemo, type RefObject } from "react";
+import { useRef, type RefObject } from "react";
 import { useFrame } from "@react-three/fiber";
 import {
   EffectComposer,
@@ -6,6 +6,7 @@ import {
   ChromaticAberration,
   Vignette,
   Noise,
+  wrapEffect,
 } from "@react-three/postprocessing";
 import { BlendFunction } from "postprocessing";
 import { Effect } from "postprocessing";
@@ -46,16 +47,20 @@ class WarpEffect extends Effect {
   constructor() {
     super("WarpEffect", WARP_FRAG, {
       uniforms: new Map<string, Uniform>([
-        ["uTime",       new Uniform(0)],
-        ["uHurt",       new Uniform(0)],
-        ["uRipple",     new Uniform(new Vector2(0.5, 0.5))],
-        ["uRippleAge",  new Uniform(1)],
-        ["uBass",       new Uniform(0)],
-        ["uCombat",     new Uniform(0)],
+        ["uTime",      new Uniform(0)],
+        ["uHurt",      new Uniform(0)],
+        ["uRipple",    new Uniform(new Vector2(0.5, 0.5))],
+        ["uRippleAge", new Uniform(1)],
+        ["uBass",      new Uniform(0)],
+        ["uCombat",    new Uniform(0)],
       ]),
     });
   }
 }
+
+// wrapEffect converts the class into a proper R3F component that the
+// EffectComposer can collect via its __r3f.objects mechanism.
+const WarpFX = wrapEffect(WarpEffect);
 
 // ── Props ────────────────────────────────────────────────────────────────────
 
@@ -64,63 +69,62 @@ interface ScreenFXProps {
   mapId?: string | null;
 }
 
-// ── Driver component (must live inside <Canvas>) ─────────────────────────────
+// ── Frame driver — updates all uniforms each tick ────────────────────────────
 
 function ScreenFXDriver({
-  warpEffect,
+  warpRef,
   caOffsetRef,
   inCombat,
 }: {
-  warpEffect: WarpEffect;
+  warpRef: RefObject<WarpEffect | null>;
   caOffsetRef: RefObject<Vector2>;
   inCombat: boolean;
 }) {
   const playerHurtAt = useFxStore((s) => s.playerHurtAt);
 
-  const combatRamp    = useRef(0);
-  const hurtDecay     = useRef(0);
-  const rippleAge     = useRef(1);
-  const lastHurtAt    = useRef(0);
-  const rippleOrigin  = useRef(new Vector2(0.5, 0.5));
+  const combatRamp   = useRef(0);
+  const rippleAge    = useRef(1);
+  const lastHurtAt   = useRef(0);
+  const rippleOrigin = useRef(new Vector2(0.5, 0.5));
 
   useFrame((_, delta) => {
     const now = performance.now();
 
-    // Detect new hurt event
+    // Detect new hurt event — reset ripple
     if (playerHurtAt !== lastHurtAt.current && playerHurtAt > 0) {
       lastHurtAt.current = playerHurtAt;
       rippleAge.current  = 0;
-      rippleOrigin.current.set(0.5, 0.5); // screen center approximation
+      rippleOrigin.current.set(0.5, 0.5);
     }
 
-    // Decay hurt intensity over 600ms
-    hurtDecay.current = Math.max(0, 1 - (now - playerHurtAt) / 600);
+    const hurtDecay = Math.max(0, 1 - (now - playerHurtAt) / 600);
 
-    // Smooth combat ramp: 0.9× speed up, 0.4× speed down
+    // Smooth combat ramp: ramps up fast, fades out slowly
     const targetCombat = inCombat ? 1 : 0;
-    const rampSpeed = inCombat ? 0.9 : 0.4;
-    combatRamp.current += (targetCombat - combatRamp.current) * delta * rampSpeed;
+    combatRamp.current += (targetCombat - combatRamp.current) * delta * (inCombat ? 0.9 : 0.4);
 
-    // Ripple age advances, capped at 1
     rippleAge.current = Math.min(1, rippleAge.current + delta * 1.2);
 
     const bass   = getAudioBass();
-    const hurt   = hurtDecay.current;
+    const hurt   = hurtDecay;
     const combat = combatRamp.current;
 
-    // CA offset: gentle always-on + combat raise + hurt spike
+    // CA offset: gentle always-on, rises in combat, spikes on hurt
     const caX = 0.0006 + combat * 0.0018 + hurt * 0.007 + bass * 0.001;
     const caY = (0.0006 + combat * 0.0012 + hurt * 0.005) * 0.7;
     caOffsetRef.current!.set(caX, caY);
 
-    // Warp uniforms
-    const u = warpEffect.uniforms;
-    u.get("uTime")!.value      = now * 0.001;
-    u.get("uHurt")!.value      = hurt;
-    u.get("uRipple")!.value    = rippleOrigin.current;
-    u.get("uRippleAge")!.value = rippleAge.current;
-    u.get("uBass")!.value      = bass;
-    u.get("uCombat")!.value    = combat;
+    // Push warp uniforms if the effect is mounted
+    const warp = warpRef.current;
+    if (warp) {
+      const u = warp.uniforms;
+      u.get("uTime")!.value      = now * 0.001;
+      u.get("uHurt")!.value      = hurt;
+      u.get("uRipple")!.value    = rippleOrigin.current;
+      u.get("uRippleAge")!.value = rippleAge.current;
+      u.get("uBass")!.value      = bass;
+      u.get("uCombat")!.value    = combat;
+    }
   });
 
   return null;
@@ -129,8 +133,9 @@ function ScreenFXDriver({
 // ── Main export ──────────────────────────────────────────────────────────────
 
 export function ScreenFX({ inCombat, mapId }: ScreenFXProps) {
-  const warpEffect = useMemo(() => new WarpEffect(), []);
-  const caOffset   = useRef(new Vector2(0.0006, 0.0004));
+  // wrapEffect forwards ref to the underlying Effect instance
+  const warpRef  = useRef<WarpEffect>(null);
+  const caOffset = useRef(new Vector2(0.0006, 0.0004));
 
   const underground =
     (mapId?.includes("network") || mapId?.includes("cave") || mapId?.includes("depth")) ?? false;
@@ -138,12 +143,14 @@ export function ScreenFX({ inCombat, mapId }: ScreenFXProps) {
   return (
     <>
       <ScreenFXDriver
-        warpEffect={warpEffect}
+        warpRef={warpRef}
         caOffsetRef={caOffset}
         inCombat={inCombat}
       />
-      <EffectComposer multisampling={0} disableNormalPass>
-        <primitive object={warpEffect} />
+      <EffectComposer multisampling={0}>
+        {/* WarpFX is a proper React component from wrapEffect — registers
+            correctly with the EffectComposer's __r3f.objects collection */}
+        <WarpFX ref={warpRef} />
         <Bloom
           mipmapBlur
           intensity={underground ? 0.55 : 0.3}
