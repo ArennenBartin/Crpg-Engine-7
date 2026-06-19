@@ -2,6 +2,7 @@ import { useRef, useMemo, type RefObject } from "react";
 import { useFrame } from "@react-three/fiber";
 import {
   EffectComposer,
+  Bloom,
   ChromaticAberration,
   Vignette,
   Noise,
@@ -143,6 +144,14 @@ export function ScreenFX({ inCombat, mapId }: ScreenFXProps) {
       />
       <EffectComposer multisampling={0} disableNormalPass>
         <primitive object={warpEffect} />
+        <Bloom
+          mipmapBlur
+          intensity={underground ? 0.55 : 0.3}
+          luminanceThreshold={underground ? 0.78 : 0.85}
+          luminanceSmoothing={0.03}
+          radius={0.6}
+          levels={7}
+        />
         <ChromaticAberration offset={caOffset.current} />
         <Vignette
           eskil={false}
