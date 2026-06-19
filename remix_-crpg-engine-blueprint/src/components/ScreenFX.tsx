@@ -8,8 +8,11 @@ import {
   Noise,
   wrapEffect,
 } from "@react-three/postprocessing";
-import { BlendFunction } from "postprocessing";
-import { Effect } from "postprocessing";
+import {
+  BlendFunction,
+  Effect,
+  ChromaticAberrationEffect,
+} from "postprocessing";
 import { Uniform, Vector2 } from "three";
 import { useFxStore } from "../store/fxStore";
 import { getAudioBass } from "../utils/audioManager";
@@ -58,8 +61,8 @@ class WarpEffect extends Effect {
   }
 }
 
-// wrapEffect converts the class into a proper R3F component that the
-// EffectComposer can collect via its __r3f.objects mechanism.
+// wrapEffect registers the class via extend() and forwards the ref to the live
+// Effect instance (React 19 treats ref as a regular prop).
 const WarpFX = wrapEffect(WarpEffect);
 
 // ── Props ────────────────────────────────────────────────────────────────────
@@ -73,11 +76,11 @@ interface ScreenFXProps {
 
 function ScreenFXDriver({
   warpRef,
-  caOffsetRef,
+  caRef,
   inCombat,
 }: {
   warpRef: RefObject<WarpEffect | null>;
-  caOffsetRef: RefObject<Vector2>;
+  caRef: RefObject<ChromaticAberrationEffect | null>;
   inCombat: boolean;
 }) {
   const playerHurtAt = useFxStore((s) => s.playerHurtAt);
@@ -97,24 +100,26 @@ function ScreenFXDriver({
       rippleOrigin.current.set(0.5, 0.5);
     }
 
-    const hurtDecay = Math.max(0, 1 - (now - playerHurtAt) / 600);
+    const hurt = Math.max(0, 1 - (now - playerHurtAt) / 600);
 
     // Smooth combat ramp: ramps up fast, fades out slowly
     const targetCombat = inCombat ? 1 : 0;
     combatRamp.current += (targetCombat - combatRamp.current) * delta * (inCombat ? 0.9 : 0.4);
+    const combat = combatRamp.current;
 
     rippleAge.current = Math.min(1, rippleAge.current + delta * 1.2);
 
-    const bass   = getAudioBass();
-    const hurt   = hurtDecay;
-    const combat = combatRamp.current;
+    const bass = getAudioBass();
 
-    // CA offset: gentle always-on, rises in combat, spikes on hurt
-    const caX = 0.0006 + combat * 0.0018 + hurt * 0.007 + bass * 0.001;
-    const caY = (0.0006 + combat * 0.0012 + hurt * 0.005) * 0.7;
-    caOffsetRef.current!.set(caX, caY);
+    // CA offset: gentle always-on, rises in combat, spikes on hurt.
+    // Mutate the effect's own offset Vector2 in place.
+    const ca = caRef.current;
+    if (ca) {
+      ca.offset.x = 0.0006 + combat * 0.0018 + hurt * 0.007 + bass * 0.001;
+      ca.offset.y = (0.0006 + combat * 0.0012 + hurt * 0.005) * 0.7;
+    }
 
-    // Push warp uniforms if the effect is mounted
+    // Warp uniforms
     const warp = warpRef.current;
     if (warp) {
       const u = warp.uniforms;
@@ -133,23 +138,16 @@ function ScreenFXDriver({
 // ── Main export ──────────────────────────────────────────────────────────────
 
 export function ScreenFX({ inCombat, mapId }: ScreenFXProps) {
-  // wrapEffect forwards ref to the underlying Effect instance
-  const warpRef  = useRef<WarpEffect>(null);
-  const caOffset = useRef(new Vector2(0.0006, 0.0004));
+  const warpRef = useRef<WarpEffect>(null);
+  const caRef   = useRef<ChromaticAberrationEffect>(null);
 
   const underground =
     (mapId?.includes("network") || mapId?.includes("cave") || mapId?.includes("depth")) ?? false;
 
   return (
     <>
-      <ScreenFXDriver
-        warpRef={warpRef}
-        caOffsetRef={caOffset}
-        inCombat={inCombat}
-      />
+      <ScreenFXDriver warpRef={warpRef} caRef={caRef} inCombat={inCombat} />
       <EffectComposer multisampling={0}>
-        {/* WarpFX is a proper React component from wrapEffect — registers
-            correctly with the EffectComposer's __r3f.objects collection */}
         <WarpFX ref={warpRef} />
         <Bloom
           mipmapBlur
@@ -159,16 +157,16 @@ export function ScreenFX({ inCombat, mapId }: ScreenFXProps) {
           radius={0.6}
           levels={7}
         />
-        <ChromaticAberration offset={caOffset.current} />
+        <ChromaticAberration
+          ref={caRef}
+          offset={new Vector2(0.0006, 0.0004)}
+        />
         <Vignette
           eskil={false}
           offset={0.3}
           darkness={underground ? 0.72 : 0.48}
         />
-        <Noise
-          blendFunction={BlendFunction.OVERLAY}
-          opacity={0.06}
-        />
+        <Noise blendFunction={BlendFunction.OVERLAY} opacity={0.06} />
       </EffectComposer>
     </>
   );
