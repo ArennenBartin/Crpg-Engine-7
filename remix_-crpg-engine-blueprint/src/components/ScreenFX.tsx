@@ -1,4 +1,4 @@
-import { useRef, type RefObject } from "react";
+import { Component, useRef, type ReactNode, type RefObject } from "react";
 import { useFrame } from "@react-three/fiber";
 import {
   EffectComposer,
@@ -11,6 +11,7 @@ import {
 import {
   BlendFunction,
   Effect,
+  EffectAttribute,
   ChromaticAberrationEffect,
 } from "postprocessing";
 import { Uniform, Vector2, UnsignedByteType } from "three";
@@ -49,6 +50,10 @@ void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor)
 class WarpEffect extends Effect {
   constructor() {
     super("WarpEffect", WARP_FRAG, {
+      // We sample inputBuffer at displaced UVs, so this is a convolution effect.
+      // Without this attribute the effect merger builds an invalid shader and
+      // can tear down the WebGL context on stricter (mobile) drivers.
+      attributes: EffectAttribute.CONVOLUTION,
       uniforms: new Map<string, Uniform>([
         ["uTime",      new Uniform(0)],
         ["uHurt",      new Uniform(0)],
@@ -135,6 +140,27 @@ function ScreenFXDriver({
   return null;
 }
 
+// ── Failsafe boundary ─────────────────────────────────────────────────────────
+// Post-processing is a cosmetic layer. If the EffectComposer or any effect throws
+// while constructing its passes (e.g. an unsupported render target on a mobile
+// GPU), swallow it and render nothing rather than taking down the whole game.
+
+class FXBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
+  state = { failed: false };
+
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+
+  componentDidCatch(error: unknown) {
+    console.warn("ScreenFX disabled — post-processing failed to initialise:", error);
+  }
+
+  render() {
+    return this.state.failed ? null : this.props.children;
+  }
+}
+
 // ── Main export ──────────────────────────────────────────────────────────────
 
 export function ScreenFX({ inCombat, mapId }: ScreenFXProps) {
@@ -145,7 +171,7 @@ export function ScreenFX({ inCombat, mapId }: ScreenFXProps) {
     (mapId?.includes("network") || mapId?.includes("cave") || mapId?.includes("depth")) ?? false;
 
   return (
-    <>
+    <FXBoundary>
       <ScreenFXDriver warpRef={warpRef} caRef={caRef} inCombat={inCombat} />
       <EffectComposer multisampling={0} frameBufferType={UnsignedByteType}>
         <WarpFX ref={warpRef} />
@@ -155,7 +181,6 @@ export function ScreenFX({ inCombat, mapId }: ScreenFXProps) {
           luminanceThreshold={underground ? 0.78 : 0.85}
           luminanceSmoothing={0.03}
           radius={0.6}
-          levels={7}
         />
         <ChromaticAberration
           ref={caRef}
@@ -168,6 +193,6 @@ export function ScreenFX({ inCombat, mapId }: ScreenFXProps) {
         />
         <Noise blendFunction={BlendFunction.OVERLAY} opacity={0.06} />
       </EffectComposer>
-    </>
+    </FXBoundary>
   );
 }
