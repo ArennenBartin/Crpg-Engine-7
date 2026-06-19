@@ -267,6 +267,7 @@ export const EventActionSchema = z.object({
     "modify_player_stats", // stats = deltas, e.g. { max_hp: 6, attack: 2 }
     "learn_skill", // skill_id added to known_skills
     "set_entity_hidden", // entity_id + hidden — despawn/respawn an entity
+    "game_end", // ends the playthrough and shows the end screen (Act finale)
     "custom",
   ]),
   entity_id: z.string().optional(),

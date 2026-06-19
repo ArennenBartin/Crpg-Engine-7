@@ -1256,7 +1256,12 @@ function LevelUpOverlay({
   );
 }
 
-export function PlayEngine() {
+export function PlayEngine({ onGameEnd }: { onGameEnd?: () => void } = {}) {
+  // Kept in a ref so the cutscene runner's closure always calls the latest
+  // callback (the runner effect is long-lived and would otherwise capture a
+  // stale prop).
+  const onGameEndRef = useRef(onGameEnd);
+  onGameEndRef.current = onGameEnd;
   const { gamePackage } = useEngineStore();
   const {
     saveData,
@@ -2700,7 +2705,7 @@ export function PlayEngine() {
         }
         finishAction();
       } else if (action.type === "game_end") {
-        setState("end");
+        onGameEndRef.current?.();
         finishAction();
       } else {
         finishAction();
@@ -6149,5 +6154,5 @@ export function PlayMode() {
     );
   }
 
-  return <PlayEngine />;
+  return <PlayEngine onGameEnd={() => setState("end")} />;
 }
