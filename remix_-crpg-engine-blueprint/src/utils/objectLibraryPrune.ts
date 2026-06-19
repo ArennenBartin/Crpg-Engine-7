@@ -37,8 +37,6 @@ export const collectAct1ObjectIds = (
   const objectIds = new Set<string>();
 
   gamePackage.maps.forEach((map) => {
-    if (!ACT_1_MAP_IDS.has(map.id)) return;
-
     map.cells.forEach((cell) => {
       if (cell.object_id) objectIds.add(cell.object_id);
     });
@@ -57,6 +55,10 @@ export const collectAct1ObjectIds = (
 export const pruneObjectLibraryToAct1Usage = (
   gamePackage: GamePackage,
 ): GamePackage => {
+  // Keep every object referenced by retained maps. The active Act 1 set is
+  // the playable path, but the package still ships legacy/reference maps for
+  // the editor. Pruning only the active set left those maps with invisible
+  // placements whenever their object definitions were dropped.
   const objectIds = collectAct1ObjectIds(gamePackage);
   const objectLibrary = gamePackage.object_library.filter((object: ObjectData) =>
     objectIds.has(object.id),
