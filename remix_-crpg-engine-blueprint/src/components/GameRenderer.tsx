@@ -650,11 +650,11 @@ const getBarkTexture = (text: string) => {
   const cached = barkTextureCache.get(text);
   if (cached) return cached;
 
-  const fontPx = 34;
-  const padX = 28;
-  const padY = 20;
-  const lineH = fontPx * 1.28;
-  const maxLineWidth = 560;
+  const fontPx = 46;
+  const padX = 34;
+  const padY = 26;
+  const lineH = fontPx * 1.3;
+  const maxLineWidth = 620;
 
   const measure = document.createElement("canvas").getContext("2d")!;
   measure.font = `500 ${fontPx}px Georgia, 'Times New Roman', serif`;
@@ -714,12 +714,22 @@ const getBarkTexture = (text: string) => {
   return entry;
 };
 
+// World height per wrapped line of speech — kept well above combat numbers so
+// an overheard sentence is comfortably legible at the default camera distance.
+const BARK_WORLD_LINE_HEIGHT = 0.62;
+// Clearance from the standing surface to the bottom edge of the speech plate,
+// so it floats clear of the speaker's head and HP-bar band regardless of how
+// many lines the plate has.
+const BARK_BOTTOM_CLEARANCE = 1.85;
+
 function BarkNode({ bark, baseY }: { bark: Bark; baseY: number }) {
   const groupRef = useRef<THREE.Group>(null);
   const matRef = useRef<THREE.MeshBasicMaterial>(null);
   const { texture, aspect, lineCount } = getBarkTexture(bark.text);
-  // Float above the speaker's head, clear of the HP-bar band.
-  const startY = baseY + 1.95;
+  const height = BARK_WORLD_LINE_HEIGHT * Math.max(1, lineCount) + 0.22;
+  // Anchor by the plate's bottom edge so taller (multi-line) plates grow
+  // upward rather than sinking into the sprite.
+  const baseCenterY = baseY + BARK_BOTTOM_CLEARANCE + height / 2;
   const fadeMs = 280;
 
   useFrame(() => {
@@ -740,14 +750,13 @@ function BarkNode({ bark, baseY }: { bark: Bark; baseY: number }) {
       opacity = Math.max(0, (bark.lifetime - age) / fadeMs);
     mat.opacity = opacity;
     // Gentle settle: rises a touch as it appears.
-    group.position.y = startY + Math.min(0.12, age / 1600);
+    group.position.y = baseCenterY + Math.min(0.12, age / 1600);
   });
 
-  const height = 0.34 * Math.max(1, lineCount * 0.82);
   return (
     <group
       ref={groupRef}
-      position={[bark.cell[0], startY, bark.cell[1]]}
+      position={[bark.cell[0], baseCenterY, bark.cell[1]]}
       visible={false}
     >
       <Billboard>
