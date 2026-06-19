@@ -60,7 +60,7 @@ const STRUCTURAL_STORY_OBJECT_IDS = new Set([
   "obj_ald_cordon_viewing_rail",
 ]);
 
-const STRUCTURAL_TAGS = new Set(["door", "wall", "roof", "floor", "ground"]);
+const STRUCTURAL_TAGS = new Set(["door", "wall", "roof", "floor", "ground", "column"]);
 
 const isStructuralObject = (object: ObjectData | undefined, objectId: string) => {
   const tags = object?.tags || [];
@@ -69,6 +69,7 @@ const isStructuralObject = (object: ObjectData | undefined, objectId: string) =>
     objectId.startsWith("obj_p_wall") ||
     objectId.startsWith("obj_roof") ||
     objectId.startsWith("obj_p_roof") ||
+    objectId.includes("column") ||
     tags.some((tag) => STRUCTURAL_TAGS.has(tag))
   );
 };
@@ -115,11 +116,13 @@ const pruneMap = (
 ): { map: MapData; removed: number } => {
   if (!ACTIVE_MAP_IDS.has(map.id)) return { map, removed: 0 };
   let removed = 0;
+  const prunedCells = new Set<string>();
   const customObjectPlacements = (map.custom_object_placements || []).filter(
     (placement) => {
       const object = objectById.get(placement.object_id);
       if (shouldKeepPlacement(placement, object)) return true;
       removed += 1;
+      prunedCells.add(`${placement.cell[0]},${placement.cell[1]}`);
       return false;
     },
   );
@@ -128,9 +131,22 @@ const pruneMap = (
     return { map, removed: 0 };
   }
 
+  // Restore walkability for cells whose only reason for being non-walkable
+  // was a now-removed placement. Generator floor cells start as walkable=true
+  // and are only set to false by place() calls.
+  const cells = prunedCells.size > 0
+    ? map.cells.map((cell) => {
+        if (prunedCells.has(`${cell.x},${cell.z}`) && cell.walkable === false) {
+          return { ...cell, walkable: true as const };
+        }
+        return cell;
+      })
+    : map.cells;
+
   return {
     map: {
       ...map,
+      cells,
       custom_object_placements: customObjectPlacements,
     },
     removed,
