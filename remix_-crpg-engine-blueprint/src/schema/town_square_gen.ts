@@ -337,8 +337,6 @@ export const generateTownSquareCells = (): {
       condition: {
         all: [
           { switch: "lazare_talked" },
-          { switch: "testimonies_gathered" },
-          { switch: "found_log_4" },
           { switch: "cyberghost_defeated" },
           { not: { switch: "vampire_cleared" } },
         ],
@@ -354,8 +352,6 @@ export const generateTownSquareCells = (): {
       condition: {
         all: [
           { switch: "lazare_talked" },
-          { switch: "testimonies_gathered" },
-          { switch: "found_log_4" },
           { switch: "cyberghost_defeated" },
           { not: { switch: "vampire_cleared" } },
         ],

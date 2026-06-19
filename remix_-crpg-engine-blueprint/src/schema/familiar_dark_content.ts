@@ -1747,6 +1747,11 @@ export const FD_DIALOGUE: DialogueData[] = [
             condition: { switch: "seen_cordon" },
             next_node_id: "node_move",
           },
+          {
+            text: "I have Holt's gate record, Dimos's candle receipt, and a dead man's wall naming you. Speak directly. (Warrior)",
+            condition: { all: [{ switch: "class_warrior" }, { switch: "act1_assigned" }, { not: { switch: "found_orin_shard_link" } }] },
+            next_node_id: "node_warrior_press",
+          },
           { text: "Back to work." },
         ],
       },
@@ -1836,6 +1841,12 @@ export const FD_DIALOGUE: DialogueData[] = [
         speaker: "Orin",
         text: "The Witness figures are too coherent. I do not like coherent. Ordinary Glass holds pattern. That stuff holds intention, or something close enough that my hands do not know the difference.",
         options: [{ text: "Go back.", next_node_id: "node_1" }],
+      },
+      {
+        id: "node_warrior_press",
+        speaker: "Orin",
+        text: "Orin's hands go still on the furnace rail.\n\n'Fine. Write it down plainly — I am tired of the small version.\n\nI knew the shard was not cold. I told Darro it was spent because I was afraid of what he would do with a live one. I was right to be afraid of that. I was wrong about the method.\n\nLazare did not do this. I am the last link in a chain that started at this furnace. I have known it since they found him.'",
+        options: [{ text: "Record the full testimony.", set_switch: "found_orin_shard_link", trigger_cutscene: "cut_record_orin" }],
       },
     ], CUTSCENE_ART_ORIN_GLASSWORKS, "The stained-glass furnace hall of the Alderamontico Glassworks."),
   },
@@ -1994,6 +2005,16 @@ export const FD_DIALOGUE: DialogueData[] = [
             condition: { switch: "met_nessa" },
             next_node_id: "node_rite",
           },
+          {
+            text: "By the writ and a dead man's due: what did you see the night the cave opened? (Warrior)",
+            condition: { all: [{ switch: "class_warrior" }, { switch: "act1_assigned" }, { not: { switch: "lazare_talked" } }] },
+            next_node_id: "node_warrior_mirror",
+          },
+          {
+            text: "Your feeding license — third annotation, eastern boundary: Grid-pattern discomfort, noted. What did you feel? (Scholar)",
+            condition: { all: [{ switch: "class_scholar" }, { switch: "act1_assigned" }, { not: { switch: "lazare_talked" } }] },
+            next_node_id: "node_scholar_annotation",
+          },
           { text: "Close the door." },
         ],
       },
@@ -2083,6 +2104,22 @@ export const FD_DIALOGUE: DialogueData[] = [
         scene_image_url: CUTSCENE_ART_LAZARE_ESTATE,
         scene_image_alt: "Brother Aldric and the Intercessor stand outside Lazare's shuttered estate.",
         options: [{ text: "Accept the boundary.", set_switch: "lazare_recruited", next_node_id: "node_1" }],
+      },
+      {
+        id: "node_warrior_mirror",
+        speaker: "Lazare",
+        text: "A long pause. Then:\n\n'That is a different authority than this house usually receives. Very well.\n\nThe night Darro died — every mirror in this room showed the old road instead of my face. Something reached toward the eastern caves with a pattern I recognize: hunger, but not mine. Hot Glass and a prayer spoken through clenched teeth.\n\nI stayed in. I make the same choice every night. The mirrors corroborate it, if you trust mirrors.'",
+        scene_image_url: CUTSCENE_ART_LAZARE_ESTATE,
+        scene_image_alt: "Brother Aldric and the Intercessor stand outside Lazare's shuttered estate.",
+        options: [{ text: "Record the mirror testimony.", set_switches: [{ switch_id: "lazare_talked" }, { switch_id: "lazare_mirror_admitted" }], next_node_id: "node_1" }],
+      },
+      {
+        id: "node_scholar_annotation",
+        speaker: "Lazare",
+        text: "You read Church paper the way old men read faces — precisely, and looking for what the author wanted to omit.\n\nYes. Seventeen years ago, a Grid-pattern anomaly near the eastern bound. Not my hunger: something that predated me, running through the old road stone. I reported it to the Church. They filed it as thermal irregularity and nobody came back.\n\nThe annotation is yours, Intercessor. The Hall will not remember it. Apparently you will.",
+        scene_image_url: CUTSCENE_ART_LAZARE_ESTATE,
+        scene_image_alt: "Brother Aldric and the Intercessor stand outside Lazare's shuttered estate.",
+        options: [{ text: "Mark the license annotation as evidence.", set_switches: [{ switch_id: "lazare_talked" }, { switch_id: "scholar_grid_annotation" }], next_node_id: "node_1" }],
       },
     ],
   },
@@ -2289,8 +2326,19 @@ export const FD_DIALOGUE: DialogueData[] = [
             condition: { switch: "nessa_thread_started" },
             next_node_id: "node_after_nessa",
           },
+          {
+            text: "Listen to it. (Mystic)",
+            condition: { switch: "class_mystic" },
+            next_node_id: "node_mystic_listen",
+          },
           { text: "Step back from the line." },
         ],
+      },
+      {
+        id: "node_mystic_listen",
+        speaker: "Scene",
+        text: "The Glass is not silent — it is organized. Seven pulses against the stone, a pause, then seven again. Not the weeping, not the statue. Something beneath the Witness has been counting since before Nessa stood here.\n\nAldric notices you tilt your head. He does not ask what you hear.",
+        options: [{ text: "(Note the count. Seven below the stone.)", set_switch: "mystic_witness_count", next_node_id: "node_1" }],
       },
       {
         id: "node_before_nessa",
@@ -2425,7 +2473,7 @@ export const FD_DIALOGUE: DialogueData[] = [
           },
           {
             text: "Current: return the cave finding to Aldric.",
-            condition: { all: [{ switch: "found_log_4" }, { switch: "cyberghost_defeated" }, { not: { switch: "vampire_cleared" } }] },
+            condition: { all: [{ switch: "cyberghost_defeated" }, { not: { switch: "vampire_cleared" } }] },
             next_node_id: "node_return_verdict",
           },
           {
@@ -3717,6 +3765,11 @@ FD_DIALOGUE.push({
           next_node_id: "node_grid",
         },
         {
+          text: "Grid-sickness. Lazare's suppressed license annotation confirms the Grid was active near the eastern bound long before Orin's shard. Darro walked into something already open. (Scholar)",
+          condition: { all: [{ switch: "scholar_grid_annotation" }, { not: { switch: "found_log_4" } }] },
+          next_node_id: "node_grid_scholar",
+        },
+        {
           text: "Unlawful concealment. Orin supplied the shard, hid what it was, and a man died of it. (Testimony)",
           condition: { switch: "testimonies_gathered" },
           next_node_id: "node_concealment",
@@ -3739,6 +3792,11 @@ FD_DIALOGUE.push({
           text: "And the rite text names who taught the posture.",
           condition: { switch: "act1_rite_text" },
           next_node_id: "node_grid_rite",
+        },
+        {
+          text: "And the Witness was already counting before the rite began. Seven pulses. (Mystic)",
+          condition: { all: [{ switch: "mystic_witness_count" }, { not: { switch: "act1_rite_text" } }] },
+          next_node_id: "node_grid_mystic",
         },
         {
           text: "File it.",
@@ -3847,6 +3905,24 @@ FD_DIALOGUE.push({
           trigger_cutscene: "cut_act1_end_condemned",
         },
       ],
+    },
+
+    // ── Scholar path: grid annotation as alternative evidence ─────────────────
+    {
+      id: "node_grid_scholar",
+      speaker: "Brother Aldric",
+      text: "Seventeen years in a Church footnote. You found it because you read paper the way it deserves to be read — against the grain, looking for what the writer wanted to omit.\n\nThe Grid was active near the eastern bound before Nessa's rite, before Orin's shard, before Darro entered any cave. The boundary was already open. Darro walked into something waiting.",
+      scene_image_url: CUTSCENE_ART_ALDRIC_OFFICE,
+      options: [{ text: "Then the shard was the last link, not the first. File it.", next_node_id: "node_grid_file" }],
+    },
+
+    // ── Mystic enrichment: counting pulses at the Witness ─────────────────────
+    {
+      id: "node_grid_mystic",
+      speaker: "Brother Aldric",
+      text: "Seven. The same count as the rite circle. As the candles in the cellar. You heard the machine, not just what it produced.\n\nNessa did not build the connection. She completed a circuit that had been building under this town since before she could hold a candle. That changes what the finding has to carry about her.",
+      scene_image_url: CUTSCENE_ART_ALDRIC_OFFICE,
+      options: [{ text: "Then the finding carries it. File.", next_node_id: "node_grid_file" }],
     },
   ],
 });
