@@ -1747,6 +1747,11 @@ export const FD_DIALOGUE: DialogueData[] = [
             condition: { switch: "seen_cordon" },
             next_node_id: "node_move",
           },
+          {
+            text: "I have Holt's gate record, Dimos's candle receipt, and a dead man's wall naming you. Speak directly. (Warrior)",
+            condition: { all: [{ switch: "class_warrior" }, { switch: "act1_assigned" }, { not: { switch: "found_orin_shard_link" } }] },
+            next_node_id: "node_warrior_press",
+          },
           { text: "Back to work." },
         ],
       },
@@ -1836,6 +1841,12 @@ export const FD_DIALOGUE: DialogueData[] = [
         speaker: "Orin",
         text: "The Witness figures are too coherent. I do not like coherent. Ordinary Glass holds pattern. That stuff holds intention, or something close enough that my hands do not know the difference.",
         options: [{ text: "Go back.", next_node_id: "node_1" }],
+      },
+      {
+        id: "node_warrior_press",
+        speaker: "Orin",
+        text: "Orin's hands go still on the furnace rail.\n\n'Fine. Write it down plainly — I am tired of the small version.\n\nI knew the shard was not cold. I told Darro it was spent because I was afraid of what he would do with a live one. I was right to be afraid of that. I was wrong about the method.\n\nLazare did not do this. I am the last link in a chain that started at this furnace. I have known it since they found him.'",
+        options: [{ text: "Record the full testimony.", set_switch: "found_orin_shard_link", trigger_cutscene: "cut_record_orin" }],
       },
     ], CUTSCENE_ART_ORIN_GLASSWORKS, "The stained-glass furnace hall of the Alderamontico Glassworks."),
   },
@@ -1994,6 +2005,16 @@ export const FD_DIALOGUE: DialogueData[] = [
             condition: { switch: "met_nessa" },
             next_node_id: "node_rite",
           },
+          {
+            text: "By the writ and a dead man's due: what did you see the night the cave opened? (Warrior)",
+            condition: { all: [{ switch: "class_warrior" }, { switch: "act1_assigned" }, { not: { switch: "lazare_talked" } }] },
+            next_node_id: "node_warrior_mirror",
+          },
+          {
+            text: "Your feeding license — third annotation, eastern boundary: Grid-pattern discomfort, noted. What did you feel? (Scholar)",
+            condition: { all: [{ switch: "class_scholar" }, { switch: "act1_assigned" }, { not: { switch: "lazare_talked" } }] },
+            next_node_id: "node_scholar_annotation",
+          },
           { text: "Close the door." },
         ],
       },
@@ -2083,6 +2104,22 @@ export const FD_DIALOGUE: DialogueData[] = [
         scene_image_url: CUTSCENE_ART_LAZARE_ESTATE,
         scene_image_alt: "Brother Aldric and the Intercessor stand outside Lazare's shuttered estate.",
         options: [{ text: "Accept the boundary.", set_switch: "lazare_recruited", next_node_id: "node_1" }],
+      },
+      {
+        id: "node_warrior_mirror",
+        speaker: "Lazare",
+        text: "A long pause. Then:\n\n'That is a different authority than this house usually receives. Very well.\n\nThe night Darro died — every mirror in this room showed the old road instead of my face. Something reached toward the eastern caves with a pattern I recognize: hunger, but not mine. Hot Glass and a prayer spoken through clenched teeth.\n\nI stayed in. I make the same choice every night. The mirrors corroborate it, if you trust mirrors.'",
+        scene_image_url: CUTSCENE_ART_LAZARE_ESTATE,
+        scene_image_alt: "Brother Aldric and the Intercessor stand outside Lazare's shuttered estate.",
+        options: [{ text: "Record the mirror testimony.", set_switches: [{ switch_id: "lazare_talked" }, { switch_id: "lazare_mirror_admitted" }], next_node_id: "node_1" }],
+      },
+      {
+        id: "node_scholar_annotation",
+        speaker: "Lazare",
+        text: "You read Church paper the way old men read faces — precisely, and looking for what the author wanted to omit.\n\nYes. Seventeen years ago, a Grid-pattern anomaly near the eastern bound. Not my hunger: something that predated me, running through the old road stone. I reported it to the Church. They filed it as thermal irregularity and nobody came back.\n\nThe annotation is yours, Intercessor. The Hall will not remember it. Apparently you will.",
+        scene_image_url: CUTSCENE_ART_LAZARE_ESTATE,
+        scene_image_alt: "Brother Aldric and the Intercessor stand outside Lazare's shuttered estate.",
+        options: [{ text: "Mark the license annotation as evidence.", set_switches: [{ switch_id: "lazare_talked" }, { switch_id: "scholar_grid_annotation" }], next_node_id: "node_1" }],
       },
     ],
   },
@@ -2289,8 +2326,19 @@ export const FD_DIALOGUE: DialogueData[] = [
             condition: { switch: "nessa_thread_started" },
             next_node_id: "node_after_nessa",
           },
+          {
+            text: "Listen to it. (Mystic)",
+            condition: { switch: "class_mystic" },
+            next_node_id: "node_mystic_listen",
+          },
           { text: "Step back from the line." },
         ],
+      },
+      {
+        id: "node_mystic_listen",
+        speaker: "Scene",
+        text: "The Glass is not silent — it is organized. Seven pulses against the stone, a pause, then seven again. Not the weeping, not the statue. Something beneath the Witness has been counting since before Nessa stood here.\n\nAldric notices you tilt your head. He does not ask what you hear.",
+        options: [{ text: "(Note the count. Seven below the stone.)", set_switch: "mystic_witness_count", next_node_id: "node_1" }],
       },
       {
         id: "node_before_nessa",
@@ -2425,7 +2473,7 @@ export const FD_DIALOGUE: DialogueData[] = [
           },
           {
             text: "Current: return the cave finding to Aldric.",
-            condition: { all: [{ switch: "found_log_4" }, { switch: "cyberghost_defeated" }, { not: { switch: "vampire_cleared" } }] },
+            condition: { all: [{ switch: "cyberghost_defeated" }, { not: { switch: "vampire_cleared" } }] },
             next_node_id: "node_return_verdict",
           },
           {
@@ -2861,8 +2909,44 @@ export const FD_DIALOGUE: DialogueData[] = [
       {
         id: "node_1",
         speaker: "Case Note",
-        text: "Act I finding: Darro Keel died from Grid sickness after Glass exposure, not vampire feeding. Lazare is dangerous, but not the cave killer.\n\nAldric has reopened Nessa's case because Darro's logs, Mara's name, and the Witness refuse to stay in separate files.\n\nThe next thread runs under the Counted Cup, where old prayers keep their own records.",
-        options: [{ text: "Continue the investigation." }],
+        text: "Act I finding: Darro Keel died from Grid sickness after Glass exposure, not vampire feeding. Lazare is dangerous, but not the cave killer.\n\nOrin Vale supplied the shard. He knew what it was.",
+        options: [{ text: "And the Witness?", next_node_id: "node_2" }],
+      },
+      {
+        id: "node_2",
+        speaker: "Brother Aldric",
+        text: "Still bleeding. The rite at the statue, Nessa's candles, Mara's prayer — none of that dies quietly just because we closed Darro's file.\n\nBut that is tomorrow's thread.",
+        options: [{ text: "Then tonight we rest.", next_node_id: "node_3" }],
+      },
+      {
+        id: "node_3",
+        speaker: "Scene",
+        text: "Above the town the Witness bleeds on in the dark, indifferent to verdicts. Somewhere under the Counted Cup, seven knocks sound in the floor, then silence, then seven again.\n\nYou do not go down tonight.",
+        options: [{ text: "— End of Act I —" }],
+      },
+    ],
+  },
+  {
+    id: "dia_act1_end_condemned",
+    display_name: "Act I: The Wrong Door",
+    nodes: [
+      {
+        id: "node_1",
+        speaker: "Case Note",
+        text: "Act I finding, sealed under your name: predatory irregularity. Lazare Behind the Shutters answers for the death of Darro Keel.\n\nThe town has its monster. Orin Vale keeps his shards. The file is closed.",
+        options: [{ text: "And Aldric?", next_node_id: "node_2" }],
+      },
+      {
+        id: "node_2",
+        speaker: "Brother Aldric",
+        text: "He does not argue it twice. He signs where the Intercessor tells him to sign.\n\n'You had the cave in your hands,' he says, once, and then not again. 'It told you a name. It was not his.'",
+        options: [{ text: "It's the answer they wanted.", next_node_id: "node_3" }],
+      },
+      {
+        id: "node_3",
+        speaker: "Scene",
+        text: "Above the town the Witness bleeds on — a little warmer tonight, if anyone were still ordered to log it. Under the Counted Cup, seven knocks sound in the floor, then silence, then seven again.\n\nNo one will go down now. The wrong door is shut and bolted. The right one stays open in the dark, and waits.",
+        options: [{ text: "— End of Act I —" }],
       },
     ],
   },
@@ -3343,10 +3427,9 @@ export const FD_CUTSCENES: CutsceneData[] = [
     display_name: "The Scriptorium Return",
     is_blocking: true,
     actions: [
-      { type: "set_switch", switch_id: "cyberghost_defeated", switch_value: true },
-      { type: "set_switch", switch_id: "vampire_cleared", switch_value: true },
-      { type: "set_switch", switch_id: "orin_disciplined", switch_value: true },
-      { type: "set_switch", switch_id: "nessa_thread_started", switch_value: true },
+      // The verdict is no longer pre-decided here. dia_office_after lets the
+      // player file the finding; the chosen ruling sets the outcome switches
+      // (vampire_cleared / orin_disciplined / nessa_thread_started / finding_*).
       { type: "camera_pan", cell: [15, -14], duration: 900 },
       { type: "show_dialogue", dialogue_id: "dia_office_after" },
       { type: "camera_pan", duration: 700 },
@@ -3360,6 +3443,22 @@ export const FD_CUTSCENES: CutsceneData[] = [
       { type: "set_switch", switch_id: "act1_complete", switch_value: true },
       { type: "set_switch", switch_id: "act1_end_seen", switch_value: true },
       { type: "show_dialogue", dialogue_id: "dia_act1_end" },
+      { type: "screen_fade", duration: 1200 },
+      { type: "game_end" },
+    ],
+  },
+  {
+    // Reached only when the player files the false verdict against Lazare in
+    // dia_office_after. Act I ends short and dark: the Nessa thread never opens.
+    id: "cut_act1_end_condemned",
+    display_name: "Act I: The Wrong Door",
+    is_blocking: true,
+    actions: [
+      { type: "set_switch", switch_id: "act1_complete", switch_value: true },
+      { type: "set_switch", switch_id: "act1_end_seen", switch_value: true },
+      { type: "show_dialogue", dialogue_id: "dia_act1_end_condemned" },
+      { type: "screen_fade", duration: 1200 },
+      { type: "game_end" },
     ],
   },
   {
@@ -3650,70 +3749,180 @@ FD_DIALOGUE.push({
     {
       id: "node_1",
       speaker: "Scene",
-      text: "Aldric clears the table with one arm. 'Put the logs down. All of them. In order.' Darro Keel's wall-scraps, Holt's slate copy, Orin's handling note, and Lazare's untouched gate record become one file.",
+      text: "Aldric clears the table with one arm. 'Put it all down. In order.' Darro Keel's wall-scraps, Holt's slate copy, Orin's handling note, Lazare's untouched gate record — one file at last. Then he sets the pen down beside it and does not pick it up.",
       scene_image_url: CUTSCENE_ART_ALDRIC_OFFICE,
-      options: [{ text: "Read the finding.", next_node_id: "node_2" }],
+      options: [{ text: "You're not writing the finding?", next_node_id: "node_2" }],
     },
     {
       id: "node_2",
       speaker: "Brother Aldric",
-      text: "Darro Keel handled a Glassworks offcut supplied by Orin Vale. Darro used it repeatedly in the eastern cave under old rite conditions.\n\nHis behavior became compulsive, patterned, and self-recording. The animal deaths were not feeding.\n\nLazare Behind the Shutters did not kill him.",
+      text: "The writ is yours, Intercessor. I have read this file a hundred ways and I will not file it for you.\n\nThree readings fit what we have. Only one of them is true — and truth is not always what the Hall wants entered. Choose, and put your name beneath it.",
       scene_image_url: CUTSCENE_ART_ALDRIC_OFFICE,
       options: [
         {
-          text: "So Lazare is innocent.",
-          next_node_id: "node_lazare_clear"
+          text: "Grid-sickness and concealment. Darro killed himself with Orin's live shard, in the old rite posture. (Cave logs)",
+          condition: { switch: "found_log_4" },
+          next_node_id: "node_grid",
         },
         {
-          text: "Orin killed him.",
-          next_node_id: "node_orin_clear"
+          text: "Grid-sickness. Lazare's suppressed license annotation confirms the Grid was active near the eastern bound long before Orin's shard. Darro walked into something already open. (Scholar)",
+          condition: { all: [{ switch: "scholar_grid_annotation" }, { not: { switch: "found_log_4" } }] },
+          next_node_id: "node_grid_scholar",
         },
         {
-          text: "The logs mention Mara and the Witness.",
-          condition: { any: [{ switch: "found_log_3" }, { switch: "found_log_4" }] },
-          next_node_id: "node_nessa_hook"
+          text: "Unlawful concealment. Orin supplied the shard, hid what it was, and a man died of it. (Testimony)",
+          condition: { switch: "testimonies_gathered" },
+          next_node_id: "node_concealment",
+        },
+        {
+          text: "Predatory irregularity. Lazare hunted Darro in the caves.",
+          next_node_id: "node_predatory_warn",
+        },
+      ],
+    },
+
+    // ── The true reading ─────────────────────────────────────────────────────
+    {
+      id: "node_grid",
+      speaker: "Brother Aldric",
+      text: "Then say it plainly. The statue did not reach out and take him. Darro reached in — again, and again — with a shard Orin swore was spent. That is the finding the cave actually wrote.",
+      scene_image_url: CUTSCENE_ART_ALDRIC_OFFICE,
+      options: [
+        {
+          text: "And the rite text names who taught the posture.",
+          condition: { switch: "act1_rite_text" },
+          next_node_id: "node_grid_rite",
+        },
+        {
+          text: "And the Witness was already counting before the rite began. Seven pulses. (Mystic)",
+          condition: { all: [{ switch: "mystic_witness_count" }, { not: { switch: "act1_rite_text" } }] },
+          next_node_id: "node_grid_mystic",
+        },
+        {
+          text: "File it.",
+          condition: { not: { switch: "act1_rite_text" } },
+          next_node_id: "node_grid_file",
         },
       ],
     },
     {
-      id: "node_lazare_clear",
+      id: "node_grid_rite",
       speaker: "Brother Aldric",
-      text: "Of murder in this case. Say only what the finding can bear.\n\nLazare remains dangerous. He is not responsible for Darro Keel's death.\n\nThe distinction is narrow enough to cut anyone who handles it carelessly.",
+      text: "Mara Vey. Her hand, her prayer, three generations of candle-keepers under it. Darro borrowed an old hinge and it answered him.\n\nI will enter that. Quietly. But I will enter it.",
       scene_image_url: CUTSCENE_ART_ALDRIC_OFFICE,
-      options: [{ text: "Continue the finding.", next_node_id: "node_nessa_hook" }],
+      options: [{ text: "File the finding.", next_node_id: "node_grid_file" }],
     },
     {
-      id: "node_orin_clear",
-      speaker: "Brother Aldric",
-      text: "No. Orin supplied danger, concealed it, and tried to survive the consequence by naming another.\n\nThat is negligence, cowardice, and breach of handling. It is not murder.\n\nThe Church can discipline Orin. It cannot pretend discipline is the same thing as truth.",
-      scene_image_url: CUTSCENE_ART_ALDRIC_OFFICE,
-      options: [{ text: "Continue the finding.", next_node_id: "node_nessa_hook" }],
-    },
-    {
-      id: "node_nessa_hook",
-      speaker: "Brother Aldric",
-      text: "I will clear Lazare. I will mark Orin for Glassworks discipline and Church handling. I will enter Darro as Grid-sick deceased, unresolved remnant dispersed.\n\nMara Vey is named in the cave. Mara Vey is also named in Nessa's docket.\n\nThe vampire case is closed. The Witness case is not.",
+      id: "node_grid_file",
+      speaker: "Case Note",
+      text: "Filed under your name: Lazare — cleared of the killing, watched all the same. Orin — Glassworks discipline and Church handling. Darro — Grid-sick deceased, remnant dispersed.\n\nThe vampire case is closed. The name the cave kept — Mara — is also the name on Nessa's docket. The Witness case is not.",
       scene_image_url: CUTSCENE_ART_ALDRIC_OFFICE,
       options: [
         {
           text: "Open the Nessa thread.",
+          set_switches: [
+            { switch_id: "verdict_filed", switch_value: true },
+            { switch_id: "finding_grid", switch_value: true },
+            { switch_id: "vampire_cleared", switch_value: true },
+            { switch_id: "orin_disciplined", switch_value: true },
+            { switch_id: "nessa_thread_started", switch_value: true },
+          ],
           trigger_quest: "quest_vampire",
           trigger_quest_state: "cleared",
         },
       ],
     },
+
+    // ── The partial truth ────────────────────────────────────────────────────
     {
-      id: "node_clear_only",
+      id: "node_concealment",
       speaker: "Brother Aldric",
-      text: "The record clears Lazare and disciplines Orin, but the wider pattern remains.\n\nBecause the town was wrong loudly, it may be wrong quietly elsewhere.\n\nI have another file I wanted clean; it is not clean, and the name on it is Nessa.",
+      text: "It is true, and it is not the whole truth. Orin's cowardice is real and provable — but a live shard does not kill a careful man, and Darro was not careful. The cave says why.\n\nEnter concealment alone and you bury the Grid in the footnotes.",
+      scene_image_url: CUTSCENE_ART_ALDRIC_OFFICE,
+      options: [
+        {
+          text: "Enter it anyway. Concealment is what the Hall can prove.",
+          next_node_id: "node_concealment_file",
+        },
+        {
+          text: "You're right. Read it as Grid-sickness.",
+          condition: { switch: "found_log_4" },
+          next_node_id: "node_grid",
+        },
+      ],
+    },
+    {
+      id: "node_concealment_file",
+      speaker: "Case Note",
+      text: "Filed under your name: Orin Vale — unlawful concealment and breach of handling. Lazare — cleared. Darro — misadventure by his own hand.\n\nThe Grid stays a rumor on a cave wall. Aldric files it without comment, which is its own comment.",
       scene_image_url: CUTSCENE_ART_ALDRIC_OFFICE,
       options: [
         {
           text: "Open the Nessa thread.",
+          set_switches: [
+            { switch_id: "verdict_filed", switch_value: true },
+            { switch_id: "finding_concealment", switch_value: true },
+            { switch_id: "vampire_cleared", switch_value: true },
+            { switch_id: "orin_disciplined", switch_value: true },
+            { switch_id: "nessa_thread_started", switch_value: true },
+          ],
           trigger_quest: "quest_vampire",
           trigger_quest_state: "cleared",
         },
       ],
+    },
+
+    // ── The wrong reading — Aldric pushes back, then defers to the writ ───────
+    {
+      id: "node_predatory_warn",
+      speaker: "Brother Aldric",
+      text: "Aldric's hand stops over the file. Look at me. Lazare is a danger and a recluse, and the town would thank you for hanging him. He did not do this.\n\nThe gate record never moved. The cave wrote another name. File predatory irregularity and an innocent man answers for it — while the thing that actually opened keeps breathing under our feet.\n\nIs that the finding you enter?",
+      scene_image_url: CUTSCENE_ART_ALDRIC_OFFICE,
+      options: [
+        {
+          text: "I enter it. The town needs an answer it understands.",
+          next_node_id: "node_predatory_file",
+        },
+        {
+          text: "...No. Read it again.",
+          next_node_id: "node_2",
+        },
+      ],
+    },
+    {
+      id: "node_predatory_file",
+      speaker: "Case Note",
+      text: "Filed under your name: predatory irregularity. Lazare Behind the Shutters, bound over for the death of Darro Keel. Orin Vale — released. The cave logs — sealed, unread by the Hall.",
+      scene_image_url: CUTSCENE_ART_ALDRIC_OFFICE,
+      options: [
+        {
+          text: "Sign it.",
+          set_switches: [
+            { switch_id: "verdict_filed", switch_value: true },
+            { switch_id: "finding_predatory", switch_value: true },
+            { switch_id: "lazare_condemned", switch_value: true },
+          ],
+          trigger_cutscene: "cut_act1_end_condemned",
+        },
+      ],
+    },
+
+    // ── Scholar path: grid annotation as alternative evidence ─────────────────
+    {
+      id: "node_grid_scholar",
+      speaker: "Brother Aldric",
+      text: "Seventeen years in a Church footnote. You found it because you read paper the way it deserves to be read — against the grain, looking for what the writer wanted to omit.\n\nThe Grid was active near the eastern bound before Nessa's rite, before Orin's shard, before Darro entered any cave. The boundary was already open. Darro walked into something waiting.",
+      scene_image_url: CUTSCENE_ART_ALDRIC_OFFICE,
+      options: [{ text: "Then the shard was the last link, not the first. File it.", next_node_id: "node_grid_file" }],
+    },
+
+    // ── Mystic enrichment: counting pulses at the Witness ─────────────────────
+    {
+      id: "node_grid_mystic",
+      speaker: "Brother Aldric",
+      text: "Seven. The same count as the rite circle. As the candles in the cellar. You heard the machine, not just what it produced.\n\nNessa did not build the connection. She completed a circuit that had been building under this town since before she could hold a candle. That changes what the finding has to carry about her.",
+      scene_image_url: CUTSCENE_ART_ALDRIC_OFFICE,
+      options: [{ text: "Then the finding carries it. File.", next_node_id: "node_grid_file" }],
     },
   ],
 });

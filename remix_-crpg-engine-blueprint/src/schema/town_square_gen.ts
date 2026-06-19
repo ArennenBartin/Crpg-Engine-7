@@ -275,11 +275,17 @@ export const generateTownSquareCells = (): {
     ]},
     { entity_id: "ent_high_clerk", cell: [7, -5], schedule: [
       { hour: 7, cell: [7, -5] },
+      // Morning at the well, beside Sela — procedure meets folk custom.
+      { hour: 8, cell: [-1, -5] },
+      { hour: 11, cell: [7, -5] },
       { hour: 14, cell: [13, -14] },
       { hour: 21, cell: [7, -3] },
     ]},
     { entity_id: "ent_elder", cell: [-3, -5], schedule: [
       { hour: 8, cell: [-3, -5] },
+      // Midday she drifts to Dimos's stall to trade gossip for thread.
+      { hour: 11, cell: [-5, 6] },
+      { hour: 15, cell: [-3, -5] },
       { hour: 18, cell: [-6, 0] },
       { hour: 23, cell: [-2, -10] },
     ]},
@@ -337,8 +343,6 @@ export const generateTownSquareCells = (): {
       condition: {
         all: [
           { switch: "lazare_talked" },
-          { switch: "testimonies_gathered" },
-          { switch: "found_log_4" },
           { switch: "cyberghost_defeated" },
           { not: { switch: "vampire_cleared" } },
         ],
@@ -354,8 +358,6 @@ export const generateTownSquareCells = (): {
       condition: {
         all: [
           { switch: "lazare_talked" },
-          { switch: "testimonies_gathered" },
-          { switch: "found_log_4" },
           { switch: "cyberghost_defeated" },
           { not: { switch: "vampire_cleared" } },
         ],

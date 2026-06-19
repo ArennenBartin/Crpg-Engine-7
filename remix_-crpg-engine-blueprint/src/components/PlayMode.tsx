@@ -9,6 +9,7 @@ import {
   deleteSaveSlot,
 } from "../store/playStore";
 import { GameRenderer, playerStateRef } from "./GameRenderer";
+import { ScreenFX } from "./ScreenFX";
 import {
   MapData,
   CellData,
@@ -111,6 +112,16 @@ const PLAY_DPR_RAISE = 0.04;
 const NPC_SIMULATION_RADIUS = 16;
 const NPC_SCHEDULE_PATH_LIMIT = 96;
 const TWO_PI = Math.PI * 2;
+
+// ── Ambient barks ────────────────────────────────────────────────────────────
+// Two NPCs bark at each other when within this Manhattan distance, but only if
+// the player is close enough to overhear (earshot). Each exchange holds a
+// cooldown in in-game minutes so the same gossip doesn't loop, plus a real-time
+// floor so back-to-back player turns don't stack exchanges on top of each other.
+const BARK_TALK_RADIUS = 2;
+const BARK_EARSHOT = 9;
+const BARK_DEFAULT_COOLDOWN_MIN = 480;
+const BARK_MIN_REAL_INTERVAL_MS = 5000;
 
 const MOVEMENT_COMMAND_KEYS = new Set([
   "arrowup",
@@ -1256,7 +1267,12 @@ function LevelUpOverlay({
   );
 }
 
-export function PlayEngine() {
+export function PlayEngine({ onGameEnd }: { onGameEnd?: () => void } = {}) {
+  // Kept in a ref so the cutscene runner's closure always calls the latest
+  // callback (the runner effect is long-lived and would otherwise capture a
+  // stale prop).
+  const onGameEndRef = useRef(onGameEnd);
+  onGameEndRef.current = onGameEnd;
   const { gamePackage } = useEngineStore();
   const {
     saveData,
@@ -1437,6 +1453,9 @@ export function PlayEngine() {
   const activeMapRef = useRef<MapData | null>(null);
   const latestPartyFollowersRef = useRef<{ entity_id: string; cell: [number, number] }[]>([]);
   const inputBlockedRef = useRef(false);
+  // bark id -> in-game minute it last played; throttles repeat gossip.
+  const barkCooldownRef = useRef<Map<string, number>>(new Map());
+  const lastBarkRealRef = useRef(0);
   const cameraAzimuthRef = useRef(cameraAzimuth);
   const handleMoveRef = useRef<((dx: number, dz: number) => void) | null>(null);
   const handleActRef = useRef<(() => void) | null>(null);
@@ -2031,14 +2050,17 @@ export function PlayEngine() {
 
     if (previousTurn === activeTurn) return;
 
-    const heldMovementKeys = new Set([
-      ...combatInputHeldKeysRef.current,
-      ...[...keysDownRef.current].filter(isMovementCommandKey),
-    ]);
+    // Only gate on keyboard keys physically held at the turn boundary.
+    // Joystick keys live in combatInputHeldKeysRef (not keysDownRef) and are
+    // continuously re-fired by pointer events, so including them here would
+    // permanently lock the gate — the joystick never "releases".
+    const heldKeyboardKeys = new Set(
+      [...keysDownRef.current].filter(isMovementCommandKey),
+    );
     activeCombatTurnRef.current = activeTurn;
     clearInputState();
-    combatInputHeldKeysRef.current = heldMovementKeys;
-    combatInputNeedsReleaseRef.current = heldMovementKeys.size > 0;
+    combatInputHeldKeysRef.current = heldKeyboardKeys;
+    combatInputNeedsReleaseRef.current = heldKeyboardKeys.size > 0;
     combatInputLockUntilRef.current =
       inputNow() + COMBAT_ACTOR_SWITCH_INPUT_DELAY_MS;
   }, [saveData?.in_combat, saveData?.active_turn_id]);
@@ -2696,6 +2718,9 @@ export function PlayEngine() {
           }
         }
         finishAction();
+      } else if (action.type === "game_end") {
+        onGameEndRef.current?.();
+        finishAction();
       } else {
         finishAction();
       }
@@ -3026,6 +3051,97 @@ export function PlayEngine() {
     }
   }, [saveData]);
 
+  // After the world has settled for the turn, see whether two NPCs ended up
+  // standing together with the player in earshot, and play an overheard
+  // exchange if one matches the current state of the investigation. Reads the
+  // already-committed save so the NPC positions are final for this turn.
+  const maybeFireBarks = () => {
+    if (inputBlockedRef.current) return;
+    const sData = usePlayStore.getState().saveData;
+    const gp = useEngineStore.getState().gamePackage;
+    const map = activeMapRef.current;
+    if (!sData || !map || sData.in_combat) return;
+    const barks = gp.barks;
+    if (!barks || barks.length === 0) return;
+
+    const nowReal = performance.now();
+    if (nowReal - lastBarkRealRef.current < BARK_MIN_REAL_INTERVAL_MS) return;
+
+    const clockMin = sData.clock_minutes ?? 0;
+    const playerCell = sData.player.cell;
+    const states = sData.entity_states || {};
+    const partyMembers = sData.party_members || [];
+
+    // Live, audible NPCs on this map with their final cell for the turn.
+    const npcs = (map.entity_placements || [])
+      .map((placement, index) => {
+        const def = gp.entities.find((e) => e.id === placement.entity_id);
+        const key = entityStateKey(map.id, placement.entity_id, index);
+        const st = states[key] || {};
+        return {
+          id: placement.entity_id,
+          def,
+          cell: (st.cell || placement.cell) as [number, number],
+          out: !!st.dead || !!st.hidden,
+        };
+      })
+      .filter(
+        (n) =>
+          n.def &&
+          n.def.is_npc &&
+          !n.out &&
+          !partyMembers.includes(n.id),
+      );
+    if (npcs.length < 2) return;
+
+    const ctx = buildConditionContext(sData);
+
+    for (let i = 0; i < npcs.length; i++) {
+      for (let j = i + 1; j < npcs.length; j++) {
+        const a = npcs[i];
+        const b = npcs[j];
+        const pairDist =
+          Math.abs(a.cell[0] - b.cell[0]) + Math.abs(a.cell[1] - b.cell[1]);
+        if (pairDist > BARK_TALK_RADIUS) continue;
+        const earshot = Math.min(
+          Math.abs(playerCell[0] - a.cell[0]) +
+            Math.abs(playerCell[1] - a.cell[1]),
+          Math.abs(playerCell[0] - b.cell[0]) +
+            Math.abs(playerCell[1] - b.cell[1]),
+        );
+        if (earshot > BARK_EARSHOT) continue;
+
+        const bark = barks.find((bk) => {
+          const [s0, s1] = bk.speakers;
+          const matchesPair =
+            (s0 === a.id && s1 === b.id) || (s0 === b.id && s1 === a.id);
+          if (!matchesPair) return false;
+          if (!evaluateCondition(bk.condition, ctx)) return false;
+          const last = barkCooldownRef.current.get(bk.id);
+          const cd = bk.cooldown_minutes ?? BARK_DEFAULT_COOLDOWN_MIN;
+          if (last !== undefined && clockMin - last < cd) return false;
+          return true;
+        });
+        if (!bark) continue;
+
+        barkCooldownRef.current.set(bark.id, clockMin);
+        lastBarkRealRef.current = nowReal;
+        const cellOf = (entityId: string) =>
+          entityId === a.id ? a.cell : b.cell;
+        useFxStore.getState().enqueueBark(
+          bark.lines.map((line) => ({
+            cell: cellOf(line.speaker),
+            text: line.text,
+            speaker:
+              gp.entities.find((e) => e.id === line.speaker)?.display_name ||
+              "",
+          })),
+        );
+        return;
+      }
+    }
+  };
+
   const pumpEngine = () => {
     usePlayStore.setState((state) => {
       const sData = state.saveData;
@@ -3310,6 +3426,8 @@ export function PlayEngine() {
             : state.logMessages,
       };
     });
+    // World has settled for this turn — check for an overheard exchange.
+    maybeFireBarks();
   };
 
   useEffect(() => {
@@ -4465,6 +4583,7 @@ export function PlayEngine() {
             renderCenter={cameraFocusOverride || activeFocusPos}
             renderRadius={PLAY_RENDER_RADIUS}
           />
+          <ScreenFX inCombat={inCombat} mapId={activeMap?.id} />
         </Canvas>
         {showPerfHud && (
           <div
@@ -6040,7 +6159,7 @@ export function PlayEngine() {
 }
 
 export function PlayMode() {
-  const [state, setState] = useState<"title" | "playing">("title");
+  const [state, setState] = useState<"title" | "playing" | "end">("title");
   const { gamePackage } = useEngineStore();
   const hasSave = !!usePlayStore((s) => s.saveData);
   const playTitleSfx = useCallback(
@@ -6058,6 +6177,30 @@ export function PlayMode() {
       playMusic("/music/rain-on-the-ledger.mp3");
     }
   }, [state]);
+
+  if (state === "end") {
+    return (
+      <div className="h-full bg-neutral-950 text-white relative overflow-hidden flex flex-col items-center justify-center">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(30,20,40,0.98)_0%,rgba(0,0,0,1)_100%)]" />
+        <div className="relative z-10 flex flex-col items-center gap-8 px-8 text-center max-w-lg">
+          <div className="h-px w-32 bg-gradient-to-r from-transparent via-[var(--color-sacred-gold)] to-transparent" />
+          <h2 className="font-[family-name:var(--font-display)] text-2xl font-bold uppercase tracking-[0.28em] text-[var(--color-sacred-gold)]">
+            End of Act I
+          </h2>
+          <p className="font-[family-name:var(--font-body)] text-base leading-relaxed text-neutral-300 italic">
+            The Familiar Dark
+          </p>
+          <div className="h-px w-32 bg-gradient-to-r from-transparent via-[var(--color-sacred-gold)] to-transparent" />
+          <button
+            className="mt-4 border border-[var(--color-sacred-gold-dark)] bg-black/68 px-7 py-4 font-[family-name:var(--font-display)] text-sm font-bold uppercase tracking-[0.22em] text-[var(--color-sacred-ink)] transition-all hover:border-[var(--color-sacred-gold)] hover:bg-black/82 hover:text-[var(--color-sacred-gold)] active:scale-[0.98]"
+            onClick={() => setState("title")}
+          >
+            Return to Title
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (state === "title") {
     return (
@@ -6119,5 +6262,5 @@ export function PlayMode() {
     );
   }
 
-  return <PlayEngine />;
+  return <PlayEngine onGameEnd={() => setState("end")} />;
 }

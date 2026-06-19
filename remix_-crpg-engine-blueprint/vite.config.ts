@@ -15,6 +15,8 @@ export default defineConfig(() => {
         } as const;
 
   return {
+    // "/" for dev/root; set VITE_BASE (e.g. "/Crpg-Engine-7/") for sub-path deploys.
+    base: process.env.VITE_BASE || '/',
     plugins: [react(), tailwindcss()],
     resolve: {
       alias: {
