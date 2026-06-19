@@ -82,6 +82,7 @@ export const playMusic = (
   });
   currentAudio = audio;
   currentUrl = url;
+  initAudioAnalyser(audio);
 };
 
 // The URL currently looping, or null. Lets the combat-music layer remember
@@ -95,6 +96,58 @@ export const stopMusic = () => {
   }
   currentAudio = null;
   currentUrl = null;
+};
+
+// ── Audio Analyser ───────────────────────────────────────────────────────────
+// Connects a music element to an AnalyserNode so ScreenFX can read frequency
+// data for audio-reactive effects. Silently no-ops if the browser blocks the
+// AudioContext or if the element can't be sourced (CORS).
+
+let audioCtx: AudioContext | null = null;
+let analyserNode: AnalyserNode | null = null;
+let analyserBuffer: Uint8Array | null = null;
+let analyserSourceEl: HTMLAudioElement | null = null;
+
+const initAudioAnalyser = (audio: HTMLAudioElement) => {
+  if (analyserSourceEl === audio) return; // already wired
+  try {
+    if (!audioCtx) audioCtx = new AudioContext();
+    if (audioCtx.state === "suspended") audioCtx.resume().catch(() => {});
+
+    const analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 256;
+    analyser.smoothingTimeConstant = 0.8;
+
+    const source = audioCtx.createMediaElementSource(audio);
+    source.connect(analyser);
+    analyser.connect(audioCtx.destination);
+
+    analyserNode = analyser;
+    analyserBuffer = new Uint8Array(analyser.frequencyBinCount);
+    analyserSourceEl = audio;
+  } catch {
+    // CORS or browser restriction — audio-reactive visuals gracefully disabled
+  }
+};
+
+/** Returns 0–1 low-frequency (bass) amplitude of currently playing music. */
+export const getAudioBass = (): number => {
+  if (!analyserNode || !analyserBuffer) return 0;
+  analyserNode.getByteFrequencyData(analyserBuffer);
+  // Bins 0–5 cover roughly 0–512 Hz at fftSize=256 / 44100 Hz sample rate
+  let sum = 0;
+  for (let i = 0; i < 6; i++) sum += analyserBuffer[i];
+  return sum / (6 * 255);
+};
+
+/** Returns 0–1 overall amplitude of currently playing music. */
+export const getAudioLevel = (): number => {
+  if (!analyserNode || !analyserBuffer) return 0;
+  analyserNode.getByteFrequencyData(analyserBuffer);
+  let sum = 0;
+  const len = analyserBuffer.length;
+  for (let i = 0; i < len; i++) sum += analyserBuffer[i];
+  return sum / (len * 255);
 };
 
 export const playSound = (

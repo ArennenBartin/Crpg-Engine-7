@@ -9,6 +9,7 @@ import {
   deleteSaveSlot,
 } from "../store/playStore";
 import { GameRenderer, playerStateRef } from "./GameRenderer";
+import { ScreenFX } from "./ScreenFX";
 import {
   MapData,
   CellData,
@@ -4582,6 +4583,7 @@ export function PlayEngine({ onGameEnd }: { onGameEnd?: () => void } = {}) {
             renderCenter={cameraFocusOverride || activeFocusPos}
             renderRadius={PLAY_RENDER_RADIUS}
           />
+          <ScreenFX inCombat={inCombat} mapId={activeMap?.id} />
         </Canvas>
         {showPerfHud && (
           <div
