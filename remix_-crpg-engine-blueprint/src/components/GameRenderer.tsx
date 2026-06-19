@@ -28,6 +28,7 @@ import { entityStateKey } from "../utils/entityState";
 import {
   useFxStore,
   DamagePopup,
+  Bark,
   POPUP_LIFETIME_MS,
   HIT_FLASH_MS,
 } from "../store/fxStore";
@@ -628,6 +629,175 @@ function DamagePopupLayer({
           <DamagePopupNode
             key={`popup_${popup.id}`}
             popup={popup}
+            baseY={getStandingSurfaceY(cell, objectById)}
+          />
+        );
+      })}
+    </>
+  );
+}
+
+// ── Ambient bark speech bubbles ──────────────────────────────────────────────
+// Overheard NPC-to-NPC lines, word-wrapped onto a soft dark plate so they read
+// as speech rather than damage numbers. Cached per string since the same line
+// recurs across a playthrough.
+const barkTextureCache = new Map<
+  string,
+  { texture: THREE.CanvasTexture; aspect: number; lineCount: number }
+>();
+
+const getBarkTexture = (text: string) => {
+  const cached = barkTextureCache.get(text);
+  if (cached) return cached;
+
+  const fontPx = 34;
+  const padX = 28;
+  const padY = 20;
+  const lineH = fontPx * 1.28;
+  const maxLineWidth = 560;
+
+  const measure = document.createElement("canvas").getContext("2d")!;
+  measure.font = `500 ${fontPx}px Georgia, 'Times New Roman', serif`;
+
+  // Greedy word wrap.
+  const words = text.split(/\s+/);
+  const lines: string[] = [];
+  let current = "";
+  for (const word of words) {
+    const trial = current ? `${current} ${word}` : word;
+    if (measure.measureText(trial).width > maxLineWidth && current) {
+      lines.push(current);
+      current = word;
+    } else {
+      current = trial;
+    }
+  }
+  if (current) lines.push(current);
+
+  const textWidth = Math.max(
+    ...lines.map((line) => measure.measureText(line).width),
+  );
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.ceil(textWidth + padX * 2);
+  canvas.height = Math.ceil(lines.length * lineH + padY * 2);
+  const ctx = canvas.getContext("2d")!;
+
+  // Soft rounded plate.
+  const r = 18;
+  const w = canvas.width;
+  const h = canvas.height;
+  ctx.beginPath();
+  ctx.moveTo(r, 0);
+  ctx.arcTo(w, 0, w, h, r);
+  ctx.arcTo(w, h, 0, h, r);
+  ctx.arcTo(0, h, 0, 0, r);
+  ctx.arcTo(0, 0, w, 0, r);
+  ctx.closePath();
+  ctx.fillStyle = "rgba(14, 12, 18, 0.82)";
+  ctx.fill();
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = "rgba(196, 184, 162, 0.35)";
+  ctx.stroke();
+
+  ctx.font = `500 ${fontPx}px Georgia, 'Times New Roman', serif`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillStyle = "rgba(233, 226, 212, 0.98)";
+  lines.forEach((line, i) => {
+    ctx.fillText(line, w / 2, padY + lineH * (i + 0.5));
+  });
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  const entry = { texture, aspect: w / h, lineCount: lines.length };
+  barkTextureCache.set(text, entry);
+  return entry;
+};
+
+function BarkNode({ bark, baseY }: { bark: Bark; baseY: number }) {
+  const groupRef = useRef<THREE.Group>(null);
+  const matRef = useRef<THREE.MeshBasicMaterial>(null);
+  const { texture, aspect, lineCount } = getBarkTexture(bark.text);
+  // Float above the speaker's head, clear of the HP-bar band.
+  const startY = baseY + 1.95;
+  const fadeMs = 280;
+
+  useFrame(() => {
+    const now = performance.now();
+    const age = now - bark.showAt;
+    const group = groupRef.current;
+    const mat = matRef.current;
+    if (!group || !mat) return;
+    if (age < 0 || age > bark.lifetime) {
+      group.visible = false;
+      return;
+    }
+    group.visible = true;
+    // Fade in, hold, fade out.
+    let opacity = 1;
+    if (age < fadeMs) opacity = age / fadeMs;
+    else if (age > bark.lifetime - fadeMs)
+      opacity = Math.max(0, (bark.lifetime - age) / fadeMs);
+    mat.opacity = opacity;
+    // Gentle settle: rises a touch as it appears.
+    group.position.y = startY + Math.min(0.12, age / 1600);
+  });
+
+  const height = 0.34 * Math.max(1, lineCount * 0.82);
+  return (
+    <group
+      ref={groupRef}
+      position={[bark.cell[0], startY, bark.cell[1]]}
+      visible={false}
+    >
+      <Billboard>
+        <mesh raycast={() => null} renderOrder={1000}>
+          <planeGeometry args={[height * aspect, height]} />
+          <meshBasicMaterial
+            ref={matRef}
+            map={texture}
+            transparent
+            opacity={0}
+            depthTest={false}
+            depthWrite={false}
+          />
+        </mesh>
+      </Billboard>
+    </group>
+  );
+}
+
+function BarkLayer({
+  highestCellByCoord,
+  objectById,
+}: {
+  highestCellByCoord: Map<string, CellData>;
+  objectById: Map<string, ObjectData>;
+}) {
+  const barks = useFxStore((state) => state.barks);
+  const pruneBarks = useFxStore((state) => state.pruneBarks);
+  const lastPruneRef = useRef(0);
+
+  useFrame(() => {
+    if (barks.length === 0) return;
+    const now = performance.now();
+    if (now - lastPruneRef.current > 400) {
+      lastPruneRef.current = now;
+      pruneBarks();
+    }
+  });
+
+  return (
+    <>
+      {barks.map((bark) => {
+        const cell =
+          highestCellByCoord.get(
+            getCellCoordKey(bark.cell[0], bark.cell[1]),
+          ) || null;
+        return (
+          <BarkNode
+            key={`bark_${bark.id}`}
+            bark={bark}
             baseY={getStandingSurfaceY(cell, objectById)}
           />
         );
@@ -2516,6 +2686,12 @@ export const GameRenderer = memo(function GameRenderer({
 
       {/* Floating combat text (damage numbers, heals, deaths) */}
       <DamagePopupLayer
+        highestCellByCoord={highestCellByCoord}
+        objectById={objectById}
+      />
+
+      {/* Overheard NPC-to-NPC ambient speech */}
+      <BarkLayer
         highestCellByCoord={highestCellByCoord}
         objectById={objectById}
       />

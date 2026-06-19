@@ -27,6 +27,7 @@ import {
   FD_QUESTS,
   FD_SHOPS,
 } from "./familiar_dark_content";
+import { FD_BARKS } from "./familiar_dark_barks";
 
 export const GameMetadataSchema = z.object({
   title: z.string(),
@@ -178,6 +179,31 @@ export const EntityPlacementSchema = z.object({
   entity_id: z.string(),
   cell: z.tuple([z.number(), z.number()]),
   schedule: z.array(ScheduleEntrySchema).optional(),
+});
+
+// ── Ambient barks ────────────────────────────────────────────────────────────
+// A short overheard exchange between two NPCs — the town talking to itself, not
+// to the player. Fires when both named speakers stand within talking distance
+// of each other AND the player is within earshot. Lines play in sequence as
+// floating speech above each speaker's head. `condition` gates the exchange on
+// world state so the gossip tracks the investigation (the town that wanted a
+// vampire starts whispering about a witch). When several barks share a speaker
+// pair, the runtime fires the first whose condition passes — author the most
+// specific (state-gated) variants before the generic fallback.
+export const BarkLineSchema = z.object({
+  speaker: z.string(), // entity_id of whichever speaker says this line
+  text: z.string(),
+});
+
+export const BarkSchema = z.object({
+  id: z.string(),
+  // The two entity_ids that must stand together (order-independent).
+  speakers: z.tuple([z.string(), z.string()]),
+  condition: ConditionSchema.optional(),
+  lines: z.array(BarkLineSchema),
+  // In-game minutes before this exact exchange may play again (runtime default
+  // applies when omitted).
+  cooldown_minutes: z.number().optional(),
 });
 
 // A physical item lying on the ground. Picked up with Act; removal is
@@ -649,6 +675,7 @@ export const GamePackageSchema = z.object({
   shops: z.array(ShopSchema).default([]),
   factions: z.array(z.any()).default([]),
   endings: z.array(z.any()).default([]),
+  barks: z.array(BarkSchema).default([]),
   validators: z.record(z.string(), z.any()).default({}),
 });
 
@@ -658,6 +685,8 @@ export type MapExitData = z.infer<typeof MapExitSchema>;
 export type WorldItemPlacementData = z.infer<typeof WorldItemPlacementSchema>;
 export type ContainerPlacementData = z.infer<typeof ContainerPlacementSchema>;
 export type ScheduleEntryData = z.infer<typeof ScheduleEntrySchema>;
+export type BarkLineData = z.infer<typeof BarkLineSchema>;
+export type BarkData = z.infer<typeof BarkSchema>;
 export type CellData = z.infer<typeof CellSchema>;
 export type ObjectData = z.infer<typeof ObjectSchema>;
 export type ObjectPart = z.infer<typeof ObjectPartSchema>;
@@ -837,7 +866,8 @@ export const createEmptyGamePackage = (): GamePackage => {
           // ent_innkeep live in the town square social/market hub.)
           { entity_id: "ent_mother", cell: [-12, 7], schedule: [
             { hour: 8, cell: [-12, 7] },
-            { hour: 18, cell: [-6, 4] },
+            // Evening at the shrine yard, beside Cosmas the pilgrim.
+            { hour: 18, cell: [-4, 4] },
             { hour: 22, cell: [-14, 12] },
           ] },   // outside the pilgrim's shrine
         ],
@@ -1319,6 +1349,7 @@ export const createEmptyGamePackage = (): GamePackage => {
     dialogue: FD_DIALOGUE,
     quests: FD_QUESTS,
     cutscenes: FD_CUTSCENES,
+    barks: FD_BARKS,
     switches: {},
     items: FD_ITEMS,
     abilities: [

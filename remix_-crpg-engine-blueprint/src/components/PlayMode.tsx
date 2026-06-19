@@ -112,6 +112,16 @@ const NPC_SIMULATION_RADIUS = 16;
 const NPC_SCHEDULE_PATH_LIMIT = 96;
 const TWO_PI = Math.PI * 2;
 
+// ── Ambient barks ────────────────────────────────────────────────────────────
+// Two NPCs bark at each other when within this Manhattan distance, but only if
+// the player is close enough to overhear (earshot). Each exchange holds a
+// cooldown in in-game minutes so the same gossip doesn't loop, plus a real-time
+// floor so back-to-back player turns don't stack exchanges on top of each other.
+const BARK_TALK_RADIUS = 2;
+const BARK_EARSHOT = 9;
+const BARK_DEFAULT_COOLDOWN_MIN = 480;
+const BARK_MIN_REAL_INTERVAL_MS = 5000;
+
 const MOVEMENT_COMMAND_KEYS = new Set([
   "arrowup",
   "arrowdown",
@@ -1442,6 +1452,9 @@ export function PlayEngine({ onGameEnd }: { onGameEnd?: () => void } = {}) {
   const activeMapRef = useRef<MapData | null>(null);
   const latestPartyFollowersRef = useRef<{ entity_id: string; cell: [number, number] }[]>([]);
   const inputBlockedRef = useRef(false);
+  // bark id -> in-game minute it last played; throttles repeat gossip.
+  const barkCooldownRef = useRef<Map<string, number>>(new Map());
+  const lastBarkRealRef = useRef(0);
   const cameraAzimuthRef = useRef(cameraAzimuth);
   const handleMoveRef = useRef<((dx: number, dz: number) => void) | null>(null);
   const handleActRef = useRef<(() => void) | null>(null);
@@ -3037,6 +3050,97 @@ export function PlayEngine({ onGameEnd }: { onGameEnd?: () => void } = {}) {
     }
   }, [saveData]);
 
+  // After the world has settled for the turn, see whether two NPCs ended up
+  // standing together with the player in earshot, and play an overheard
+  // exchange if one matches the current state of the investigation. Reads the
+  // already-committed save so the NPC positions are final for this turn.
+  const maybeFireBarks = () => {
+    if (inputBlockedRef.current) return;
+    const sData = usePlayStore.getState().saveData;
+    const gp = useEngineStore.getState().gamePackage;
+    const map = activeMapRef.current;
+    if (!sData || !map || sData.in_combat) return;
+    const barks = gp.barks;
+    if (!barks || barks.length === 0) return;
+
+    const nowReal = performance.now();
+    if (nowReal - lastBarkRealRef.current < BARK_MIN_REAL_INTERVAL_MS) return;
+
+    const clockMin = sData.clock_minutes ?? 0;
+    const playerCell = sData.player.cell;
+    const states = sData.entity_states || {};
+    const partyMembers = sData.party_members || [];
+
+    // Live, audible NPCs on this map with their final cell for the turn.
+    const npcs = (map.entity_placements || [])
+      .map((placement, index) => {
+        const def = gp.entities.find((e) => e.id === placement.entity_id);
+        const key = entityStateKey(map.id, placement.entity_id, index);
+        const st = states[key] || {};
+        return {
+          id: placement.entity_id,
+          def,
+          cell: (st.cell || placement.cell) as [number, number],
+          out: !!st.dead || !!st.hidden,
+        };
+      })
+      .filter(
+        (n) =>
+          n.def &&
+          n.def.is_npc &&
+          !n.out &&
+          !partyMembers.includes(n.id),
+      );
+    if (npcs.length < 2) return;
+
+    const ctx = buildConditionContext(sData);
+
+    for (let i = 0; i < npcs.length; i++) {
+      for (let j = i + 1; j < npcs.length; j++) {
+        const a = npcs[i];
+        const b = npcs[j];
+        const pairDist =
+          Math.abs(a.cell[0] - b.cell[0]) + Math.abs(a.cell[1] - b.cell[1]);
+        if (pairDist > BARK_TALK_RADIUS) continue;
+        const earshot = Math.min(
+          Math.abs(playerCell[0] - a.cell[0]) +
+            Math.abs(playerCell[1] - a.cell[1]),
+          Math.abs(playerCell[0] - b.cell[0]) +
+            Math.abs(playerCell[1] - b.cell[1]),
+        );
+        if (earshot > BARK_EARSHOT) continue;
+
+        const bark = barks.find((bk) => {
+          const [s0, s1] = bk.speakers;
+          const matchesPair =
+            (s0 === a.id && s1 === b.id) || (s0 === b.id && s1 === a.id);
+          if (!matchesPair) return false;
+          if (!evaluateCondition(bk.condition, ctx)) return false;
+          const last = barkCooldownRef.current.get(bk.id);
+          const cd = bk.cooldown_minutes ?? BARK_DEFAULT_COOLDOWN_MIN;
+          if (last !== undefined && clockMin - last < cd) return false;
+          return true;
+        });
+        if (!bark) continue;
+
+        barkCooldownRef.current.set(bark.id, clockMin);
+        lastBarkRealRef.current = nowReal;
+        const cellOf = (entityId: string) =>
+          entityId === a.id ? a.cell : b.cell;
+        useFxStore.getState().enqueueBark(
+          bark.lines.map((line) => ({
+            cell: cellOf(line.speaker),
+            text: line.text,
+            speaker:
+              gp.entities.find((e) => e.id === line.speaker)?.display_name ||
+              "",
+          })),
+        );
+        return;
+      }
+    }
+  };
+
   const pumpEngine = () => {
     usePlayStore.setState((state) => {
       const sData = state.saveData;
@@ -3321,6 +3425,8 @@ export function PlayEngine({ onGameEnd }: { onGameEnd?: () => void } = {}) {
             : state.logMessages,
       };
     });
+    // World has settled for this turn — check for an overheard exchange.
+    maybeFireBarks();
   };
 
   useEffect(() => {

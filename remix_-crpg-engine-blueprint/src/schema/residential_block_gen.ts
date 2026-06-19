@@ -346,7 +346,8 @@ export const generateResidentialBlockCells = (): {
     { entity_id: "ent_mason", cell: [11, -14], schedule: [
       { hour: 6, cell: [11, -14] },
       { hour: 12, cell: [11, -7] },
-      { hour: 20, cell: [4, -4] },
+      // Evening she stops by the shrine yard where Cosmas keeps vigil.
+      { hour: 20, cell: [0, 4] },
       { hour: 23, cell: [15, -13] },
     ] },
     // Pilgrim inside near the shrine
